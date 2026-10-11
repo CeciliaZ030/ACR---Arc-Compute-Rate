@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { LOCAL_SELLER, MAINNET_SELLER, chainMismatch, isHostFailure, publishedSeller, sellerBase, sellerCandidates, servesPath } from "./apiBase";
+import { LOCAL_SELLER, MAINNET_SELLER, PROBE_SELLER, chainMismatch, isHostFailure, publishedSeller, sellerBase, sellerCandidates, servesPath } from "./apiBase";
 
 /* The default that matters is the one nobody sets. Eight places spelled
    `?? "http://127.0.0.1:8000"`, which is wrong in the only place it is ever
@@ -75,6 +75,34 @@ test("an override equal to the published base collapses to one candidate", () =>
 
 test("whitespace is not a host", () => {
   assert.deepEqual(sellerCandidates("   ", MAINNET_SELLER), [MAINNET_SELLER]);
+});
+
+test("alternates are what stop the collapse above being the end of the story", () => {
+  /* The three tests above are all correct AND all describe a cushion that does
+     not exist, which is why they passed while the live site served the archive.
+     Each one ends with a single candidate; `makeLadder` has nothing to try.
+
+     The primitive did not change its mind about dedupe — it gained a third
+     argument. The caller passes the presses it KNOWS, so removing a duplicate
+     leaves the others rather than leaving nothing. `chainChoice.test.ts` pins
+     the chain-aware behaviour; these are the pure-function cases. */
+  // The exact live configuration: override == published, one known alternate.
+  assert.deepEqual(sellerCandidates(MAINNET_SELLER, MAINNET_SELLER, [MAINNET_SELLER, PROBE_SELLER]), [
+    MAINNET_SELLER,
+    PROBE_SELLER,
+  ]);
+  // Order is configured, then published, then the rest — and each appears once.
+  assert.deepEqual(
+    sellerCandidates(PROBE_SELLER, MAINNET_SELLER, [MAINNET_SELLER, PROBE_SELLER]),
+    [PROBE_SELLER, MAINNET_SELLER],
+  );
+  // A trailing slash is the same host in the alternates list too, not a fourth rung.
+  assert.deepEqual(sellerCandidates("", `${MAINNET_SELLER}/`, [MAINNET_SELLER, PROBE_SELLER]), [
+    MAINNET_SELLER,
+    PROBE_SELLER,
+  ]);
+  // Default stays empty, which is the whole reason the tests above still hold.
+  assert.deepEqual(sellerCandidates("", MAINNET_SELLER, []), [MAINNET_SELLER]);
 });
 
 test("only 5xx means the host is not serving", () => {

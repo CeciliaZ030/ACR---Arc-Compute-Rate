@@ -1,7 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { MAINNET_SELLER, TESTNET_SELLER } from "./apiBase";
+import {
+  LOCAL_SELLER,
+  MAINNET_PRESSES,
+  MAINNET_SELLER,
+  PROBE_SELLER,
+  TESTNET_PRESSES,
+  TESTNET_SELLER,
+} from "./apiBase";
 import { CHAIN, CHAIN_TESTNET, chainFacts, isMainnet } from "./chain";
 import { CHAINS, CHAIN_KEYS, CHAIN_PARAM, DEFAULT_CHAIN, apiKey, chainCandidates, emptyChainFacts, emptyTerminal, parseChainKey, resolveChain, sameChain } from "./chainChoice";
 import { readHeaders, sharedCache } from "./readResult";
@@ -77,17 +84,99 @@ test("apiKey keeps an existing query and never duplicates the param", () => {
 });
 
 test("the candidate ladder dedupes, and the override comes first", () => {
-  assert.deepEqual(chainCandidates("mainnet", "", "production"), [MAINNET_SELLER]);
-  assert.deepEqual(chainCandidates("testnet", "", "production"), [TESTNET_SELLER]);
+  /* THIS TEST USED TO ASSERT THE BUG. Its own comment said "an override equal to
+     the published host is ONE candidate", named the incident that caused
+     ("the fallback could never fire") — and then pinned the collapse as correct.
+     It diagnosed the cause and froze the symptom. On the deployed site that
+     collapse meant `/api/terminal` served the archive to every visitor with
+     `fellBack: false` while the configured host could not answer at all.
+
+     Dedupe is still the property under test. What changed is that deduping a
+     LIST of known presses leaves the others standing, where deduping one
+     literal against one variable left nothing. */
+  assert.deepEqual(chainCandidates("mainnet", "", "production"), [MAINNET_SELLER, PROBE_SELLER]);
   assert.deepEqual(chainCandidates("mainnet", "https://other.test", "production"), [
     "https://other.test",
     MAINNET_SELLER,
+    PROBE_SELLER,
   ]);
-  // An override equal to the published host is ONE candidate: deriving the
-  // cushion from the same variable once collapsed the list to a single dead
-  // host, so the fallback could never fire.
-  assert.deepEqual(chainCandidates("mainnet", MAINNET_SELLER, "production"), [MAINNET_SELLER]);
-  assert.deepEqual(chainCandidates("mainnet", `${MAINNET_SELLER}/`, "production"), [MAINNET_SELLER]);
+  // The case that was broken: the override naming the published host still
+  // dedupes to one entry for THAT host, and the other press remains a rung.
+  assert.deepEqual(chainCandidates("mainnet", MAINNET_SELLER, "production"), [
+    MAINNET_SELLER,
+    PROBE_SELLER,
+  ]);
+  assert.deepEqual(chainCandidates("mainnet", `${MAINNET_SELLER}/`, "production"), [
+    MAINNET_SELLER,
+    PROBE_SELLER,
+  ]);
+  // Configured first holds even when it is the OTHER known press — order comes
+  // from the environment, not from the list.
+  assert.deepEqual(chainCandidates("mainnet", PROBE_SELLER, "production"), [
+    PROBE_SELLER,
+    MAINNET_SELLER,
+  ]);
+  // Testnet is unchanged: one press exists, so one candidate. Asserted rather
+  // than left implicit, because this is the chain where a second rung would be
+  // invented rather than configured.
+  assert.deepEqual(chainCandidates("testnet", "", "production"), [TESTNET_SELLER]);
+  assert.deepEqual(chainCandidates("testnet", TESTNET_SELLER, "production"), [TESTNET_SELLER]);
+});
+
+test("outside production the ladder never reaches a deployed press", () => {
+  /* The guard on the cushion's own reach. In development mainnet's published
+     host is the local press, and appending the known production presses would
+     mean a developer whose `make api` is down reads LIVE MAINNET without being
+     told — the recorded trap where a stub press that failed to answer /health
+     made the ladder serve production while the page looked plausible.
+
+     So: a cushion must not reach past the environment it was built for. */
+  for (const env of ["development", "test"]) {
+    const got = chainCandidates("mainnet", "", env);
+    assert.deepEqual(got, [LOCAL_SELLER], `mainnet in ${env} must stay local`);
+    assert.ok(
+      !got.includes(MAINNET_SELLER) && !got.includes(PROBE_SELLER),
+      `a deployed press leaked into the ${env} ladder`,
+    );
+  }
+});
+
+test("a chain's press list cannot collapse to a single rung", () => {
+  /* THE INVARIANT, not an example of it. Every assertion above could pass while
+     the real deployment had one rung, because what the deployment passes is an
+     `ACR_API` nobody here can see. This states the property instead: for every
+     value that variable could plausibly hold, mainnet must still offer a second
+     host to try.
+
+     Mainnet only. `TESTNET_PRESSES` has one entry and says why — demanding two
+     there would be asserting a host into existence. */
+  assert.ok(MAINNET_PRESSES.length >= 2, "mainnet must know a second press or there is no cushion");
+  assert.equal(
+    new Set(MAINNET_PRESSES).size,
+    MAINNET_PRESSES.length,
+    "a duplicate entry is a rung that is not one",
+  );
+  // No host may serve two chains: that is the mismatch the identity guard exists
+  // to refuse, and it would be a silent testnet-under-mainnet render.
+  for (const host of MAINNET_PRESSES) {
+    assert.ok(!TESTNET_PRESSES.includes(host as never), `${host} is listed for both chains`);
+  }
+  for (const configured of [
+    "",
+    "   ",
+    MAINNET_SELLER,
+    `${MAINNET_SELLER}/`,
+    PROBE_SELLER,
+    "https://staging.example",
+  ]) {
+    const got = chainCandidates("mainnet", configured, "production");
+    assert.ok(
+      new Set(got).size >= 2,
+      `ACR_API=${configured || "(unset)"} collapsed the mainnet ladder to ${JSON.stringify(got)}`,
+    );
+    const c = configured.trim().replace(/\/$/, "");
+    if (c) assert.equal(got[0], c, "a configured host must be tried first");
+  }
 });
 
 test("an empty payload still says WHICH chain it is empty for", () => {

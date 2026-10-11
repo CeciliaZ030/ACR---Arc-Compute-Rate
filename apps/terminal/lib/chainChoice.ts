@@ -37,7 +37,14 @@
  * gate failed on the explanation, which is the gate working.
  */
 
-import { LOCAL_SELLER, MAINNET_SELLER, TESTNET_SELLER } from "./apiBase";
+import {
+  LOCAL_SELLER,
+  MAINNET_PRESSES,
+  MAINNET_SELLER,
+  TESTNET_PRESSES,
+  TESTNET_SELLER,
+  sellerCandidates,
+} from "./apiBase";
 import { CHAIN, CHAIN_TESTNET } from "./chain";
 import type { ChainFactsData, TerminalData } from "./types";
 
@@ -62,6 +69,16 @@ export interface ChainChoice {
   chainId: number;
   /** The press this build knows for that chain. */
   published: string;
+  /** EVERY press this build knows for that chain, in preference order.
+   *
+   *  `published` alone was not enough, and the gap was live for months:
+   *  `chainCandidates` dedupes, so an `ACR_API` naming the same host as
+   *  `published` yielded ONE candidate and no cushion. Measured on the deployed
+   *  site 2026-10-11 — mainnet `configured == published == active` with
+   *  `fellBack: false` while the configured host could not answer at all, so
+   *  every visitor got the archive. A list cannot collapse that way: whichever
+   *  host the environment names, the others are still rungs. */
+  presses: readonly string[];
   /** The env var that may override it, if any. */
   envVar: "ACR_API" | "ACR_API_TESTNET";
   profile: typeof CHAIN | typeof CHAIN_TESTNET;
@@ -90,6 +107,7 @@ export const CHAINS: Record<ChainKey, ChainChoice> = {
     key: "mainnet",
     chainId: CHAIN.chainId,
     published: MAINNET_SELLER,
+    presses: MAINNET_PRESSES,
     envVar: "ACR_API",
     profile: CHAIN,
     bundle: true,
@@ -99,6 +117,7 @@ export const CHAINS: Record<ChainKey, ChainChoice> = {
     key: "testnet",
     chainId: CHAIN_TESTNET.chainId,
     published: TESTNET_SELLER,
+    presses: TESTNET_PRESSES,
     envVar: "ACR_API_TESTNET",
     profile: CHAIN_TESTNET,
     bundle: false,
@@ -140,21 +159,35 @@ export function apiKey(path: string, chain: ChainKey): string {
 
 /** Which seller bases to try for a chain, configured override first.
  *
- *  Mirrors `sellerCandidates()` and dedupes the same way: an override equal to
- *  the published host is one candidate, not two. The cushion rung exists because
- *  an `ACR_API` naming a decommissioned host once demoted every route on the
- *  live terminal to the archive for two days. */
+ *  THIS NO LONGER MIRRORS `sellerCandidates()` — it CALLS it, and that is the
+ *  fix. Two near-identical copies of the same dedupe lived in two files, so the
+ *  defect had to be found and fixed twice; it was found in neither. Both copies
+ *  reduced to one candidate whenever the override equalled the published host,
+ *  and on the deployed site that was true on BOTH chains simultaneously
+ *  (`configured == published == active`, `fellBack: false`). The cushion rung
+ *  exists because an `ACR_API` naming a decommissioned host once demoted every
+ *  route on the live terminal to the archive for two days — and then, when a
+ *  host genuinely did stop answering, the rung was not there.
+ *
+ *  Passing `CHAINS[chain].presses` is what makes the list uncollapsible: the
+ *  known hosts for the chain go in behind the configured one, so there is always
+ *  a second rung as long as the chain HAS a second press. Mainnet has two;
+ *  testnet has one and says so (see `TESTNET_PRESSES`).
+ *
+ *  THE DEV QUIRK IS PRESERVED, AND THE PRESS LIST IS WITHHELD OUTSIDE PRODUCTION
+ *  — which is not a detail. Outside production, mainnet's published host is the
+ *  local press, because that is what `make api` serves. Appending the known
+ *  production presses there would mean a developer whose local press is down
+ *  silently reads LIVE MAINNET and cannot tell: that is the already-recorded trap
+ *  where a stub press failing to answer `/health` made the ladder serve
+ *  production while the screenshot looked plausible. A cushion that reaches past
+ *  the environment it was built for is worse than no cushion, so the alternates
+ *  go in only when `published` is itself the deployed host. */
 export function chainCandidates(chain: ChainKey, configured: string, nodeEnv?: string): string[] {
+  const deployed = nodeEnv === "production" || nodeEnv === undefined;
   const published =
-    nodeEnv === "production" || nodeEnv === undefined
-      ? CHAINS[chain].published
-      : chain === "mainnet"
-        ? LOCAL_SELLER
-        : CHAINS[chain].published;
-  const c = configured.trim().replace(/\/$/, "");
-  const p = published.trim().replace(/\/$/, "");
-  if (!c) return [p];
-  return c === p ? [c] : [c, p];
+    deployed ? CHAINS[chain].published : chain === "mainnet" ? LOCAL_SELLER : CHAINS[chain].published;
+  return sellerCandidates(configured, published, deployed ? CHAINS[chain].presses : []);
 }
 
 /** The chain block for a chain with no bundle behind it.

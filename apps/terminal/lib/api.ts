@@ -20,7 +20,7 @@
  * lib/envelope.ts, or `cookies()` in a page) and passes it down.
  */
 
-import { chainMismatch, isHostFailure, publishedSeller, sellerCandidates, servesPath } from "./apiBase";
+import { chainMismatch, isHostFailure, publishedSeller, servesPath } from "./apiBase";
 import { CHAINS, chainCandidates, emptyTerminal, type ChainKey } from "./chainChoice";
 import { makeLadder } from "./sellerLadder";
 import type { Envelope, TerminalData } from "./types";
@@ -84,10 +84,16 @@ function rigFor(chain: ChainKey): Rig {
     chain === "mainnet"
       ? publishedSeller().replace(/\/$/, "")
       : CHAINS.testnet.published.replace(/\/$/, "");
-  const candidates =
-    chain === "mainnet"
-      ? sellerCandidates(configured, published)
-      : chainCandidates(chain, configured, process.env.NODE_ENV);
+  /* ONE CALL FOR BOTH CHAINS. This used to branch: mainnet went through
+     `sellerCandidates(configured, published)` and everything else through
+     `chainCandidates`, which is how two copies of the same dedupe bug stayed
+     alive in two files. `chainCandidates` now delegates to `sellerCandidates`
+     and adds `CHAINS[chain].presses`, so the mainnet path gains the second rung
+     it never had and the testnet path is unchanged in behaviour while sharing
+     the mechanism and the gate. `published` is still computed above, because
+     `/api/health` reports it and a reader needs to see which host the BUILD
+     believes in separately from which one is currently answering. */
+  const candidates = chainCandidates(chain, configured, process.env.NODE_ENV);
   const rig: Rig = {
     chain,
     wantedChainId: CHAINS[chain].chainId,
