@@ -202,6 +202,26 @@ is published to the network — step 6.
 > header` for a **bogus** deployment id too, so that error proves the route is
 > reachable and nothing about whether your subgraph is published.
 >
+> **PROVEN ON A LIVE PRESS, 2026-10-11.** The switch is not theoretical: both vars
+> went onto `acr-probe-free` (the one mainnet-chain service an `.env` key can
+> reach) via the single-key endpoint plus a redeploy, and it went live in ~90 s.
+> Before and after, same host, `npm run smoke`:
+>
+> | | before | after |
+> |---|---|---|
+> | transport | `via='unset'` | `via='gateway'`, `daily_cap=None`, `errors=0` |
+> | `/tca` | refused | 3 purchases, `$0.00461` |
+> | tools answering | tape tools refused | **11 of 11 anonymously** |
+>
+> The two residual failures under a CARD are not the subgraph and are worth not
+> misreading: `query_tape` fails **closed** because `/armor/info` on that host
+> says `credentials_present: false`, and `can_i_pay` correctly reports no mainnet
+> USDC for a wallet that is funded on testnet. Both are honest answers.
+>
+> So the recipe for `acr-api-mainnet` is now evidence rather than a plan: a
+> current image (it serves **44** routes against this host's 50) plus these two
+> variables.
+>
 > Still on Studio's capped dev endpoint: the **testnet** press
 > (`ethonline/v0.2.0`, last measured ~9,144/day against the 3,000 cap). Publishing
 > a testnet subgraph needs its own slug, which the CLI cannot create.
