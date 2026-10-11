@@ -58,6 +58,30 @@ build fails. The live consequence, three consecutive reads, `x-vercel-cache: MIS
 each time: `/api/terminal?chain=mainnet` returns **`live: false` in 9.7s**. The
 whole site is on the archived bundle.
 
+**UPDATE, same day, after the cushion was fixed and deployed (`e07f882`).** The
+terminal now carries a real two-rung ladder for mainnet, and the measurement
+that followed draws the boundary of what it can do, precisely:
+
+| failure mode | what the press returns | ladder? |
+|---|---|---|
+| `/terminal/data` cannot build a bundle | **timeout / 5xx** | **advances** — the front page recovers |
+| a subgraph read fails inside the press | **HTTP 200** `{"available": false, "reason": "the subgraph did not answer"}` (`graph_proxy.py:197`) | **stops, correctly** — a 200 is an answer |
+
+So the ladder covers the outage from this morning and **cannot** cover
+`/api/tape`, TCA, ratings or `/operator/*` on a press whose subgraph is dead:
+those read `live: false` from a host that is answering. Falling back on a 200
+would mean asking a second press to overrule the first's verdict, which is the
+rule that also stops a 401 being retried against a different host. Measured
+with the `meta` op posted to both presses in the same minute: `acr-api-mainnet`
+`available: false`; `acr-probe-free` `available: true`, block 25,392,845.
+
+And the front page being `live: true` right now is **not** the ladder — it is
+`acr-api-mainnet` having restarted (uptime 1287s at 09:14Z), which lets a fresh
+process assemble a bundle while its subgraph ledger still reads **76 queries,
+76 errors**. A reboot buys a bundle, not a tape. **The env flip below is
+therefore the only fix for every subgraph-backed surface, not merely the nicer
+one.**
+
 **Setting Vercel's `ACR_API` and `NEXT_PUBLIC_ACR_API` to
 `https://acr-probe-free.onrender.com` and redeploying fixes all of it, and
 fixes one more thing for free.** `lib/apiBase.ts` keeps `MAINNET_SELLER` as the
