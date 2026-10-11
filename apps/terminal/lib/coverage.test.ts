@@ -154,6 +154,8 @@ const EXEMPT: Record<string, string> = {
   "app/spend/page.tsx": "metadata only — the client hook owns the queue, like /ops",
   "app/traction/page.tsx": "metadata only — the client hook owns the count, like /ops",
   "app/check/page.tsx": "metadata only — a price check has no answer until a visitor types one",
+  "app/og/home/route.tsx": "a preview image has one edition, the expert one; it is a picture, not a page",
+  "app/og/check/route.tsx": "a preview image has one edition, the expert one; it is a picture, not a page",
   "app/index/[id]/page.tsx": "metadata only",
   "app/companion/page.tsx": "the reader's companion IS the plain voice — one register",
   "components/Ed.tsx": "edition machinery",
