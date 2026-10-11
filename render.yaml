@@ -353,7 +353,20 @@ services:
 
       # --- the tape --------------------------------------------------------
       - key: ACR_SUBGRAPH_URL
-        value: "" # the `arc` (5042) Studio deployment, then the gateway URL once published
+        # Left EMPTY on purpose, like every address above it: this block is a
+        # skeleton and the live values are in the Render dashboard. Filling only
+        # this one in would be worse than leaving it, because a blueprint sync
+        # would then set the subgraph and wipe every address beside it.
+        #
+        # The value to paste is the `arc` (5042) Studio deployment, which exists
+        # as of 2026-10-11 (GRAPH-RUNBOOK §5, slug `acr` v0.1.0, verified four
+        # blocks behind head):
+        #   https://api.studio.thegraph.com/query/1763111/acr/v0.1.0
+        # Single-key PUT, then a SKIP_BUILD=1 redeploy — an env edit alone does
+        # not restart a Render service. Swap it for the gateway URL once the
+        # subgraph is published to the network (§6); that also needs
+        # ACR_GRAPH_API_KEY, which a *deploy* key is not.
+        value: ""
       - key: ACR_GRAPH_API_KEY
         sync: false
       - key: ACR_KEEPER_MIRROR_S
