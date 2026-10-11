@@ -22,7 +22,7 @@ reachable, running live Circle Arc-testnet execution.
 |---|---|---|
 | Seller API (mainnet, 5042) | **Render** `acr-api-mainnet` (`srv-das1navlk1mc73dvsm8g`), from `render.yaml` | https://acr-api-mainnet.onrender.com — **LIVE** since 2026-09-27 (`gate: circle`, `signer: local`). `plan: starter` in `render.yaml`, NOT free, and the comment there says why: a sleeping press stranded testnet collateral twice. **Its image predates the operator** — 44 routes, no `/operator/*` and no `/par` as of 2026-10-07 (`make verify-drift`) |
 | Seller API (testnet, 5042002) | **Render** `acr-api`, from `render.yaml` | https://acr-api-1fto.onrender.com — suspended 2026-09-15, **resumed 2026-10-01** and answering today (`chain_id: 5042002`). `plan: free`, so it sleeps: a cold start measured 25 s. This is the host that serves the operator |
-| Seller API (probe, 5042) | **Render** `acr-probe-free` (`srv-db28nc97lnhs73e1tgfg`) | https://acr-probe-free.onrender.com — a mainnet-CHAIN press on the free plan. It had **never deployed successfully** until 2026-10-09: both attempts on 10-06 died on one guard violation, `ACR_HUMANID_APP_ID is unset`. **Now the most complete mainnet press there is**: 50 routes, and since 2026-10-11 an `ACR_SUBGRAPH_URL` + `ACR_GRAPH_API_KEY` on the **network gateway** (`via='gateway'`, `daily_cap=None`). Measured after that change: `/tca` answers (3 purchases, $0.00461), `/par` prices a bill (2500 bp over a 5-row market basket), `/operator/*` answer, `get_rate` reads a print 45 min old, and `npm run smoke` is **11 of 11 anonymously** — against **5 of 11 failing** on `acr-api-mainnet`. Two caveats, neither the subgraph: carded `query_tape` fails CLOSED because `/armor/info` reports `credentials_present: false` on this host, and `signer: none` so it posts nothing (it reads the prints `acr-api-mainnet` writes to the same chain). Free plan, so it sleeps |
+| Seller API (probe, 5042) | **Render** `acr-probe-free` (`srv-db28nc97lnhs73e1tgfg`) | https://acr-probe-free.onrender.com — a mainnet-CHAIN press on the free plan. It had **never deployed successfully** until 2026-10-09: both attempts on 10-06 died on one guard violation, `ACR_HUMANID_APP_ID is unset`. **Now the most complete mainnet press there is**: 50 routes, and since 2026-10-11 an `ACR_SUBGRAPH_URL` + `ACR_GRAPH_API_KEY` on the **network gateway** (`via='gateway'`, `daily_cap=None`). Measured after that change: `/tca` answers (3 purchases, $0.00461), `/par` prices a bill (2500 bp over a 5-row market basket), `/operator/*` answer, `get_rate` reads a print 45 min old, and `npm run smoke` is **11 of 11 anonymously** — against **5 of 11 failing** on `acr-api-mainnet`. Two caveats, neither the subgraph: carded `query_tape` fails CLOSED because `/armor/info` reports `credentials_present: false` on this host, and `signer: none` so it posts nothing. **IT DOES NOT SLEEP, measured 2026-10-11.** Free-plan services spin down after ~15 idle minutes, but this one sets `ACR_SELF_URL`, so its own 60-second loop knocks on its public URL and Render counts that as traffic: after **17.5 minutes with zero external requests** `process_started_at` was unchanged to the second and `/health` answered in **1.34s**. A restart would have moved that field, which is why that is the thing to read rather than a latency |
 | Terminal | **Vercel** | https://arc-compute-rate.vercel.app |
 
 **THREE RENDER ACCOUNTS, AND NO KEY SEES THEM ALL.** This is the thing that
@@ -31,6 +31,42 @@ costs an hour if you meet it unprepared. `acr-api` belongs to one team,
 API key in `.env` can see** — a `?name=acr-api-mainnet` query returns `[]` for
 both. So a mainnet image swap is a dashboard action by its owner, not something
 a script here can do. Measured 2026-10-09.
+
+**THE TERMINAL STILL POINTS AT THE WEAKER OF THE TWO MAINNET PRESSES**, and one
+environment variable is the whole of it. Measured on the live deployment
+2026-10-11, `/api/health` reports `configured`, `published` and `active` all as
+`https://acr-api-mainnet.onrender.com`, `fellBack: false`. That host's own
+subgraph ledger reads **`queries=10 errors=10`, `via=studio-dev`, `cap=3000`** —
+a 100% failure rate, which is the Studio development cap exhausted, not a slow
+day — while `acr-probe-free` reads `via=gateway`, `cap=null`, `errors=0`. The
+visible cost, measured on the live site: `/api/operator/businesses` and
+`/api/operator/traction` answer **503 `upstream: "absent"`**, `/api/tape` is
+`live: false`, and `/par` has no route to ask.
+
+**Setting Vercel's `ACR_API` and `NEXT_PUBLIC_ACR_API` to
+`https://acr-probe-free.onrender.com` and redeploying fixes all of it, and
+fixes one more thing for free.** `lib/apiBase.ts` keeps `MAINNET_SELLER` as the
+build's cushion, and `sellerCandidates` dedupes — so while `ACR_API` names the
+same host as `MAINNET_SELLER` there is **one candidate and no cushion at all**,
+which is precisely the pathology that file's own comment was written about. Flip
+the variable and `configured != published`, so `acr-api-mainnet` becomes a live
+second rung instead of a no-op. Do **not** also change the literal: two distinct
+hosts is the point.
+
+Three preconditions, all checked 2026-10-11 rather than assumed: `ACR_CORS_ORIGINS`
+on the probe host already answers `access-control-allow-origin:
+https://arc-compute-rate.vercel.app` (without which the wallet path and `/curve`
+break and nothing else does); `ACR_ARC_CHAIN_ID=5042` matches `buildChainId=5042`,
+so `chainMismatch` allows it; and it does not sleep, per the row above.
+
+**AND NOBODY IS POSTING PRINTS RIGHT NOW.** Worth separating from the above,
+because the repoint neither causes nor fixes it. `acr-api-mainnet` holds the
+signer (`signer: local`, `0x1547…5379`) and reports **`posts: 0`** with
+`note: "error"` on all three indices since its 07:17Z boot; the probe host has
+no signer by design. Read straight off the gateway, the newest print was **1.61
+hours old** against a 2-hour settle window and a 1.5-hour warn line, so the
+oracle is drifting toward stale with no press able to write. The chain itself is
+healthy — the subgraph is synced to the head, `hasIndexingErrors: false`.
 
 The service is declared in [`render.yaml`](../render.yaml) at the repo root: a
 `runtime: image` web service pulling `docker.io/kaushtubh02/acr-api:latest`, health-

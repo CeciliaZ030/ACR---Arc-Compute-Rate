@@ -1,7 +1,7 @@
 /** Every tool, against a real press. The check the unit suite cannot be.
  *
  *   npm run smoke                                     # the default host
- *   ACR_API=https://acr-api-mainnet.onrender.com npm run smoke
+ *   ACR_API=https://acr-api-mainnet.onrender.com npm run smoke   # the older press, for contrast
  *   ACR_AGENT_PRIVATE_KEY=0x… npm run smoke           # also exercise the card
  *   ACR_SMOKE_PAY=1 npm run smoke                     # … and SPEND, once
  *

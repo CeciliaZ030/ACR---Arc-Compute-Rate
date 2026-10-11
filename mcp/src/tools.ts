@@ -31,18 +31,37 @@ import { canIPay, DEFAULT_GATED_ENDPOINT } from "./preflight.js";
 
 /** The press this plugin reads when nothing says otherwise.
  *
- *  The same host `/developers` renders in its config block, because a developer
- *  who follows the page and one who follows this file must not end up on
- *  different chains. Two things pin it here rather than to the other Arc: the
+ *  Still an Arc MAINNET press, which is the constraint that matters: the
  *  terminal REFUSES a seller that is not on the build's chain (lib/apiBase.ts),
- *  so the page would not call it anyway; and the terminal has a whole-project
- *  gate forbidding the other network's values in its shipping UI, with eight
- *  recorded incidents behind it (apps/terminal/lib/mainnetOnly.test.ts).
+ *  and it has a whole-project gate forbidding the other network's values in its
+ *  shipping UI, with eight recorded incidents behind it
+ *  (apps/terminal/lib/mainnetOnly.test.ts). So a developer who follows
+ *  `/developers` and one who runs this bare still end up on the same chain.
+ *
+ *  WHY THIS MOVED OFF `acr-api-mainnet`, measured 2026-10-11 rather than argued.
+ *  That press answers, and is nonetheless the wrong default:
+ *
+ *    its own subgraph ledger    queries=10 errors=10  via=studio-dev  cap=3000
+ *    this host's                queries=2  errors=0   via=gateway     cap=null
+ *
+ *  A hundred percent failure rate is not a slow day — it is the 3,000/day Studio
+ *  development cap, exhausted, and it is exactly why five of eleven tools used to
+ *  answer "the subgraph did not answer". `acr-probe-free` runs the published
+ *  gateway subgraph (`48b7j1avj…`, synced to the chain head) and serves 50 routes
+ *  against that one's 44 — including `/par`, without which `check_spend` and
+ *  `benchmark_price` have nothing to ask. `npm run smoke`: 11 of 11, anonymously.
+ *
+ *  ITS ONE WEAKNESS, AND WHY IT IS NOT ONE. It is on Render's free plan, which
+ *  sleeps after ~15 idle minutes, and a cold start is tens of seconds. It sets
+ *  `ACR_SELF_URL`, so its own 60s loop knocks on its public URL and Render counts
+ *  that as traffic. Measured, not assumed: after 17.5 minutes of zero external
+ *  requests `process_started_at` was unchanged to the second and `/health`
+ *  answered in 1.34s. A restart would have reset that field.
  *
  *  Overriding `ACR_API` to any other press needs NOTHING else changed: the chain
  *  id the card is signed for comes from whichever gate it names, not from here
  *  (see `card.ts:gateChainId`). That was the whole bug. */
-export const DEFAULT_API = "https://acr-api-mainnet.onrender.com";
+export const DEFAULT_API = "https://acr-probe-free.onrender.com";
 
 /** The three units a bill can be priced in, and the only three.
  *

@@ -12,7 +12,7 @@ npx -y acr-mcp          # no clone, no path to edit
 
 **If that 404s, the package is not on npm yet** and the clone below is the way
 in — it is two commands and it is verified, not merely written down (a fresh
-checkout builds in about four seconds and its 107 tests pass). Nothing else
+checkout builds in about four seconds and its 108 tests pass). Nothing else
 differs: the same `dist/server.js`, the same env block, the same eleven tools.
 
 <details><summary>From a clone — the route that works today, and how you pin a fork</summary>
@@ -52,30 +52,42 @@ this with no wallet anywhere near it. **`ACR_ARC_CHAIN_ID` is deliberately absen
 the card takes its chain from whichever gate `ACR_API` names, so pointing this at
 a different press needs nothing else changed. See *The 401 this used to be* below.
 
-### Why that host, and not the mainnet one
+### Why that host — and which press to point at
 
-**Because all eleven tools answer there and five of them do not on mainnet
-today.** Measured with `npm run smoke` against each press on 2026-10-10:
+**All eleven tools answer on both of these.** That was not true a day ago, and
+the table is the shortest way to say what changed. Measured with `npm run smoke`
+against each press, 2026-10-10 and again 2026-10-11:
 
-| | `acr-api-1fto` (Arc testnet) | `acr-api-mainnet` (Arc) |
-|---|---|---|
-| tools answering | **12 of 12** probes | **5 of 11 did not** |
-| `wallet_tca`, `reroute_suggestion`, `seller_rating`, `query_tape` | answer | *"the subgraph did not answer"* |
-| `check_spend`, `benchmark_price` | price a real bill | that press has no `/par` yet |
-| `get_rate` | answers, and says the print is 25 days old | answers, fresh |
+| | `acr-api-1fto` (Arc testnet) | `acr-probe-free` (Arc) — **the default** | `acr-api-mainnet` (Arc) |
+|---|---|---|---|
+| tools answering | **12 of 12** probes | **11 of 11** probes | **5 of 11 did not** |
+| subgraph transport | `studio-dev`, cap 3000 | **`gateway`, no cap** | `studio-dev`, cap 3000 |
+| its own query ledger | `2436 queries, 0 errors` | `0 errors` | **`10 queries, 10 errors`** |
+| `check_spend`, `benchmark_price` | price a real bill | price a real bill | no `/par` route to ask |
+| `get_rate` print age | ~25 days | ~1.6 hours | ~1.6 hours |
+| routes served | 50 | 50 | 44 |
 
-Two operator items, not two bugs. The mainnet press's subgraph is on The Graph
-Studio's **development** URL, capped at 3,000 queries a day and counted on no
-dashboard — its own ledger reports `4044 queries this boot, 1062 errors,
-~13,272/day at that pace`, so the cap is exhausted and every subgraph-backed
-read fails for most of the day. And that press predates `/par`, so the bill
-check has no route to ask. Both are fixed by a publish-and-switch to the
-gateway with an API key, and a redeploy.
+The old default was `acr-api-mainnet`, and the reason it had to move is in one
+cell above: **ten queries, ten errors.** That is not a slow day. The Graph
+Studio's *development* URL is capped at 3,000 queries a day and counted on no
+dashboard, so a press that exceeds it fails every subgraph-backed read for the
+rest of the day — which is precisely why five tools used to answer *"the
+subgraph did not answer"*. The fix was to publish the subgraph to the network
+and query it through the gateway with an API key; `acr-probe-free` runs that,
+`daily_cap` reads `null`, and the cap stops applying rather than being silenced.
 
-**Point `ACR_API` at `https://acr-api-mainnet.onrender.com` once those land.**
-Nothing else changes: the card takes its chain from whichever gate `ACR_API`
-names. Until then the five tools above are honest about it rather than wrong —
-they say the subgraph did not answer, which is a different thing from zero.
+**So: the default needs nothing set, and the quickstart above still names the
+testnet press on purpose** — its tape is years deeper, which is what you want
+when you are trying tools out. Point `ACR_API` wherever you like; the card takes
+its chain from whichever gate it names, so nothing else changes.
+
+One honest caveat about the default. It is on Render's **free plan**, which
+sleeps after ~15 idle minutes, and a cold start costs tens of seconds. It sets
+`ACR_SELF_URL` so its own 60-second loop knocks on its public URL, and Render
+counts that as traffic. Measured rather than assumed: after **17.5 minutes with
+zero external requests** its `process_started_at` was unchanged to the second
+and `/health` answered in 1.34s — a restart would have moved that field. If you
+ever do meet a cold start, the symptom is one slow first call, not an error.
 
 | tool | what it answers | spends? |
 |---|---|---|
@@ -303,7 +315,7 @@ press must not quietly strip a correctly-set card.
 
 | env | meaning |
 |---|---|
-| `ACR_API` | the seller to call. The **default is the mainnet press** (`https://acr-api-mainnet.onrender.com`), which is the product's chain and the host `/developers` renders for a mainnet reader — but the quickstart above sets this explicitly to the testnet press, because five tools do not answer on mainnet today. See *Why that host*. Run it bare and you get the default, five tools short |
+| `ACR_API` | the seller to call. The **default is `https://acr-probe-free.onrender.com`**, an Arc mainnet press — the product's chain — on which all eleven tools answer. The quickstart above still names the testnet press explicitly, because its tape is deeper; see *Why that host* for what each one is good for. Run it bare and you get the mainnet default, whole |
 | `ACR_AGENT_PRIVATE_KEY` | signs the card. Any 32-byte key; nothing is enrolled, nothing is spent |
 | `ACR_PAYER_PRIVATE_KEY` | **spends.** The wallet `pay_and_read` settles from. Unset → that tool is not registered, and `can_i_pay` reports the `payer` rung as the blocker |
 | `ACR_MAX_SPEND_USDC` | per-process spend ceiling (default `0.01`). `0` means refuse every payment |

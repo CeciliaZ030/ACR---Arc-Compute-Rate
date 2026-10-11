@@ -79,7 +79,7 @@ async function extraHeaders(): Promise<Record<string, string>> {
 }
 
 const server = new Server(
-  { name: "acr-tca", version: "0.3.0" },
+  { name: "acr-tca", version: "0.3.1" },
   { capabilities: { tools: {} } },
 );
 

@@ -437,3 +437,34 @@ test("the README's stated tool count is the number of tools there are", () => {
       `(${TOOLS.length - 1} of them reads)`,
   );
 });
+
+test("the default press is the one the README documents as the default", () => {
+  /* THIS CONSTANT HAD NO GATE AT ALL, and it is the single most consequential
+     string in the package: it is the host every bare `npx -y acr-mcp` talks to.
+     `DEFAULT_API` was imported into this file and never asserted on, so when it
+     pointed at a press whose subgraph was failing 100% of queries, nothing here
+     objected — the suite stubs `fetch`, so a dead host and a live one are the
+     same to it. The live witness is `npm run smoke`; this is the cheap half,
+     and what it actually catches is DRIFT: changing the constant and leaving
+     three README passages describing the host it used to be.
+
+     Checked against the prose rather than a second literal, because a second
+     literal is just the same mistake twice. Same shape as the two tests above. */
+  const readme = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "README.md"), "utf8");
+  assert.ok(
+    readme.includes(`**default is \`${DEFAULT_API}\`**`),
+    `the README's env table does not name ${DEFAULT_API} as the default`,
+  );
+  assert.ok(
+    readme.includes("— **the default**"),
+    "the README's press comparison no longer marks which column is the default",
+  );
+  /* And it must stay on the product's chain. The terminal refuses a seller off
+     the build's chain and forbids the other network's values in its shipping UI
+     (apps/terminal/lib/mainnetOnly.test.ts), so a testnet default would be a
+     host the page that documents it could not call. */
+  assert.ok(
+    !DEFAULT_API.includes("1fto") && !DEFAULT_API.includes("testnet"),
+    "the default press must be an Arc mainnet one",
+  );
+});
