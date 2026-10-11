@@ -63,6 +63,7 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   "components/loop/PersonNotWallet.tsx": 43,
   "app/loop/view.tsx": 4,
   "components/WorkloadRow.tsx": 8, // the editor: trigger, three field labels, done, privacy line
+  "components/EmbedRow.tsx": 8, // the embed row: trigger, three forms, copy/copied, the live line, done
   "components/WorkloadChip.tsx": 1, // one label; the figure itself is a number, outside <Ed>
   "components/WalletFunding.tsx": 6, // the balance line, deposit, bridge (busy + idle) and the bridge note
   // The §5.9 read gate. Both editions carry the whole refusal, because a
