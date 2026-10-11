@@ -158,6 +158,55 @@ is published to the network — step 6.
 
 ## 6 · Publish, and switch to the gateway (the path Studio counts)
 
+> **DONE for mainnet, 2026-10-11.** `acr` is published and the gateway serves it.
+> Verified through the press's own `graph_query`, not just with curl:
+>
+> **Two URLs work, and Studio hands you the second one**, so both are recorded.
+> Each was verified through `graph_query` with the Bearer key, and they returned
+> the identical block and rows:
+>
+> ```
+> # stable — survives version bumps, no Render edit on a later publish
+> ACR_SUBGRAPH_URL  https://gateway.thegraph.com/api/subgraphs/id/48b7j1avjuKapURQmgF3fY25xC6vK4aR4PHU4JTYfY6N
+>
+> # pinned — what Studio's v0.1.0 panel shows; one exact build
+> ACR_SUBGRAPH_URL  https://gateway.thegraph.com/api/deployments/id/QmZ5tUKEv9SY5CiUUDPyHyWFpm9LfZJefRbMy9JUPbPJzs
+>
+> ACR_GRAPH_API_KEY <the gateway key, sent as Authorization: Bearer>
+> ```
+>
+> Prefer the **stable** one here. Not because pinning is wrong — it is the safer
+> default in most systems — but because of where this particular service lives:
+> `acr-api-mainnet` is in a Render account that has repeatedly been the thing
+> blocking a fix, and a pinned id guarantees an edit to it on every future
+> publish. The stable id removes that coupling. Pin deliberately when you want a
+> specific build and are willing to pay that edit.
+>
+> `block 25,370,517 · hasIndexingErrors false`, real rows (a benchmarked `0.00441`
+> settlement, an unbenchmarked `0.0001`, an `ACR-GPU` print at `0.010832`), and
+> `transport_info` reporting **`via='gateway'`, `daily_cap=None`, `errors=0`** —
+> which is the whole point: the 3,000/day warning is not silenced, it stops
+> applying, because `daily_cap` is only set for `studio-dev`.
+>
+> **Use the SUBGRAPH id on that path, not the deployment id.** Measured:
+>
+> | path | id | result |
+> |---|---|---|
+> | `/api/subgraphs/id/` | subgraph | **OK** |
+> | `/api/deployments/id/` | deployment | **OK** — pins one build |
+> | `/api/subgraphs/id/` | deployment | **rejected:** *"subgraph not found: invalid subgraph ID"* |
+>
+> The refusal names the *id*, so a wrong **path** reads exactly like a wrong
+> **value** — the same trap shape as the account-scoped deploy key above. And an
+> unauthenticated gateway request answers `auth error: missing authorization
+> header` for a **bogus** deployment id too, so that error proves the route is
+> reachable and nothing about whether your subgraph is published.
+>
+> Still on Studio's capped dev endpoint: the **testnet** press
+> (`ethonline/v0.2.0`, last measured ~9,144/day against the 3,000 cap). Publishing
+> a testnet subgraph needs its own slug, which the CLI cannot create.
+
+
 Arc is listed on The Graph's supported-networks page as *Subgraphs · Hosted (No issuance)*: it
 can be published to the network and served by the upgrade indexer, without indexing rewards.
 Four clicks in Studio, two values on Render:

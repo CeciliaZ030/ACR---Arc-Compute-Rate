@@ -59,11 +59,26 @@ services:
       # STUDIO'S DEVELOPMENT URL: capped at 3,000 queries a day and counted on no
       # dashboard. The production path is the network gateway, which Studio
       # counts on the API key's usage page and bills (100k queries/month free).
-      # Once the subgraph is PUBLISHED from Studio (a wallet transaction on
-      # Arbitrum One) and an API key exists, switch both values below:
-      #   ACR_SUBGRAPH_URL   https://gateway.thegraph.com/api/subgraphs/id/<DEPLOYMENT ID>
+      # The mainnet subgraph `acr` IS published as of 2026-10-11, so the gateway
+      # pair below is verified rather than hypothetical:
+      #   ACR_SUBGRAPH_URL   https://gateway.thegraph.com/api/subgraphs/id/<SUBGRAPH ID>
       #   ACR_GRAPH_API_KEY  the key, as a Bearer token (single-key PUT, then a
       #                      SKIP_BUILD=1 redeploy). docs/GRAPH-RUNBOOK.md step 6.
+      #
+      # IT IS THE *SUBGRAPH* ID ON THAT PATH, NOT THE DEPLOYMENT ID. This comment
+      # used to say <DEPLOYMENT ID> and that is REJECTED — measured:
+      #   /api/subgraphs/id/<SUBGRAPH ID>      -> OK
+      #   /api/deployments/id/<DEPLOYMENT ID>  -> OK  (pins one build)
+      #   /api/subgraphs/id/<DEPLOYMENT ID>    -> "subgraph not found: invalid
+      #                                            subgraph ID"
+      # That refusal names the id, so a wrong PATH reads exactly like a wrong
+      # value — the same shape as the account-scoped deploy-key trap in
+      # GRAPH-RUNBOOK. Note Studio's version panel hands you the PINNED form
+      # (/api/deployments/id/<Qm…>), which also works; both were verified
+      # through the press's own client at the same block and rows.
+      # Prefer the subgraph id here: it survives version bumps, so a later
+      # publish needs no edit to a service in an account that has repeatedly
+      # been the thing blocking a fix.
       - key: ACR_SUBGRAPH_URL
         value: https://api.studio.thegraph.com/query/1758707/ethonline/v0.2.0
       - key: ACR_KEEPER_MIRROR_S
