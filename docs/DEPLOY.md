@@ -43,6 +43,21 @@ visible cost, measured on the live site: `/api/operator/businesses` and
 `/api/operator/traction` answer **503 `upstream: "absent"`**, `/api/tape` is
 `live: false`, and `/par` has no route to ask.
 
+**AND AS OF 08:30Z IT IS AN OUTAGE, NOT A DEGRADATION.** `/terminal/data` is the
+one route the front page needs, and it was measured twice on each host within
+the same minute:
+
+| host | `/terminal/data` |
+|---|---|
+| `acr-probe-free` | **HTTP 200 in 0.41s**, 18,395 bytes, all seven sections |
+| `acr-api-mainnet` | **timed out at 60s, twice, 0 bytes** |
+
+Its `/health` answers in 0.5s throughout, so health is not the signal here — the
+press is up and cannot build a bundle, because every subgraph query inside that
+build fails. The live consequence, three consecutive reads, `x-vercel-cache: MISS`
+each time: `/api/terminal?chain=mainnet` returns **`live: false` in 9.7s**. The
+whole site is on the archived bundle.
+
 **Setting Vercel's `ACR_API` and `NEXT_PUBLIC_ACR_API` to
 `https://acr-probe-free.onrender.com` and redeploying fixes all of it, and
 fixes one more thing for free.** `lib/apiBase.ts` keeps `MAINNET_SELLER` as the
