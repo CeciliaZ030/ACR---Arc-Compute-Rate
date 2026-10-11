@@ -32,8 +32,24 @@ jobs:
     steps:
       - name: Wake the press
         run: |
-          curl -sS -m 90 -o /dev/null -w "health %{http_code} in %{time_total}s\n" \
+          curl -sS -m 90 -o /dev/null -w "mainnet  health %{http_code} in %{time_total}s\n" \
             https://acr-api-mainnet.onrender.com/health || true
+
+          # `acr-probe-free` too, and the reason is its PLAN rather than its
+          # role. It is the only mainnet-chain press on the network gateway
+          # (`via='gateway'`, no 3,000/day cap) and the only one serving all 50
+          # routes — `/par` and `/operator/*` included, which the starter host's
+          # image predates. But it is on the FREE plan, so it sleeps, and a cold
+          # start costs far more than the terminal's 5s fetch budget: the first
+          # boot measured 83s, against 1.08s once warm.
+          #
+          # So this ping is what makes it usable as a seller at all. Added
+          # before anything is pointed at it, deliberately — GitHub cron fires
+          # only from the DEFAULT BRANCH, so this line does nothing until it is
+          # merged, and discovering that *after* repointing the terminal would
+          # mean cold-start archive fallbacks on the front page.
+          curl -sS -m 90 -o /dev/null -w "probe    health %{http_code} in %{time_total}s\n" \
+            https://acr-probe-free.onrender.com/health || true
 
       # Base repo only — a fork has no Arc RPC budget to spend on this.
       - uses: actions/checkout@v4
