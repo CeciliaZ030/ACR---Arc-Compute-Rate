@@ -637,7 +637,9 @@ VERSION ?= v0.1.0
 #: one, and Studio answers an unknown slug with a bare "Subgraph not found"
 #: that looks exactly like a bad deploy key. Create it at thegraph.com/studio,
 #: then `make graph-deploy SUBGRAPH=<slug>`.
-SUBGRAPH ?= ethonline
+#: `acr` since 2026-10-11 (mainnet, account 1763111). The older `ethonline`
+#: slug on account 1758707 holds the TESTNET deployment — see GRAPH-RUNBOOK §5.
+SUBGRAPH ?= acr
 
 graph-deploy: graph-build
 	@grep -q '"0x0000000000000000000000000000000000000000"' graph/subgraph.yaml \

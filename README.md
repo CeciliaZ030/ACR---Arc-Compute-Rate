@@ -201,7 +201,8 @@ never "clear", and why a reroute is not a ledger transaction.
 The Graph is **load-bearing**: every x402 settlement is benchmarked *in the subgraph mapping*
 against the print it could have seen, and that `slippageBp` is the only input TCA, seller
 ratings and the reroute have ([`graph/README.md`](graph/README.md); Studio `ethonline`
-**v0.2.0** on `arc-testnet`, ~3 s behind head). Meaningful work, not raw queries:
+**v0.2.0** on `arc-testnet`, ~3 s behind head, and `acr` **v0.1.0** on `arc`, deployed
+2026-10-11 four blocks behind head). Meaningful work, not raw queries:
 
 ```bash
 curl -s https://acr-api-mainnet.onrender.com/tca/0x674055533B05Ec3fD135fC21c4d91a4A2D3193d3 | jq .reroute

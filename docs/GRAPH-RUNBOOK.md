@@ -121,6 +121,34 @@ Production reads v0.2.0 (`render.yaml`). Query endpoint:
 https://api.studio.thegraph.com/query/1758707/ethonline/v0.2.0
 ```
 
+**`acr` v0.1.0 — the MAINNET deployment, 2026-10-11.** Deployed to the slug `acr`
+(`QmZ5tUKEv9SY5CiUUDPyHyWFpm9LfZJefRbMy9JUPbPJzs`), built for `NETWORK=arc`:
+
+```
+https://api.studio.thegraph.com/query/1763111/acr/v0.1.0
+```
+
+Verified rather than assumed, because a subgraph can deploy and then index nothing
+while reporting no error — which, as the `graph-deploy` guards say, reads exactly
+like a quiet market. At deploy time `_meta.block.number` was **25,368,493** against
+an Arc mainnet head of **25,368,497** — four blocks behind, so synced — with
+`hasIndexingErrors: false`, and it answers with real rows: settlements from
+`0xc2903b52…` and an `ACR-INF` print of `0.497734`, which is the value the mainnet
+press was serving at that moment.
+
+**Note the account id.** The old endpoints are `/query/1758707/…` and this one is
+`/query/1763111/…`, a different Studio account — which is why it has its own
+development allowance rather than inheriting the exhausted one. It is also the
+other half of the deploy-key trap above: a key is ACCOUNT-scoped, so a key for
+1763111 cannot see `ethonline` on 1758707 and will answer "Subgraph not found"
+for it, which reads exactly like a misspelling.
+
+**What this deploy does and does not fix.** It gives the mainnet press a working
+endpoint with a fresh cap — set `ACR_SUBGRAPH_URL` on that Render service to the
+URL above. It does **not** put anything on the gateway: that is step 6 below, needs
+a publish transaction on Arbitrum One and a gateway API key, and a *deploy* key is
+not a gateway key.
+
 That is the Studio *development* endpoint and needs no gateway API key. **It is capped at
 3,000 queries a day and Studio's dashboard does not count it** — which is why "the portal shows
 zero queries" while the press has made thousands. The press keeps its own count on
