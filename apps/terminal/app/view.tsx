@@ -56,6 +56,7 @@ export function FixingView({ initial }: { initial: Envelope<TerminalData> }) {
         live={env.live}
         direct={directLive}
         fetchedAt={env.fetchedAt}
+        history={env.data.history?.[flagship.index_id]}
       />
 
       <PlainPrimer />
