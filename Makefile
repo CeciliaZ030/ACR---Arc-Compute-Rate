@@ -708,6 +708,18 @@ anchors-report:
 anchors-check:
 	uv run python scripts/anchors.py --check
 
+# Walk the DEMO's own path against the live hosts and say what a viewer sees.
+# `test` says the code is right and `verify-drift` says the deployment serves
+# what we built; neither answers "does the thing we are about to show in front
+# of people work right now". Reads only: no transaction, no signature, no spend.
+# Strict by default, because at rehearsal time "I could not read the host" is
+# the most important failure — a sleeping free-tier press is exactly what
+# happens on stage.
+#   make rehearse
+#   make rehearse REHEARSE_API=https://acr-api-mainnet.onrender.com   # the control
+rehearse:
+	uv run python scripts/rehearse_demo.py
+
 # Has mcp/package.json's version already been published? npm refuses a duplicate
 # and `npx -y acr-mcp` keeps serving the old build, so the repo can look shipped
 # while nothing moved. `prepublishOnly` cannot see this: it builds and tests, and
