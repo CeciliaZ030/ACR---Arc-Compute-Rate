@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLiveMeta } from "@/lib/api";
-import { requestChain } from "@/lib/envelope";
+import { requestChain, upstreamNote } from "@/lib/envelope";
 import type { ChainKey } from "@/lib/chainChoice";
 import { isUnit } from "@/lib/indices";
 import { freshHeaders } from "@/lib/readResult";
@@ -75,7 +75,7 @@ export async function GET(req: Request) {
   const { data, upstream } = await fetchLiveMeta<ParCheck>(chain, path, 12_000);
   if (!data) {
     return NextResponse.json(
-      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: "the press did not answer" },
+      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: upstreamNote(upstream) },
       { status: 503, headers: freshHeaders() },
     );
   }

@@ -247,7 +247,12 @@ export function baseState(chain: ChainKey): {
   };
 }
 
-export type UpstreamStatus = "ok" | "error" | "timeout";
+/** Why a read is not live. Must stay the same set as `Envelope["upstream"]` in
+ *  lib/types.ts, which has carried `"absent"` since the 404 distinction landed
+ *  while this one did not — so every producer wrote `"absent" as UpstreamStatus`
+ *  and the cast silenced the only thing that would have noticed. A cast is not a
+ *  type; it is a request to stop checking. */
+export type UpstreamStatus = "ok" | "error" | "timeout" | "absent";
 
 /** A raw fetch that climbs this chain's ladder, for callers that need the
  *  Response itself rather than parsed JSON — /api/probe reports a status and a
@@ -379,7 +384,7 @@ export async function fetchLiveMeta<T>(
         hostFailed: isHostFailure(res.status),
         value: {
           data: null,
-          upstream: (absent ? "absent" : "error") as UpstreamStatus,
+          upstream: absent ? "absent" : "error",
           // The ladder already stops here — "an answer, even an unwelcome one,
           // ends it" — so a 401 is never retried against the fallback host,
           // which would be asking a second press to agree about a credential.

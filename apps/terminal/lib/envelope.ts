@@ -128,6 +128,40 @@ export function cardHeader(req: Request): Record<string, string> {
   return { [CARD_HEADER]: card };
 }
 
+/** Why this read is not live, in the reader's words.
+ *
+ *  THE FACT WAS ALREADY COMPUTED AND THEN THROWN AWAY. `fetchLiveMeta` asks the
+ *  host's own `/openapi.json` whether a 404 is "this deployment predates the
+ *  route" or an ordinary not-found, and returns `upstream: "absent"` for the
+ *  first — and then all five operator proxies answered the same hardcoded "the
+ *  press did not answer" either way. Measured on production 2026-10-12:
+ *
+ *      GET /api/operator/businesses
+ *        -> 503 {"upstream":"absent","error":"the press did not answer"}
+ *
+ *  The press answered. It answered 44 routes, promptly, and simply does not
+ *  carry this one yet. `apiBase.ts`'s `servesPath` docstring states the cost of
+ *  getting this wrong — "a reader who believes the product is down does not try
+ *  the thing that works" — and then the copy said it was down anyway.
+ *
+ *  Same shape as the half-wired bugs the architecture note describes: a field
+ *  EMITTED and not CONSUMED. The detection was never the missing half.
+ *
+ *  Deliberately says what to do about it. "Absent" alone is a fact about a
+ *  deployment, which is our problem and not the reader's; the sentence that
+ *  helps names the redeploy that fixes it.
+ */
+export function upstreamNote(upstream: Envelope<unknown>["upstream"]): string {
+  switch (upstream) {
+    case "absent":
+      return "this press is running an older build that does not carry this route yet. It is up, and a redeploy restores it";
+    case "timeout":
+      return "the press did not answer in time. It sleeps between visits, so try again";
+    default:
+      return "the press did not answer";
+  }
+}
+
 /** The headers for a read, with the chain deciding whether it may be shared.
  *
  *  `directive` is the shared directive this route has always used. On the default

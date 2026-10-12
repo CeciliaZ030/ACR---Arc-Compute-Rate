@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLiveMeta } from "@/lib/api";
-import { envelopeHeaders, requestChain } from "@/lib/envelope";
+import { envelopeHeaders, requestChain, upstreamNote } from "@/lib/envelope";
 import type { TractionPayload } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   );
   if (!data) {
     return NextResponse.json(
-      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: "the press did not answer" },
+      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: upstreamNote(upstream) },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }

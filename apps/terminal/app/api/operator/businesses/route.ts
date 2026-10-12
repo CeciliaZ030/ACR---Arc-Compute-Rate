@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLiveMeta } from "@/lib/api";
-import { envelopeHeaders, requestChain } from "@/lib/envelope";
+import { envelopeHeaders, requestChain, upstreamNote } from "@/lib/envelope";
 import type { BusinessesPayload } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
   );
   if (!data) {
     return NextResponse.json(
-      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: "the press did not answer" },
+      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: upstreamNote(upstream) },
       // A failed read must never be cached — the rule `readResult.ts` states,
       // and the reason /api/registry/keys stopped replaying a stale answer.
       { status: 503, headers: { "Cache-Control": "no-store" } },

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { CHAIN_COOKIE, CHAIN_PARAM, DEFAULT_CHAIN } from "./chainChoice";
-import { chainHeaders, cookieValue, envelope, refusalHeaders, requestChain } from "./envelope";
+import { chainHeaders, cookieValue, envelope, refusalHeaders, requestChain, upstreamNote } from "./envelope";
 
 const req = (url: string, cookie?: string): Request =>
   new Request(url, cookie ? { headers: { cookie } } : undefined);
@@ -69,4 +69,26 @@ test("a refusal is never cached, on any chain", () => {
   // One failed read served from the CDN for ten seconds is a shared, confident
   // lie, and the retry that would fix it never reaches the origin.
   assert.equal(refusalHeaders()["Cache-Control"], "no-store");
+});
+
+test("an absent route is not a press that did not answer", () => {
+  // The bug this guards: the proxies computed `upstream: "absent"` from the
+  // host's own /openapi.json and then answered "the press did not answer"
+  // anyway. Measured on production 2026-10-12 — the press was up, serving 44
+  // routes promptly, and simply did not carry this one yet.
+  const absent = upstreamNote("absent");
+  assert.ok(!absent.includes("did not answer"), "absent must not claim silence");
+  assert.match(absent, /redeploy/, "and must name what fixes it");
+
+  // The other two keep saying what they always said.
+  assert.match(upstreamNote("timeout"), /did not answer in time/);
+  assert.equal(upstreamNote("error"), "the press did not answer");
+  assert.equal(upstreamNote(undefined), "the press did not answer");
+});
+
+test("every upstream value has its own sentence", () => {
+  // A new UpstreamStatus that falls through to the default would silently
+  // reintroduce the lie this file exists to stop.
+  const seen = new Set(["ok", "error", "timeout", "absent"].map((u) => upstreamNote(u as never)));
+  assert.ok(seen.size >= 3, "absent and timeout must each differ from the default");
 });

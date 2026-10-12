@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLiveMeta } from "@/lib/api";
-import { cardHeader, passthroughRefusalHeaders, refusalHeaders, requestChain } from "@/lib/envelope";
+import { cardHeader, passthroughRefusalHeaders, refusalHeaders, requestChain, upstreamNote } from "@/lib/envelope";
 import type { LedgerAudit } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
      predates the route. */
   if (!data) {
     return NextResponse.json(
-      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: "the press did not answer" },
+      { live: false, data: null, fetchedAt: Date.now(), chain, upstream, error: upstreamNote(upstream) },
       { status: 503, headers: refusalHeaders() },
     );
   }
