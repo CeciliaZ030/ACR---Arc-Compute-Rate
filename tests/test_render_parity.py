@@ -163,6 +163,15 @@ EXEMPT: dict[str, str] = {
         "because the engine's framing reads over_par at the market median"
     ),
     "verdict.over_par_usdc": "the bp figure is the comparable one; the dollar gap is quoted in the rule",
+    # `basket.age_s` and `basket.max_age_s` ARE rendered, together, in the
+    # "Measured" row: an age means nothing without the mark it is measured to,
+    # and that mark is an env var on the host no reader of the page can see.
+    "basket.warn_after_s": (
+        "the only thing this threshold does is select the band, and the band IS "
+        "rendered: `basket.status` reads `aging` past it and the State chip goes "
+        "gold. Printing the number too would put two marks on a sheet where a "
+        "reader needs one, and the actionable one is the cliff"
+    ),
     "verdict.saving_bp": "the page shows the saving in money, which is what a reader acts on",
     "verdict.note": (
         "\"a suggestion, not a promise\" — the page says the same thing in its own "

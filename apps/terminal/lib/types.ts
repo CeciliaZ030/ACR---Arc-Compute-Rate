@@ -1171,10 +1171,30 @@ export interface ParCheck {
   benchmarked_against: "market" | "fleet" | string;
   basket: {
     index_id: string;
-    /** `ok` · `ABSENT` · `STALE` · `NO_ROWS`. */
+    /** `ok` · `aging` · `ABSENT` · `STALE` · `NO_ROWS`.
+     *
+     *  THE CASING IS THE CONTRACT. The two lowercase words still price;
+     *  the SCREAMING ones are refusals and send `benchmarked_against` to
+     *  `fleet`. `aging` is the six-day band before `STALE` — old enough to
+     *  say so, not old enough to stop answering, so it must never be
+     *  treated as an absence. */
     status: string;
     /** Unix SECONDS, unlike the envelope's `fetchedAt` in milliseconds. */
     fetched_at: number;
+    /** How old the basket is, in seconds. **`null` when unknowable**, never
+     *  0 — zero would read as "fetched this instant", the freshest possible
+     *  answer for the least evidence.
+     *
+     *  Sent by the press rather than subtracted here, and that is the point:
+     *  the press and `make ci` used to compute this from two different
+     *  clocks, so for six days the gate was red and the page said `ok`. */
+    age_s: number | null;
+    /** The cliff, in seconds: past this the press refuses and reprices
+     *  against the fleet. An env var on the host, so it travels with the age
+     *  because an age means nothing without the mark it is measured to. */
+    max_age_s: number;
+    /** Where `aging` begins, in seconds. Always below `max_age_s`. */
+    warn_after_s: number;
     rows: number;
     requested: number;
   };

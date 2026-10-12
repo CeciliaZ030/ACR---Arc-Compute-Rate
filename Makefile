@@ -708,6 +708,18 @@ anchors-report:
 anchors-check:
 	uv run python scripts/anchors.py --check
 
+# The same clock, read off the HOST instead of the working tree. `anchors-check`
+# above reads the files in this checkout; the press reads the ones baked into its
+# image, so they agree only until somebody re-anchors and nothing couples them.
+# Network, and NOT in CI on purpose: the presses are free-tier and cold-start, and
+# a gate that goes red because a service was asleep gets ignored. Run it after a
+# deploy, beside `make verify-drift`.
+#   make anchors-live                                    # the probe press
+#   make anchors-live HOST=https://acr-api-1fto.onrender.com
+HOST ?= https://acr-probe-free.onrender.com
+anchors-live:
+	uv run python scripts/anchors.py --check-live $(HOST)
+
 # ── the auto-rater ───────────────────────────────────────────────────────────
 # Frozen eval sets on five scenarios per index (three of them held-out seeds),
 # and a per-component quality gate against a blessed baseline. Distinct from the

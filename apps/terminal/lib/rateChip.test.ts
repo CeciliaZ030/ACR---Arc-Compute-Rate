@@ -39,6 +39,28 @@ test("a stale basket says that is why", () => {
   assert.match(rateChip(900, "fleet", "STALE").x, /stale/);
 });
 
+test("an AGING basket is not an absence and keeps the confident verdict", () => {
+  /* The six-day band before the cliff, added to the press 2026-10-12. It is a
+     LABEL, not a refusal: the press still answers from the market basket, so
+     `benchmarked_against` stays `market` and this chip must not soften.
+
+     Pinned because the softening would be silent and wrong in the expensive
+     direction. The caveat on line 37 exists for a comparison measured against
+     OUR OWN prices at 20x to 1250x off market; an aging basket is still real
+     third-party prices, just older, and demoting it to "our prices, not the
+     market" would be a false statement about whose prices answered.
+
+     Where the age DOES belong is the Source panel's State row, which goes
+     amber for this value. One fact, one place. */
+  for (const bp of [900, -900, 0]) {
+    const chip = rateChip(bp, "market", "aging");
+    assert.equal(chip.cls, rateChip(bp, "market", "ok").cls,
+      `aging must read exactly like ok at ${bp}bp`);
+    assert.doesNotMatch(chip.x, /our prices/,
+      "an aging market basket is still the market");
+  }
+});
+
 test("no benchmark at all is still its own state", () => {
   assert.equal(rateChip(null, "market", "ok").x, "no benchmark");
   assert.equal(rateChip(null, "fleet", "STALE").x, "no benchmark", "absent outranks whose prices");

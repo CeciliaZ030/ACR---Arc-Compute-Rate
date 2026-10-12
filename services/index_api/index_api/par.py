@@ -70,6 +70,22 @@ _ANCHOR_DIR = Path(__file__).resolve().parents[3] / "anchors"
 #: generous rather than tight — the point is that the staleness has a name.
 ANCHOR_MAX_AGE_S = float(os.environ.get("ACR_ANCHOR_MAX_AGE_S", str(30 * 86_400)))
 
+#: How much of `ANCHOR_MAX_AGE_S` may elapse before a basket is worth
+#: MENTIONING. Under 1 on purpose: at the cliff itself `market_basket` has
+#: already stopped returning quotes, so a signal that first appears there
+#: reports a fortnight of answers measured against the wrong market instead of
+#: preventing them. 0.8 of thirty days is about six days of warning.
+#:
+#: LIVED HERE SINCE 2026-10-12, moved from `scripts/anchors.py`. It governs a
+#: quantity this module owns, and while it sat in the script the warning it
+#: exists to give reached `make ci` and nothing else — `/par` answered "ok" for
+#: the whole six days, and `--check` reads the anchors COMMITTED IN THE REPO
+#: while the press reads the ones baked into its image. Same number, two
+#: clocks, and only one of them was ever asked. `anchors.py` imports it from
+#: here for the reason its own comment gives about `ANCHOR_MAX_AGE_S`: a second
+#: copy would be free to drift from the one that acts.
+AGE_WARN_FRACTION = 0.8
+
 #: Every seller this deployment operates, by address. `Quote.first_party` is
 #: resolved against it, and `graph/schema.graphql` already states the standard
 #: this exists to meet: "a benchmark that counted one silently would be claiming
@@ -265,10 +281,49 @@ class Basket:
     #: "" when usable, else `ABSENT` · `STALE` · `NO_ROWS` — named the way
     #: `Par.reason` is, so a surface can say which absence it is.
     status: str = "ABSENT"
+    #: How old the basket is, in seconds. **`None` when unknowable**, never
+    #: 0.0: a missing or unparseable `fetched_at` means "we cannot say", and
+    #: zero would read as "fetched this instant" — the freshest possible answer
+    #: for the least evidence. `held_usdc` and `chainMismatch` refuse the same
+    #: way. Carried rather than left to each caller to subtract, because two
+    #: callers subtracting from two clocks is how the CI gate and the product
+    #: came to disagree in the first place.
+    age_s: float | None = None
 
     @property
     def usable(self) -> bool:
         return bool(self.quotes) and not self.status
+
+    @property
+    def aging(self) -> bool:
+        """Old enough to say so, not old enough to refuse.
+
+        DELIBERATELY NOT A `status` VALUE. `usable` above is
+        `bool(quotes) and not status`, and `app.py` reroutes to the fleet on
+        `not usable` — so a word like `AGING` in `status` would flip a healthy
+        basket off the market and price a stranger's bill on our own scale.
+        That is the ±196,546 bp reading this warning exists to PREVENT, and
+        putting the warning in `status` would be the thing that causes it.
+
+        So this is a label and never a refusal: quotes still answer, `usable`
+        stays true, nothing reroutes. Only the cliff refuses.
+        """
+        if self.age_s is None or self.status:
+            return False
+        return self.age_s > AGE_WARN_FRACTION * ANCHOR_MAX_AGE_S
+
+    @property
+    def wire_status(self) -> str:
+        """The one word a reader gets, and the only place `"ok"` is minted.
+
+        `status` is `""` when usable because every other value in it is a named
+        refusal; `""` is not something to show anyone. The casing follows that
+        split — lowercase for the two states that still price (`ok`, `aging`),
+        SCREAMING for the refusals, exactly as `status` already reads.
+        """
+        if self.status:
+            return self.status
+        return "aging" if self.aging else "ok"
 
 
 def market_basket(
@@ -318,11 +373,20 @@ def market_basket(
         except ValueError:
             fetched = 0.0
 
+        # Subtracted ONCE and then carried, rather than left to each caller.
+        # `None` for an unreadable date, which is the whole argument on
+        # `Basket.age_s`.
+        age_s = t - fetched if fetched else None
+
         # STALE IS NOT ABSENT, and neither is a silent price. `--fetch` is
-        # manual by design, so an old basket is the expected failure here.
-        if fetched and t - fetched > ANCHOR_MAX_AGE_S:
+        # manual by design, so an old basket is the expected failure here. The
+        # age is carried THROUGH the refusal: "stale" is the verdict and "by
+        # how much" is the thing that tells an owner whether to re-anchor now
+        # or find out why nobody has in two months.
+        if age_s is not None and age_s > ANCHOR_MAX_AGE_S:
             return Basket(unit=want, index_id=index_id, fetched_at=fetched,
-                          rows=len(rows), requested=requested, status="STALE")
+                          rows=len(rows), requested=requested, status="STALE",
+                          age_s=age_s)
 
         quotes = tuple(
             Quote(
@@ -359,6 +423,7 @@ def market_basket(
             unit=want, index_id=index_id, quotes=quotes, fetched_at=fetched,
             rows=len(rows), requested=requested,
             status="" if quotes else "NO_ROWS",
+            age_s=age_s,
         )
     return Basket(unit=want)
 

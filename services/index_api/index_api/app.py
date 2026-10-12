@@ -1463,6 +1463,8 @@ def price_check(
     from .operator import Obligation, decide
     from .par import assess as par_assess
     from .par import (
+        AGE_WARN_FRACTION,
+        ANCHOR_MAX_AGE_S,
         is_first_party,
         market_basket,
         par_from_quotes,
@@ -1510,10 +1512,24 @@ def price_check(
         # "a benchmark that counted one silently would be claiming security it
         # does not have."
         "benchmarked_against": against,
+        # A DATE IS NOT AN AGE. This shipped `fetched_at` alone — a bare unix
+        # float — so no reader could tell a one-day-old basket from a
+        # twenty-nine-day-old one, and the surface rendered it as a calendar
+        # date in a teal chip either way. Meanwhile `AGE_WARN_FRACTION` had
+        # already decided that past 24 days this is worth saying out loud, and
+        # said it only to `make ci`.
+        #
+        # So the answer now carries the clock AND the two marks on it, because
+        # an age is only readable against the threshold that governs it and
+        # that threshold is an env var a reader cannot see. `age_s` is `None`
+        # when unknowable rather than 0.0 — see `Basket.age_s`.
         "basket": {
             "index_id": basket.index_id,
-            "status": basket.status or "ok",
+            "status": basket.wire_status,
             "fetched_at": basket.fetched_at,
+            "age_s": basket.age_s,
+            "max_age_s": ANCHOR_MAX_AGE_S,
+            "warn_after_s": AGE_WARN_FRACTION * ANCHOR_MAX_AGE_S,
             "rows": basket.rows,
             "requested": basket.requested,
         },

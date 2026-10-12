@@ -92,7 +92,12 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   // The form, the three unit hints, the verdict rows, the basket state and
   // every column of the comparison table. A visitor who cannot read "$/1k
   // tokens" is exactly the visitor this page is for.
-  "app/check/view.tsx": 40,
+  // Raised 40 -> 48 on 2026-10-12, to ACTUAL, for the reason the ops/view.tsx
+  // note above gives: eight markers of slack is a floor holding nothing. The
+  // basket's age and the sentence that says what to do about it are two of
+  // those eight, and they are exactly the sort of copy that gets dropped in a
+  // refactor without any gate noticing.
+  "app/check/view.tsx": 48,
   // two states, two registers each: the footnote and the chip.
   "components/ChainToggle.tsx": 2,
   "components/spend/EscalationActions.tsx": 11, // the key, the buttons, why they are off without one, the note, who signs
