@@ -134,6 +134,31 @@ EXEMPT: dict[str, str] = {
     "escalations[].vendor": "rendered in the block heading",
     "escalations[].escalated": "every row in this queue is escalated by definition",
     "escalations[].category": "not what a person deciding this needs first",
+    # --- the Warns integration, not yet live --------------------------------
+    # Both are empty on all 19 archived decisions and will stay empty until the
+    # first Warns-signed obligation arrives. A field that is blank on every row
+    # teaches a reader to skip the column it is in, which is the opposite of
+    # what putting it on the page is for. Render `warns_decision_id` on the
+    # escalation card the day a row carries one; it is the authorisation a
+    # person settling that queue most wants named.
+    "escalations[].warns_decision_id": (
+        "empty until the Warns integration is live; a column blank on every row "
+        "trains a reader to ignore it. Render it when the first row has one"
+    ),
+    "recent[].warns_decision_id": (
+        "same as the escalation row above: nothing carries one yet"
+    ),
+    # The signature is different in kind, not just in timing. It is cryptographic
+    # evidence for a verifier, not a fact a person reads off a card, and it is
+    # deliberately outside the hashed record. `decisionHash` on chain plus the
+    # id above is what a reader follows; the signature is what a machine checks.
+    "escalations[].warns_signature": (
+        "evidence for a verifier, not a line on a card: it signs the decision hash "
+        "and is checked by machine, never read by a person"
+    ),
+    "recent[].warns_signature": (
+        "evidence for a verifier, not a line on a card (see the escalation row)"
+    ),
     # --- par check (/check) ---
     # The /par payload carries the SAME comparison twice: `par` is the benchmark
     # object and `verdict` is `assess()`'s read of it. The page renders the par
