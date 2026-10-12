@@ -720,6 +720,16 @@ anchors-check:
 rehearse:
 	uv run python scripts/rehearse_demo.py
 
+# The same demo, driven in a real browser. `rehearse` above reads the /api/*
+# envelopes; the demo shows PAGES, and every page here is client-rendered — so a
+# hydration error or a className that no longer matches the CSS leaves the API
+# green and the screen blank. Needs Chrome; SKIPS cleanly without it, and is out
+# of `make ci` for the same reason smoke and anchors-live are.
+#   make rehearse-pages
+#   make rehearse-pages REHEARSE_CHAIN=mainnet   # the control: the empty state
+rehearse-pages:
+	uv run python scripts/rehearse_pages.py
+
 # Has mcp/package.json's version already been published? npm refuses a duplicate
 # and `npx -y acr-mcp` keeps serving the old build, so the repo can look shipped
 # while nothing moved. `prepublishOnly` cannot see this: it builds and tests, and
