@@ -65,7 +65,36 @@ MAINNET_CONTRACTS = {
 
 STRICT = os.environ.get("REHEARSE_STRICT", "1").strip().lower() not in ("0", "false", "off", "")
 
+
+def chain_cookie_name() -> str:
+    """The cookie the terminal honours, read from the file that declares it.
+
+    `lib/chainChoice.ts` exports `CHAIN_COOKIE`, and the pages honour ONLY that
+    cookie — no query parameter, no header. Parsed rather than retyped for the
+    reason `printAge.test.ts` reads its thresholds out of `par.py`: a third copy
+    of this string is a third thing to keep in step, and the failure if it drifts
+    is this gate silently rehearsing the wrong chain. Which is the bug this
+    change exists to fix, so hardcoding it here would be a poor joke.
+    """
+    src = (ROOT / "apps" / "terminal" / "lib" / "chainChoice.ts").read_text(encoding="utf-8")
+    import re
+    m = re.search(r'CHAIN_COOKIE\s*=\s*"([^"]+)"', src)
+    if not m:
+        raise SystemExit(
+            "cannot find CHAIN_COOKIE in lib/chainChoice.ts — the terminal honours "
+            "only that cookie, so this gate cannot choose a chain without it"
+        )
+    return m.group(1)
+
+
+COOKIE = chain_cookie_name()
+
+#: Failures that stop the DEMO, and failures a judge sees on the default
+#: chain. Kept apart because the first version lumped them and announced
+#: "3 steps would not survive the demo" about three mainnet routes the demo
+#: never opens -- the same conflation this gate was already fixed for once.
 fails: list[str] = []
+judge_fails: list[str] = []
 notes: list[str] = []
 
 
@@ -87,14 +116,33 @@ def note(msg: str) -> None:
     notes.append(msg)
 
 
-def get(url: str, timeout: int = 120) -> dict | None:
-    """A GET that distinguishes "said no" from "could not be asked"."""
-    req = urllib.request.Request(url, headers={"User-Agent": "acr-rehearse/1"})
+def get(url: str, timeout: int = 120, chain: str | None = None) -> dict | None:
+    """A GET that distinguishes "said no" from "could not be asked".
+
+    `chain` sets the terminal's chain cookie. Without it every terminal read
+    lands on the DEFAULT chain, which is how this gate came to report the demo
+    as broken while the demo's own network was green.
+    """
+    headers = {"User-Agent": "acr-rehearse/1"}
+    if chain:
+        headers["Cookie"] = f"{COOKIE}={chain}"
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 — our own hosts
             return json.load(r)
     except urllib.error.HTTPError as exc:
-        bad(f"{url} -> HTTP {exc.code}")
+        # THE TERMINAL'S PROXY ANSWERS 5xx WITH A MEANINGFUL ENVELOPE. A 503
+        # carrying {"upstream":"absent",...} is the route telling us exactly
+        # what happened, and the first version of this gate threw it away and
+        # printed "-> HTTP 503" instead -- so the actionable message below, the
+        # one naming the undeployed commits, could never fire. Read the body.
+        try:
+            body = json.loads(exc.read().decode("utf-8"))
+            if isinstance(body, dict) and ("upstream" in body or "live" in body):
+                return body
+        except Exception:  # noqa: BLE001 -- a non-JSON 5xx is a real failure
+            pass
+        bad(f"{url} -> HTTP {exc.code} with no envelope")
     except Exception as exc:  # noqa: BLE001
         bad(f"{url} unreachable ({type(exc).__name__}: {exc})")
     return None
@@ -225,31 +273,88 @@ def rehearse_wallet() -> None:
         ok(f"approvalNonce {nonce} (global and sequential — one approval at a time)")
 
 
-# --- 5. the live terminal ----------------------------------------------------
+# --- 5. the live terminal, on the chain the demo uses -----------------------
 
-def rehearse_terminal() -> None:
-    step("5. The live terminal's own pages, through its own proxies")
-    for path, label in (("/api/operator/businesses", "/spend  (registry)"),
-                        ("/api/operator/traction", "/traction"),
-                        ("/api/par?unit=%24%2F1k%20tokens&billed_usdc=0.02&quantity=10",
-                         "/check  (price a bill)")):
-        d = get(f"{TERMINAL}{path}")
+#: The two undeployed commits behind the default chain's failure. Named in the
+#: message because a gate that says what to DO beats one that says what is
+#: wrong, and here the whole answer is one `vercel --prod`.
+UNDEPLOYED = (
+    "9c7033d (the ladder stops on a healthy host's 404 instead of walking to "
+    "acr-probe-free) and 4a262c5 (the envelope says 'the press did not answer' "
+    "about a press that answered with a 404)"
+)
+
+TERMINAL_ROUTES = (
+    ("/api/operator/businesses", "/spend  (registry)"),
+    ("/api/operator/traction", "/traction"),
+    ("/api/par?unit=%24%2F1k%20tokens&billed_usdc=0.02&quantity=10", "/check  (price a bill)"),
+)
+
+
+def rehearse_terminal(chain: str, *, is_demo: bool) -> None:
+    """The terminal's own pages, on ONE chain.
+
+    THE BUG THIS SIGNATURE FIXES. This used to take no chain, so every read
+    landed on the terminal's DEFAULT chain — mainnet. The demo is testnet only,
+    so the gate reported the demo as broken on its first run while the demo's
+    own network was entirely green. A gate measuring an adjacent thing is worse
+    than no gate before a demo: it either sends you chasing a non-problem or
+    teaches you to ignore it.
+    """
+    which = "THE DEMO" if is_demo else "a visitor landing on the default chain"
+    step(f"5{'a' if is_demo else 'b'}. The live terminal on {chain} \u2014 {which}")
+
+    health = get(f"{TERMINAL}/api/health", chain=chain)
+    if health:
+        d = health.get("data") or {}
+        # `signer` plus `chain_id` names the host: `local` is acr-api-mainnet
+        # (it holds a poster key), `none` is acr-probe-free. This is how the
+        # 18:49 restart that broke the default chain was traced.
+        # THREE presses, three signer values — the testnet one uses Circle
+        # custody and reports `circle`, which a two-entry map called "unknown".
+        # Keyed on (chain_id, signer) because `signer` alone cannot separate a
+        # mainnet press from a testnet one.
+        host = {
+            ("5042", "local"): "acr-api-mainnet (44 routes, holds a poster key)",
+            ("5042", "none"): "acr-probe-free (50 routes, no signer)",
+            ("5042002", "circle"): "acr-api-1fto (50 routes, Circle custody)",
+        }.get((str(d.get("chain_id")), str(d.get("signer"))), "a host this gate does not know")
+        print(f"     answered by: {host} \u00b7 chain {d.get('chain_id')} "
+              f"\u00b7 signer {d.get('signer')!r}")
+
+    for path, label in TERMINAL_ROUTES:
+        d = get(f"{TERMINAL}{path}", chain=chain)
         if d is None:
             continue
         up, live = d.get("upstream"), d.get("live")
         if live and up in (None, "ok"):
             extra = ""
             data = d.get("data") or {}
-            if isinstance(data, dict) and "businesses" in data:
-                rows = data["businesses"]
-                extra = f" · {len(rows)} businesses"
-                if not any(b.get("slug") == "acr-operator" for b in rows):
-                    note("`acr-operator` is NOT in the live registry — the press "
+            rows = data.get("businesses") if isinstance(data, dict) else None
+            # `businesses` IS A LIST OF ROWS on /operator/businesses and a DICT
+            # OF COUNTS on /operator/traction — same key, two shapes, and the
+            # first version of this gate crashed iterating the counts. Checked
+            # by type rather than by route, so adding a route cannot resurrect it.
+            if isinstance(rows, list):
+                extra = f" \u00b7 {len(rows)} businesses"
+                if not any(isinstance(b, dict) and b.get("slug") == "acr-operator"
+                           for b in rows):
+                    note("`acr-operator` is NOT in the live registry \u2014 the press "
                          "image predates it (swap the image)")
+            elif isinstance(rows, dict):
+                extra = f" \u00b7 {rows.get('businesses')} counted, {rows.get('spending')} spending"
             ok(f"{label}: live{extra}")
+        elif is_demo:
+            bad(f"THE DEMO WILL NOT WORK: {label} on {chain} is "
+                f"upstream={up!r} live={live!r}. This is a page the demo opens.")
         else:
-            bad(f"{label}: upstream={up!r} live={live!r} — this is a page the "
-                "demo opens, and it is not answering")
+            # SHORT, and the remedy printed ONCE at the end. Repeating the same
+            # two commit hashes on every line is a wall a reader skips, which is
+            # the same reason the aging sentence on /check only appears when it
+            # is true.
+            msg = f"a judge sees {label} as upstream={up!r} on the default chain"
+            print(f"  ✗ {msg}")
+            judge_fails.append(msg)
 
 
 # --- 6. the claim the demo makes about mainnet ------------------------------
@@ -300,7 +405,11 @@ def main() -> int:
     rehearse_press()
     rehearse_par()
     rehearse_wallet()
-    rehearse_terminal()
+    # THE DEMO'S CHAIN FIRST. Both must be green before the 17th — they are both
+    # public — but when the gate is red it matters enormously which one it is,
+    # so they are separate steps with separate sentences.
+    rehearse_terminal("testnet", is_demo=True)
+    rehearse_terminal("mainnet", is_demo=False)
     rehearse_mainnet_claim()
 
     print("\n" + "-" * 70)
@@ -309,12 +418,23 @@ def main() -> int:
         for n in notes:
             print(f"  · {n}")
     if fails:
-        print(f"\n✗ {len(fails)} step(s) would not survive the demo:")
+        print(f"\n✗ {len(fails)} step(s) WOULD NOT SURVIVE THE DEMO:")
         for f in fails:
             print(f"    {f}")
-        return 1 if STRICT else 0
-    print("✓ every step of the demo answered, with real values")
-    return 0
+    else:
+        print("✓ every step of the DEMO answered, with real values")
+
+    if judge_fails:
+        print(f"\n✗ {len(judge_fails)} thing(s) a JUDGE sees "
+              "that the demo does not touch:")
+        for f in judge_fails:
+            print(f"    {f}")
+        print(f"\n  all of it is one deploy: {UNDEPLOYED}")
+        print("  -> `vercel --prod` from apps/terminal")
+
+    # Both matter before the 17th -- the demo is the 15th and the submission
+    # surface is public either way. They are only REPORTED separately.
+    return 1 if (fails or judge_fails) and STRICT else 0
 
 
 if __name__ == "__main__":
