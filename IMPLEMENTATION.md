@@ -5,8 +5,9 @@ as a working, tested system: a calibrated payment-exhaust simulator, the
 four-pillar estimator, on-chain contracts, a cash-settled instrument, an
 x402-gated index API, and a live Terminal with the "Attack the Index" demo.
 
-> **Live deployment:** the Terminal runs at <https://arccomputerate.in>
-> and the seller API at <https://acr-api-mainnet.onrender.com>. See
+> **Live deployment:** the Terminal runs at <https://arc-compute-rate.vercel.app>
+> and the seller API at <https://acr-probe-free.onrender.com> (all 50 routes; <https://acr-api-mainnet.onrender.com> is the
+> same chain but **404s `/par` and `/operator/*`** until its image is rebuilt). See
 > `docs/DEPLOY.md` for the cloud state and `docs/README.md` for the
 > judge-facing status.
 

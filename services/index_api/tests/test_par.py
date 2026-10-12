@@ -10,9 +10,12 @@ recoverable.
 from __future__ import annotations
 
 import json
+from datetime import datetime
+from pathlib import Path
 
 import pytest
 from index_api.par import (
+    AGE_WARN_FRACTION,
     ANCHOR_MAX_AGE_S,
     FLEET_SELLERS,
     MATERIAL_BP,
@@ -26,6 +29,12 @@ from index_api.par import (
     quotes_from_catalog,
     quotes_from_receipts,
 )
+
+#: The repo root, for the one test that reads a sibling file by path rather
+#: than importing it — see `test_the_warn_fraction_is_imported_by_the_gate`.
+#: Same idiom as `mcp/src/printAge.test.ts`, which pins `ANCHOR_MAX_AGE_S` by
+#: reading `par.py`.
+ROOT = Path(__file__).resolve().parents[3]
 
 RES = "https://acr.example/compute/inference"
 A = "0x" + "aa" * 20
@@ -292,6 +301,79 @@ def test_a_stale_basket_is_a_named_refusal_and_never_a_price(tmp_path):
     # …and the same file, read inside the window, is fine.
     fresh = market_basket(UNIT, anchor_dir=root, now=1_767_225_600.0 + ANCHOR_MAX_AGE_S / 2)
     assert fresh.status == "" and len(fresh.quotes) == 1
+
+
+def test_an_aging_basket_is_said_out_loud_and_still_prices(tmp_path):
+    """The six days between the warning and the cliff, which the product spent
+    answering "ok".
+
+    `AGE_WARN_FRACTION` has always decided that past 0.8 of the window a basket
+    is worth mentioning, and until 2026-10-12 it lived in `scripts/anchors.py`,
+    so the only thing that ever consulted it was `make ci` — against the
+    anchors in the REPO, while the press reads the ones in its image.
+
+    THE SECOND HALF OF THIS TEST IS THE IMPORTANT HALF. `usable` is
+    `bool(quotes) and not status`, and `app.py` reroutes to the fleet on
+    `not usable` — so putting this warning in `status` would take a healthy
+    basket off the market and price a stranger's bill on our own scale, which
+    is the ±196,546 bp reading the warning exists to prevent. The band must
+    label and never refuse.
+    """
+    root = _basket_dir(tmp_path, [_row("a/one", 0.0004), _row("b/two", 0.0006)])
+    at = datetime.fromisoformat("2026-10-06T00:00:00+00:00").timestamp()
+    warn = AGE_WARN_FRACTION * ANCHOR_MAX_AGE_S
+
+    just_inside = market_basket(UNIT, anchor_dir=root, now=at + warn - 3600)
+    assert just_inside.wire_status == "ok"
+    assert just_inside.aging is False
+
+    aging = market_basket(UNIT, anchor_dir=root, now=at + warn + 3600)
+    # THE HALF THAT MUST NOT MOVE, ASSERTED FIRST, so that an implementation
+    # which routes this through `status` fails on the message that explains the
+    # damage rather than on a casing mismatch three lines down. Checked when
+    # the ordering was reversed: it failed on `wire_status` instead, which is a
+    # true report of a wrong thing.
+    assert aging.status == "", "the band is a label, never a refusal"
+    assert aging.usable is True, "an aging basket must NOT reroute to the fleet"
+    assert len(aging.quotes) == 2, "it still prices, with the same rows"
+    # …and only then, that it actually says so.
+    assert aging.wire_status == "aging", "past the warn mark it must say so"
+    assert aging.aging is True
+
+    # And the cliff still refuses, so the new band did not soften it.
+    past = market_basket(UNIT, anchor_dir=root, now=at + ANCHOR_MAX_AGE_S + 3600)
+    assert past.wire_status == "STALE" and past.usable is False
+
+
+def test_an_age_it_cannot_know_is_none_and_never_zero(tmp_path):
+    """Zero would read as "fetched this instant" — the freshest possible answer
+    for the least evidence. The same refusal `held_usdc` makes on a failed
+    balance read, and `chainMismatch` on an unparseable chain id."""
+    root = _basket_dir(tmp_path, [_row("a/one", 0.0004)], fetched="not a date")
+    b = market_basket(UNIT, anchor_dir=root)
+    assert b.age_s is None
+    assert b.aging is False, "unknowable is not aging"
+    assert b.wire_status == "ok", "and it is not a refusal either"
+    # A unit with no basket at all reports the same way.
+    assert market_basket("$/furlong", anchor_dir=root).age_s is None
+
+
+def test_the_warn_fraction_is_imported_by_the_gate_not_copied(tmp_path):
+    """`scripts/anchors.py` declared its own `AGE_WARN_FRACTION` until
+    2026-10-12. Two copies of the number that decides when to warn is how the
+    CI gate and the live surface came to disagree for six days at a stretch,
+    and `anchors.py` makes exactly this argument about `ANCHOR_MAX_AGE_S` four
+    lines above the import."""
+    src = (ROOT / "scripts" / "anchors.py").read_text(encoding="utf-8")
+    assert "AGE_WARN_FRACTION" in src, "the gate must still consult it"
+    assert "AGE_WARN_FRACTION = " not in src, (
+        "scripts/anchors.py declares its own AGE_WARN_FRACTION again — import "
+        "it from index_api.par, where the cliff it divides lives"
+    )
+    assert 0.0 < AGE_WARN_FRACTION < 1.0, (
+        "the warn mark must fall BEFORE the cliff; at or past it the basket has "
+        "already stopped returning quotes and the warning is an obituary"
+    )
 
 
 def test_a_unit_with_no_basket_says_absent_rather_than_empty(tmp_path):

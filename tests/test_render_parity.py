@@ -64,7 +64,41 @@ VIEWS: dict[str, tuple[str, ...]] = {
     # working basket, which is the same trap `market_context` set above: a gate
     # that only sees the good payload audits the good payload.
     "par check (unbenchmarked)": ("app/check/view.tsx",),
+    # /tca, which no payload covered until 2026-10-10. `seen` and its `note`
+    # were added to the press to stop an unknown payer reading as a clean bill,
+    # and five surfaces went on rendering the zero because nothing here walked
+    # this payload. The unseen shape is listed first because it is the one that
+    # was wrong.
+    "tca (a payer the tape has never seen)": (
+        "app/tape/view.tsx",
+        "components/TapeTeaser.tsx",
+        "components/loop/LoopFlow.tsx",
+        "lib/tape.ts",
+    ),
+    "tca (a payer with fills)": (
+        "app/tape/view.tsx",
+        "components/TapeTeaser.tsx",
+        "components/loop/LoopFlow.tsx",
+        "lib/tape.ts",
+    ),
 }
+
+def _tca_card(*, seen: bool) -> dict:
+    """A TCA card built by the press's own `_card`, in both of its states.
+
+    `seen=False` is the one that matters: the subgraph answered, so
+    `available` is true and every figure is zero, which is what an unknown
+    payer gets. Five terminal surfaces rendered that as an audited clean bill
+    until 2026-10-10, and no gate could see it because /tca was not in VIEWS.
+    """
+    from index_api.tca import _card
+
+    if seen:
+        rows = [{"spent": "2500000", "bmSpent": "2500000",
+                 "wSlipTenthBp": "32500000", "overpay": "0", "n": "10", "nAll": "12"}]
+        return _card({"payerDays": rows, "settlements": []}, 7)
+    return _card({"payerDays": [], "settlements": []}, 7)
+
 
 #: field path → why it is deliberately not rendered. Every entry is a claim
 #: somebody can argue with, which is the point of writing it down.
@@ -100,6 +134,31 @@ EXEMPT: dict[str, str] = {
     "escalations[].vendor": "rendered in the block heading",
     "escalations[].escalated": "every row in this queue is escalated by definition",
     "escalations[].category": "not what a person deciding this needs first",
+    # --- the Warns integration, not yet live --------------------------------
+    # Both are empty on all 19 archived decisions and will stay empty until the
+    # first Warns-signed obligation arrives. A field that is blank on every row
+    # teaches a reader to skip the column it is in, which is the opposite of
+    # what putting it on the page is for. Render `warns_decision_id` on the
+    # escalation card the day a row carries one; it is the authorisation a
+    # person settling that queue most wants named.
+    "escalations[].warns_decision_id": (
+        "empty until the Warns integration is live; a column blank on every row "
+        "trains a reader to ignore it. Render it when the first row has one"
+    ),
+    "recent[].warns_decision_id": (
+        "same as the escalation row above: nothing carries one yet"
+    ),
+    # The signature is different in kind, not just in timing. It is cryptographic
+    # evidence for a verifier, not a fact a person reads off a card, and it is
+    # deliberately outside the hashed record. `decisionHash` on chain plus the
+    # id above is what a reader follows; the signature is what a machine checks.
+    "escalations[].warns_signature": (
+        "evidence for a verifier, not a line on a card: it signs the decision hash "
+        "and is checked by machine, never read by a person"
+    ),
+    "recent[].warns_signature": (
+        "evidence for a verifier, not a line on a card (see the escalation row)"
+    ),
     # --- par check (/check) ---
     # The /par payload carries the SAME comparison twice: `par` is the benchmark
     # object and `verdict` is `assess()`'s read of it. The page renders the par
@@ -129,6 +188,15 @@ EXEMPT: dict[str, str] = {
         "because the engine's framing reads over_par at the market median"
     ),
     "verdict.over_par_usdc": "the bp figure is the comparable one; the dollar gap is quoted in the rule",
+    # `basket.age_s` and `basket.max_age_s` ARE rendered, together, in the
+    # "Measured" row: an age means nothing without the mark it is measured to,
+    # and that mark is an env var on the host no reader of the page can see.
+    "basket.warn_after_s": (
+        "the only thing this threshold does is select the band, and the band IS "
+        "rendered: `basket.status` reads `aging` past it and the State chip goes "
+        "gold. Printing the number too would put two marks on a sheet where a "
+        "reader needs one, and the actionable one is the cliff"
+    ),
     "verdict.saving_bp": "the page shows the saving in money, which is what a reader acts on",
     "verdict.note": (
         "\"a suggestion, not a promise\" — the page says the same thing in its own "
@@ -446,10 +514,14 @@ def _payloads(tmp_path, monkeypatch) -> dict[str, dict]:
 
     statement = build_statement(
         "parity", days=90, policy_for=lambda b: _Pol(),
-        tca_fn=lambda payer, days=7: {
-            "available": True, "purchases": 12, "benchmarked": 10,
-            "spent_usdc": 2.5, "vw_slippage_bp": 130.0, "overpaid_usdc": 999.0,
-        },
+        # THROUGH `_card`, NOT A LITERAL — the same lesson this file states in
+        # capitals about `ObligationDecision` above, and the market card was
+        # still written the other way. The hand-written dict here omitted
+        # `seen`, so when the press gained that field in 2026-10 the gate
+        # reported clean while /spend rendered `Purchases 0` for a treasury the
+        # tape has never heard of. A fixture that cannot emit a leaf cannot
+        # audit it.
+        tca_fn=lambda payer, days=7: _tca_card(seen=True),
     )
     # The same statement with the market context refused, which is the shape
     # production serves whenever the subgraph is slow or silent. `_market_card`
@@ -512,6 +584,8 @@ def _payloads(tmp_path, monkeypatch) -> dict[str, dict]:
         "audit": audited,
         "par check": par_ok,
         "par check (unbenchmarked)": par_none,
+        "tca (a payer the tape has never seen)": _tca_card(seen=False),
+        "tca (a payer with fills)": _tca_card(seen=True),
     }
 
 

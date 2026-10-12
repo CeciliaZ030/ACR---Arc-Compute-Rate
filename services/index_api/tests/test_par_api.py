@@ -13,11 +13,13 @@ figure is a real number about a synthetic scale and must never reach a caller.
 from __future__ import annotations
 
 import json
+import time
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from index_api.app import app
-from index_api.par import FLEET_SELLERS
+from index_api.par import AGE_WARN_FRACTION, ANCHOR_MAX_AGE_S, FLEET_SELLERS
 
 client = TestClient(app)
 
@@ -80,6 +82,85 @@ def test_the_basket_declares_its_date_and_what_it_is_missing():
     b = j["basket"]
     assert b["fetched_at"] > 0
     assert b["requested"] >= b["rows"] > 0
+
+
+def test_the_basket_states_its_own_age_and_the_marks_it_is_measured_against():
+    """A DATE IS NOT AN AGE. This route shipped `fetched_at` alone, a bare unix
+    float, so no caller could tell a one-day-old basket from a twenty-nine-day
+    one — and `/check` rendered it as a calendar date in a teal chip either way.
+
+    The threshold that makes the number mean anything is an env var
+    (`ACR_ANCHOR_MAX_AGE_S`) that no reader of this response can see, so it
+    travels WITH the age. Both marks, because the interesting state is the
+    six-day band between them, which is the one nothing used to report.
+    """
+    _, j = _get(unit=UNIT, billed_usdc=0.02, quantity=10)
+    b = j["basket"]
+
+    assert b["age_s"] is not None, "the press must say how old its own basket is"
+    assert b["age_s"] >= 0
+    assert b["max_age_s"] == ANCHOR_MAX_AGE_S
+    assert b["warn_after_s"] == AGE_WARN_FRACTION * ANCHOR_MAX_AGE_S
+    # The marks must be in the order that makes the warning a warning.
+    assert b["warn_after_s"] < b["max_age_s"], (
+        "the warn mark is at or past the cliff, where the basket has already "
+        "stopped returning quotes — that is an obituary, not a warning"
+    )
+    # The age agrees with the date beside it, rather than being a second
+    # clock: two subtractions from two clocks is the bug this closes.
+    assert abs((time.time() - b["fetched_at"]) - b["age_s"]) < 120
+
+    # And the word matches the band the numbers put it in.
+    expected = "ok" if b["age_s"] <= b["warn_after_s"] else "aging"
+    assert b["status"] == expected, (
+        f"basket is {b['age_s'] / 86_400:.1f}d old against a {b['warn_after_s'] / 86_400:.0f}d "
+        f"warn mark but reports {b['status']!r}"
+    )
+
+
+def test_an_aging_basket_says_so_on_the_wire_and_still_answers_from_the_market(
+    tmp_path, monkeypatch
+):
+    """The route-level half of the band, and the one that matters to a reader:
+    a basket in the warn window must still be benchmarked against the MARKET.
+
+    `app.py` reroutes to the fleet on `not basket.usable`, so an implementation
+    that expressed this warning as a refusal would answer
+    `benchmarked_against: "fleet"` here — repricing a stranger's bill on our own
+    scale, which is the ±196,546 bp reading the warning exists to prevent.
+    """
+    from index_api import par as _par
+
+    d = tmp_path / "ACR-INF"
+    d.mkdir(parents=True)
+    fetched = datetime.now(UTC) - timedelta(
+        seconds=AGE_WARN_FRACTION * ANCHOR_MAX_AGE_S + 86_400
+    )
+    (d / "2026-10-06.json").write_text(json.dumps({
+        "index_id": "ACR-INF", "unit": UNIT,
+        "fetched_at": fetched.isoformat(),
+        "rows": [
+            {"id": "a/one", "label": "a/one", "price_usd_per_unit": 0.0004,
+             "source": {"kind": "http", "url": "https://example.test/models"}},
+            {"id": "b/two", "label": "b/two", "price_usd_per_unit": 0.0006,
+             "source": {"kind": "http", "url": "https://example.test/models"}},
+        ],
+        "missing": [],
+    }))
+    monkeypatch.setattr(_par, "_ANCHOR_DIR", tmp_path)
+
+    status, j = _get(unit=UNIT, billed_usdc=0.02, quantity=10)
+    assert status == 200
+    # ASSERTED FIRST, deliberately. Checked with the band wrongly routed
+    # through `status`: with the word compared first this failed on
+    # `'AGING' == 'aging'`, which is a casing complaint about a repricing
+    # disaster. The reader of a failing gate should be told what broke.
+    assert j["benchmarked_against"] == "market", (
+        "an aging basket was rerouted to the fleet — the band must label, "
+        "never refuse"
+    )
+    assert j["par"]["sellers"] >= 2
+    assert j["basket"]["status"] == "aging"
 
 
 # --- what it would do -------------------------------------------------------

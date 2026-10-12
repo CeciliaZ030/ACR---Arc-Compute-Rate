@@ -120,6 +120,21 @@ POLICY_ABI = [
         "inputs": [],
         "outputs": [{"name": "", "type": "address"}],
     },
+    # `IERC20 public immutable usdc` (PolicyWallet.sol:79) generates this getter,
+    # and `balance_usdc()` has always been written to read the token address from
+    # it rather than from configuration — "the wallet names the token it can
+    # actually move, so this figure cannot drift from what `spend` transfers".
+    # It was simply never declared here, so every live call raised
+    # `The function 'usdc' was not found in this contract's abi` and the cash
+    # rung reported "not measured" against a wallet holding 20 USDC. Measured on
+    # Arc testnet 2026-10-12: the getter answers 0x3600…0000.
+    {
+        "name": "usdc",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "address"}],
+    },
     {
         "name": "paused",
         "type": "function",

@@ -44,6 +44,8 @@ from .agentgate import (
     VerifiedAgent,
     get_gate,
     optional_agent,
+    require_business_read,
+    scope_enforced,
 )
 from .armor import SCREEN_CAP, SCREEN_CAP_REPLY, get_screen, screen_is_live
 from .fleet import fleet_summary, listing_for
@@ -1269,11 +1271,17 @@ def agent_whoami(
     echoing a key invites clients to depend on its shape; `human_note` is what a
     caller actually needs when a claim did not reach the human tier.
 
-    `scope_enforced` is reported as FALSE because it is. `scopeHash` is a signed
-    field that `AgentGate.verify` checks against nothing — enforcing it needs a
-    per-route scope map, which is a design decision rather than a wiring one. Said
-    out loud here so it stays visible instead of becoming a field everyone assumes
-    is enforced because it is in the signature.
+    `scope_enforced` REPORTS THE FLAG, and used to be a hardcoded `False` with a
+    paragraph here explaining that `scopeHash` was a signed field checked against
+    nothing. That was honest for exactly as long as the answer was always false.
+    It is now `ACR_OPERATOR_READ_SCOPE`: when set, `require_business_read` checks
+    a card's `scopeHash` against `read:business:<slug>` on the three per-business
+    operator routes, and refuses four ways.
+
+    STILL ONLY THOSE THREE ROUTES. There is no per-route scope map, so a caller
+    reading `scope_enforced: true` learns that SOME scope is enforced somewhere,
+    not that every route checks one. `scopeHash` is one-way, so nothing here can
+    enumerate what a card grants — only test a candidate for equality.
     """
     ratelimit.check(request, "agent")
     if agent is None:
@@ -1293,7 +1301,7 @@ def agent_whoami(
         "expires_at": agent.card.expires_at,
         "ttl_s": agent.card.ttl_s,
         "scope_hash": agent.card.scope_hash,
-        "scope_enforced": False,
+        "scope_enforced": scope_enforced(),
         # WHAT the limit is keyed on, without saying what the key IS. The ident is
         # still withheld — echoing it invites clients to depend on its shape — but
         # whether your budget is shared with the rest of your fleet or is yours
@@ -1417,7 +1425,76 @@ _PRICEABLE_UNITS = tuple(spec_for(i).unit for i in ALL_INDEX_IDS)
 _NO_VENDOR = "0x" + "11" * 20
 
 
-@app.get("/par")
+class ParBasketOut(BaseModel):
+    """The comparison set `/par` answered from, and how old it is.
+
+    READ `status` BEFORE THE VERDICT. `ok` and `aging` both price against real
+    third-party list prices; the SCREAMING values mean the basket was unusable
+    and the comparison fell back to sellers THIS DEPLOYMENT OPERATES, at a scale
+    `anchors/GAP.md` records as 20x to 1250x off market. `benchmarked_against`
+    names which happened, and a verdict read without it is not a verdict.
+    """
+
+    index_id: str
+    #: `ok` · `aging` · `STALE` · `ABSENT` · `NO_ROWS`. The two lowercase words
+    #: still price; the rest are refusals. `aging` is the band before the cliff:
+    #: old enough to re-anchor, still measuring against the market.
+    status: str
+    #: Unix SECONDS the basket was fetched.
+    fetched_at: float
+    #: How old it is, in seconds. **`null` when unknowable**, never 0 — a zero
+    #: would read as "fetched this instant", the freshest possible answer for
+    #: the least evidence.
+    age_s: float | None
+    #: Past this the press refuses the basket and reprices against the fleet.
+    max_age_s: float
+    #: Where `aging` begins. Always below `max_age_s`.
+    warn_after_s: float
+    #: Prices the basket HAS and prices it ASKED FOR. A basket that shrinks
+    #: silently re-medians a different population, so both travel.
+    rows: int
+    requested: int
+
+
+class ParCheckOut(BaseModel):
+    """What `GET /par` answers.
+
+    DOCUMENTATION, NOT A FILTER — attached through `responses=` rather than
+    `response_model=` on purpose. A `response_model` makes FastAPI serialize
+    through the model, so any field this class failed to declare would be
+    silently dropped from a live response: a doc improvement that quietly
+    breaks the terminal and every integrator. This way the route keeps
+    returning exactly what it returns, and the schema is a description that
+    `test_par_schema.py` holds to the truth in both directions.
+
+    It is the only route here with a documented response, because it is the
+    only one a stranger can exercise with no key, no card and no payment — and
+    the one third parties were given no way to learn the shape of.
+    """
+
+    unit: str
+    billed_usdc: float
+    quantity: float
+    vendor: str | None
+    vendor_supplied: bool
+    #: `market` or `fleet` — WHOSE prices answered.
+    benchmarked_against: str
+    basket: ParBasketOut
+    #: How far over the going rate, in basis points. THIS is the number to
+    #: show; `verdict.verdict` answers a different question and disagrees on
+    #: purpose, reading `over_par` whenever material money sits at the cheapest
+    #: row even for a bill at exactly the market median.
+    over_rate_bp: float | None
+    par: dict
+    verdict: dict
+    #: What the spend operator WOULD do with this bill, without doing it.
+    would: dict
+
+
+@app.get(
+    "/par",
+    responses={200: {"model": ParCheckOut, "description": "The bill, priced, with its basis."}},
+)
 def price_check(
     request: Request,
     unit: str,
@@ -1433,9 +1510,13 @@ def price_check(
     benchmark nobody checks — the same sentence `/tca/{payer}` is ungated for,
     and this is the pre-trade half of that post-trade answer.
 
-    Ungated for one bill. `POST /par/batch` is where a ledger goes, and that one
-    is paid: a person checking an invoice should not meet a paywall, and an
-    agent pricing a hundred should.
+    Ungated, and there is no batch sibling. This docstring used to promise a
+    paid `POST /par/batch` as "where a ledger goes"; nothing ever built it, and
+    a route advertised in prose and absent from the router is a worse answer
+    than no route. The ledger went to the CALLER instead — `mcp/src/spendLog.ts`
+    records each priced bill on the developer's own machine and `spend_report`
+    totals them, which needs no paywall decision and keeps a business's vendor
+    list out of this service entirely.
 
     WHICH MARKET depends on the vendor, and the rule is `operator.py`'s, not a
     second one invented here: a seller this deployment operates is judged
@@ -1451,6 +1532,8 @@ def price_check(
     from .operator import Obligation, decide
     from .par import assess as par_assess
     from .par import (
+        AGE_WARN_FRACTION,
+        ANCHOR_MAX_AGE_S,
         is_first_party,
         market_basket,
         par_from_quotes,
@@ -1498,10 +1581,24 @@ def price_check(
         # "a benchmark that counted one silently would be claiming security it
         # does not have."
         "benchmarked_against": against,
+        # A DATE IS NOT AN AGE. This shipped `fetched_at` alone — a bare unix
+        # float — so no reader could tell a one-day-old basket from a
+        # twenty-nine-day-old one, and the surface rendered it as a calendar
+        # date in a teal chip either way. Meanwhile `AGE_WARN_FRACTION` had
+        # already decided that past 24 days this is worth saying out loud, and
+        # said it only to `make ci`.
+        #
+        # So the answer now carries the clock AND the two marks on it, because
+        # an age is only readable against the threshold that governs it and
+        # that threshold is an env var a reader cannot see. `age_s` is `None`
+        # when unknowable rather than 0.0 — see `Basket.age_s`.
         "basket": {
             "index_id": basket.index_id,
-            "status": basket.status or "ok",
+            "status": basket.wire_status,
             "fetched_at": basket.fetched_at,
+            "age_s": basket.age_s,
+            "max_age_s": ANCHOR_MAX_AGE_S,
+            "warn_after_s": AGE_WARN_FRACTION * ANCHOR_MAX_AGE_S,
             "rows": basket.rows,
             "requested": basket.requested,
         },
@@ -1622,6 +1719,12 @@ def operator_ledger(
     b = resolve(business)
     if b is None:
         raise HTTPException(status_code=404, detail=f"no business registered as {business!r}")
+    # AFTER the 404, deliberately. A gate that fired first would answer 401 for a
+    # business that does not exist, which hides nothing — `/operator/businesses`
+    # lists every slug publicly — and would break `verify_operator.py`, whose
+    # unknown-business check accepts 404/422/503 and not 401. Off by default; see
+    # `require_business_read`.
+    require_business_read(agent, b)
     since = time.time() - max(1, min(365, int(days))) * 86_400
     rows = read_decisions(business=b.slug, since=since)
     return to_beancount(rows, b.slug)
@@ -1720,6 +1823,12 @@ def operator_audit(
     b = resolve(business)
     if b is None:
         raise HTTPException(status_code=404, detail=f"no business registered as {business!r}")
+    # AFTER the 404, deliberately. A gate that fired first would answer 401 for a
+    # business that does not exist, which hides nothing — `/operator/businesses`
+    # lists every slug publicly — and would break `verify_operator.py`, whose
+    # unknown-business check accepts 404/422/503 and not 401. Off by default; see
+    # `require_business_read`.
+    require_business_read(agent, b)
     window = max(1, min(365, int(days)))
     since = time.time() - window * 86_400
     out = audit(
@@ -1760,7 +1869,25 @@ def operator_statement(
     `market_context`, in basis points — see `statement.py` for why that
     separation is load-bearing.
     """
+    from .businesses import resolve
+
     _meter_agent(request, agent)
+    # Resolved here as well as inside `build_statement`, so the 404 for an unknown
+    # business comes before the gate and the gate has a `Business` to key on. Two
+    # lookups of a two-row registry; the alternative is a gate that cannot name
+    # which business it is protecting.
+    b = resolve(business)
+    if b is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"no business registered as {business!r}",
+        )
+    # AFTER the 404, deliberately. A gate that fired first would answer 401 for a
+    # business that does not exist, which hides nothing — `/operator/businesses`
+    # lists every slug publicly — and would break `verify_operator.py`, whose
+    # unknown-business check accepts 404/422/503 and not 401. Off by default; see
+    # `require_business_read`.
+    require_business_read(agent, b)
     st = build_statement(
         business, days=days, limit=limit, tca_fn=payer_tca, policy_for=_policy_for
     )

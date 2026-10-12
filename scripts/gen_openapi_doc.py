@@ -27,7 +27,53 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "acr-openapi.md"
-API = "https://acr-api-mainnet.onrender.com"
+
+#: Where a reader should actually send a request, and what each host serves.
+#:
+#: THIS WAS ONE HARDCODED HOST AND IT WAS THE WRONG ONE. `API` read
+#: `https://acr-api-mainnet.onrender.com` while the route list below was
+#: rendered from the LOCAL checkout — so this document named a host, listed
+#: fifty routes, and that host answered **404** for six of them (`/par` and all
+#: five `/operator/*`). Measured 2026-10-12 with `make verify-drift`: 44 served
+#: of 50 built. `--check` compares this file to the repo, so the gap was
+#: invisible to the gate by construction; it took asking the hosts.
+#:
+#: TESTNET IS LISTED FIRST, deliberately. It serves the whole surface, it has a
+#: faucet, and nobody's real money is involved in a stranger's first call. The
+#: mainnet pair is below it, with the incomplete one named as incomplete rather
+#: than as the canonical address.
+#:
+#: `tests/test_doc_hosts.py` asserts that no reader-facing document names a host
+#: alongside a route that host does not serve.
+HOSTS = [
+    (
+        "https://acr-api-1fto.onrender.com",
+        "Arc testnet (5042002)",
+        "**start here** — all 50 routes, and a faucet, so nothing costs real money",
+    ),
+    (
+        "https://acr-probe-free.onrender.com",
+        "Arc mainnet (5042)",
+        "all 50 routes, reading real mainnet state. Holds no signing key",
+    ),
+    (
+        "https://acr-api-mainnet.onrender.com",
+        "Arc mainnet (5042)",
+        "44 of 50: `/par` and `/operator/*` answer 404 until its image is rebuilt",
+    ),
+]
+
+#: The host every runnable example in this document points at.
+API = HOSTS[0][0]
+
+#: One call a reader can paste, because there was not one anywhere in the repo.
+#: `/par` takes three REQUIRED query params and 422s without them, and its unit
+#: needs percent-encoding (`$/1k tokens`), so "GET /par" on its own is not
+#: something anybody can run. The only complete URL in the tree was an internal
+#: probe path in `apps/terminal/lib/endpoints.ts`.
+PAR_EXAMPLE = (
+    "curl -s '{api}/par?unit=%24%2F1k%20tokens&billed_usdc=0.02&quantity=10'"
+)
 
 #: Routes the reference deliberately omits, each with the reason. Mirrors the
 #: exclusion dict in tests/test_endpoint_register_parity.py: an operator surface
@@ -68,11 +114,43 @@ def render() -> str:
         f"# {spec['info']['title']}",
         f"## OpenAPI {spec['openapi']} · endpoint reference",
         "",
+        "## Where to send it",
+        "",
+        "| host | chain | serves |",
+        "|---|---|---|",
+        *[f"| `{h}` | {chain} | {what} |" for h, chain, what in HOSTS],
+        "",
         f"Live spec: `{API}/openapi.json`",
         f"Catalog: `{API}/marketplace/catalog`",
         "",
+        "### One call, runnable as written",
+        "",
+        "`/par` prices a real invoice against published third-party list prices.",
+        "It needs no key, no card and no payment:",
+        "",
+        "```bash",
+        PAR_EXAMPLE.format(api=API),
+        "```",
+        "",
+        "All three query params are required (it answers 422 without them), and the",
+        "unit is one of `$/1k tokens`, `$/GPU-sec`, `$/MB`, percent-encoded.",
+        "",
+        "Read `basket.status` before the verdict: **`ok`** and **`aging`** both price",
+        "against the market, the SCREAMING values (`STALE`, `ABSENT`, `NO_ROWS`) mean",
+        "it fell back to our own sellers, which `benchmarked_against` names. The basket",
+        "carries `age_s` beside `max_age_s`, so its age is readable without guessing",
+        "the window.",
+        "",
         f"Index endpoints: **${price} USDC per request**, x402 `exact` scheme,",
-        "Circle Gateway (GatewayWalletBatched), network `eip155:5042` (Arc mainnet).",
+        # THE NETWORK FOLLOWS THE HOST. This read "network `eip155:5042` (Arc
+        # mainnet)" flat, which was true of the one host the doc used to name
+        # and is false of the testnet host it now starts a reader on — the
+        # x402 guard refuses a testnet facilitator on 5042 and vice versa. A
+        # payment built against the wrong chain id fails in the EIP-712 domain,
+        # which is a confusing place to learn it.
+        "Circle Gateway (GatewayWalletBatched), on the chain the host you called is",
+        "on: `eip155:5042` for Arc mainnet, `eip155:5042002` for testnet. `GET",
+        "/x402/info` on that host states its own, and is the field to trust.",
         "Fleet sellers (`/compute/{label}`) price per unit; the catalog carries each one's terms.",
         "",
         "Agent-to-agent calls may present an `AGENT-CARD` (see `GET /agent/challenge`);",

@@ -2,6 +2,9 @@
 
 import { Ed } from "@/components/Ed";
 import { UNITS, isUnit, INDEX_FOR_UNIT, type Unit } from "@/lib/indices";
+import { WhyEmpty } from "@/components/WhyEmpty";
+import { ageWords } from "@/lib/format";
+import { rateChip } from "@/lib/rateChip";
 import { useParCheck } from "@/lib/useLive";
 import type { ParCheck, ParQuote } from "@/lib/types";
 import { useEffect, useState } from "react";
@@ -61,14 +64,6 @@ function fmtBp(n: number | null | undefined): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(0)} bp`;
 }
 
-/** The verdict chip. Three states, keyed on the RATE rather than on
- *  `verdict.verdict`, which answers a different question. */
-function rateChip(bpOver: number | null): { cls: string; x: string; p: string } {
-  if (bpOver == null) return { cls: "chip muted", x: "no benchmark", p: "nothing to compare" };
-  if (bpOver > 25) return { cls: "chip chip-breach", x: "over the rate", p: "more than others charge" };
-  if (bpOver < -25) return { cls: "chip chip-teal", x: "under the rate", p: "less than others charge" };
-  return { cls: "chip chip-gold", x: "at the rate", p: "about what others charge" };
-}
 
 function Form({
   unit,
@@ -208,9 +203,23 @@ function Form({
  *  different, and that field is this one. */
 function Source({ c }: { c: ParCheck }) {
   const ok = c.basket.status === "ok";
+  /* AGING IS NOT A REFUSAL. The press says this for the six days between the
+     warn mark and the cliff: the basket still prices, from the same real
+     third-party rows, so `benchmarked_against` stays `market` and the verdict
+     chip above is right to stay confident. What it is not is fresh, and
+     before 2026-10-12 nothing on this page could say so. */
+  const aging = c.basket.status === "aging";
   const fleet = c.benchmarked_against === "fleet";
   const asOf = c.basket.fetched_at
     ? new Date(c.basket.fetched_at * 1000).toISOString().slice(0, 10)
+    : null;
+  /* THE PRESS'S OWN SUBTRACTION, not ours. Two clocks computing one age is
+     precisely how `make ci` came to be red while this page read `ok`, and it
+     also means the age needs no `useNow()` and cannot differ between the
+     server render and the client. */
+  const age = c.basket.age_s == null ? null : ageWords(c.basket.age_s);
+  const limitDays = c.basket.max_age_s
+    ? Math.round(c.basket.max_age_s / 86_400)
     : null;
   return (
     <div className="panel panel-pad">
@@ -231,6 +240,17 @@ function Source({ c }: { c: ParCheck }) {
           <Ed
             x="These are prices from sellers this deployment operates, not independent ones. Disclosed rather than hidden, and a weaker comparison than the market basket."
             p="These prices are our own, not other companies'. That is a weaker check."
+          />
+        </p>
+      ) : null}
+      {/* Only when it is true, like the fleet sentence above it. The age is
+          always on the sheet below; this says what to DO about it, and a
+          caveat printed on every answer trains a reader to skip it. */}
+      {aging && !fleet ? (
+        <p className="standfirst">
+          <Ed
+            x="These prices still answer, and they are old enough to re-read. Past the limit below, a stranger's bill gets priced against our own sellers instead of the market."
+            p="These prices are getting old. They still work, and we re-read them before they stop."
           />
         </p>
       ) : null}
@@ -257,14 +277,33 @@ function Source({ c }: { c: ParCheck }) {
               <td>
                 <Ed x="Measured" p="Read on" />
               </td>
-              <td className="mono">{asOf ?? "…"}</td>
+              {/* A DATE IS NOT AN AGE. This cell was the bare date, so a
+                  reader could not tell a one-day-old basket from a
+                  twenty-nine-day-old one, and the State chip below read teal
+                  for both. The limit travels beside the age because an age
+                  means nothing without the mark it is measured to, and that
+                  mark is an env var on the host no reader can see. */}
+              <td className="mono">
+                {asOf ?? "…"}
+                {age ? ` · ${age}` : ""}
+                {limitDays ? ` · ${limitDays} day limit` : ""}
+              </td>
             </tr>
             <tr>
               <td>
                 <Ed x="State" p="Is it usable?" />
               </td>
+              {/* Three states, not two. `aging` still prices, so painting it
+                  with the breach colour would say the benchmark had failed
+                  when it had not; teal would say nothing had changed. Gold is
+                  the tone this page already uses for a weaker but working
+                  comparison, two sections up. */}
               <td className="mono">
-                <span className={ok ? "chip chip-teal" : "chip chip-breach"}>
+                <span
+                  className={
+                    aging ? "chip chip-gold" : ok ? "chip chip-teal" : "chip chip-breach"
+                  }
+                >
                   {c.basket.status}
                 </span>
               </td>
@@ -416,7 +455,7 @@ function NoBenchmark({ reason, sellers }: { reason: string; sellers: number }) {
 }
 
 function Verdict({ c, requestPath }: { c: ParCheck; requestPath: string }) {
-  const chip = rateChip(c.over_rate_bp);
+  const chip = rateChip(c.over_rate_bp, c.benchmarked_against, c.basket?.status);
   const unitPrice = c.quantity > 0 ? c.billed_usdc / c.quantity : null;
   // `available` is the boolean and `reason` is the explanation; the page needs
   // both to decide between a verdict and a stated absence, which is why
@@ -762,13 +801,22 @@ export function CheckView() {
                   x="That bill could not be read, so nothing was priced. Check the amount and the quantity."
                   p="We could not read that bill, so we priced nothing. Check the numbers."
                 />
-              ) : (
-                <Ed
-                  x="The press did not answer, so nothing was priced. This is our outage, not a verdict on the bill."
-                  p="We could not reach our own service, so we checked nothing. Try again shortly."
-                />
-              )}
+              ) : null}
             </p>
+            {/* A DEAD END UNTIL NOW, on the surface that most needed a way out.
+                This page hand-rolled its own absent sentence while /spend and
+                /traction used `WhyEmpty` — so a stranger arriving with a bill,
+                on the default chain, where /par does not exist, was told the
+                truth and given nowhere to go. `WhyEmpty` carries the switch.
+                The 422 above stays its own branch: a bill we could not read is
+                a fact about the bill, and no chain change fixes it. */}
+            {error.status !== 422 ? (
+              <WhyEmpty
+                upstream={error.upstream}
+                what="this benchmark"
+                plainWhat="the price check"
+              />
+            ) : null}
           </div>
         </section>
       ) : null}

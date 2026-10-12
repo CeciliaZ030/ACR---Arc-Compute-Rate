@@ -95,7 +95,7 @@ LOG_PATH = os.environ.get("ACR_OPERATOR_LOG_PATH", "data/operator_decisions.json
 #: obligation somebody escalated hours ago. If any of them strips a different
 #: set, the record stops matching its own commitment and the only reading left
 #: is "this was edited", which would be false.
-UNHASHED = ("tx", "paid_usdc")
+UNHASHED = ("tx", "paid_usdc", "warns_signature")
 
 #: Intents. ``reroute`` and ``escalate`` are not failures — they are the two
 #: ways this agent is useful without being reckless.
@@ -245,6 +245,24 @@ class ObligationDecision:
     #: was for is part of what the decision rested on.
     period_start: float = 0.0
     period_end: float = 0.0
+    # --- the Warns integration ---------------------------------------------
+    #: THE ID GOES IN THE HASH; THE SIGNATURE CANNOT.
+    #:
+    #: Warns reaches its own decision about an invoice, signs it, and hands back
+    #: an id. Putting that id inside the hashed record is what makes the
+    #: on-chain commitment name WHICH decision authorised the payment:
+    #: `PolicyWallet` binds `decisionHash` into the EIP-712 digest that
+    #: `spendApproved` recovers, so the owner's signature then covers a
+    #: Warns-signed decision rather than just an amount and a payee.
+    #:
+    #: Empty by default, and that is a real state rather than a placeholder — a
+    #: decision this operator reached on its own authority has no Warns id, and
+    #: writing one in would claim an authorisation nobody gave.
+    warns_decision_id: str = ""
+    #: Their signature OVER that hash, which is why it is in ``UNHASHED``: a
+    #: signature inside the record it signs is circular and cannot be produced.
+    #: Evidence carried beside the commitment, not part of it.
+    warns_signature: str = ""
     # --- what the decision was JUDGED ON, so it can be replayed -------------
     #
     # `PolicyWallet.sol` says the hash is "what makes the off-chain ledger

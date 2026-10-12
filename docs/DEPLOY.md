@@ -22,7 +22,90 @@ reachable, running live Circle Arc-testnet execution.
 |---|---|---|
 | Seller API (mainnet, 5042) | **Render** `acr-api-mainnet` (`srv-das1navlk1mc73dvsm8g`), from `render.yaml` | https://acr-api-mainnet.onrender.com — **LIVE** since 2026-09-27 (`gate: circle`, `signer: local`). `plan: starter` in `render.yaml`, NOT free, and the comment there says why: a sleeping press stranded testnet collateral twice. **Its image predates the operator** — 44 routes, no `/operator/*` and no `/par` as of 2026-10-07 (`make verify-drift`) |
 | Seller API (testnet, 5042002) | **Render** `acr-api`, from `render.yaml` | https://acr-api-1fto.onrender.com — suspended 2026-09-15, **resumed 2026-10-01** and answering today (`chain_id: 5042002`). `plan: free`, so it sleeps: a cold start measured 25 s. This is the host that serves the operator |
-| Terminal | **Vercel** | https://arccomputerate.in |
+| Seller API (probe, 5042) | **Render** `acr-probe-free` (`srv-db28nc97lnhs73e1tgfg`) | https://acr-probe-free.onrender.com — a mainnet-CHAIN press on the free plan. It had **never deployed successfully** until 2026-10-09: both attempts on 10-06 died on one guard violation, `ACR_HUMANID_APP_ID is unset`. **Now the most complete mainnet press there is**: 50 routes, and since 2026-10-11 an `ACR_SUBGRAPH_URL` + `ACR_GRAPH_API_KEY` on the **network gateway** (`via='gateway'`, `daily_cap=None`). Measured after that change: `/tca` answers (3 purchases, $0.00461), `/par` prices a bill (2500 bp over a 5-row market basket), `/operator/*` answer, `get_rate` reads a print 45 min old, and `npm run smoke` is **11 of 11 anonymously** — against **5 of 11 failing** on `acr-api-mainnet`. Two caveats, neither the subgraph: carded `query_tape` fails CLOSED because `/armor/info` reports `credentials_present: false` on this host, and `signer: none` so it posts nothing. **IT DOES NOT SLEEP, measured 2026-10-11.** Free-plan services spin down after ~15 idle minutes, but this one sets `ACR_SELF_URL`, so its own 60-second loop knocks on its public URL and Render counts that as traffic: after **17.5 minutes with zero external requests** `process_started_at` was unchanged to the second and `/health` answered in **1.34s**. A restart would have moved that field, which is why that is the thing to read rather than a latency |
+| Terminal | **Vercel** | https://arc-compute-rate.vercel.app |
+
+**THREE RENDER ACCOUNTS, AND NO KEY SEES THEM ALL.** This is the thing that
+costs an hour if you meet it unprepared. `acr-api` belongs to one team,
+`acr-probe-free` to another, and **`acr-api-mainnet` to a third that neither
+API key in `.env` can see** — a `?name=acr-api-mainnet` query returns `[]` for
+both. So a mainnet image swap is a dashboard action by its owner, not something
+a script here can do. Measured 2026-10-09.
+
+**THE TERMINAL STILL POINTS AT THE WEAKER OF THE TWO MAINNET PRESSES**, and one
+environment variable is the whole of it. Measured on the live deployment
+2026-10-11, `/api/health` reports `configured`, `published` and `active` all as
+`https://acr-api-mainnet.onrender.com`, `fellBack: false`. That host's own
+subgraph ledger reads **`queries=10 errors=10`, `via=studio-dev`, `cap=3000`** —
+a 100% failure rate, which is the Studio development cap exhausted, not a slow
+day — while `acr-probe-free` reads `via=gateway`, `cap=null`, `errors=0`. The
+visible cost, measured on the live site: `/api/operator/businesses` and
+`/api/operator/traction` answer **503 `upstream: "absent"`**, `/api/tape` is
+`live: false`, and `/par` has no route to ask.
+
+**AND AS OF 08:30Z IT IS AN OUTAGE, NOT A DEGRADATION.** `/terminal/data` is the
+one route the front page needs, and it was measured twice on each host within
+the same minute:
+
+| host | `/terminal/data` |
+|---|---|
+| `acr-probe-free` | **HTTP 200 in 0.41s**, 18,395 bytes, all seven sections |
+| `acr-api-mainnet` | **timed out at 60s, twice, 0 bytes** |
+
+Its `/health` answers in 0.5s throughout, so health is not the signal here — the
+press is up and cannot build a bundle, because every subgraph query inside that
+build fails. The live consequence, three consecutive reads, `x-vercel-cache: MISS`
+each time: `/api/terminal?chain=mainnet` returns **`live: false` in 9.7s**. The
+whole site is on the archived bundle.
+
+**UPDATE, same day, after the cushion was fixed and deployed (`e07f882`).** The
+terminal now carries a real two-rung ladder for mainnet, and the measurement
+that followed draws the boundary of what it can do, precisely:
+
+| failure mode | what the press returns | ladder? |
+|---|---|---|
+| `/terminal/data` cannot build a bundle | **timeout / 5xx** | **advances** — the front page recovers |
+| a subgraph read fails inside the press | **HTTP 200** `{"available": false, "reason": "the subgraph did not answer"}` (`graph_proxy.py:197`) | **stops, correctly** — a 200 is an answer |
+
+So the ladder covers the outage from this morning and **cannot** cover
+`/api/tape`, TCA, ratings or `/operator/*` on a press whose subgraph is dead:
+those read `live: false` from a host that is answering. Falling back on a 200
+would mean asking a second press to overrule the first's verdict, which is the
+rule that also stops a 401 being retried against a different host. Measured
+with the `meta` op posted to both presses in the same minute: `acr-api-mainnet`
+`available: false`; `acr-probe-free` `available: true`, block 25,392,845.
+
+And the front page being `live: true` right now is **not** the ladder — it is
+`acr-api-mainnet` having restarted (uptime 1287s at 09:14Z), which lets a fresh
+process assemble a bundle while its subgraph ledger still reads **76 queries,
+76 errors**. A reboot buys a bundle, not a tape. **The env flip below is
+therefore the only fix for every subgraph-backed surface, not merely the nicer
+one.**
+
+**Setting Vercel's `ACR_API` and `NEXT_PUBLIC_ACR_API` to
+`https://acr-probe-free.onrender.com` and redeploying fixes all of it, and
+fixes one more thing for free.** `lib/apiBase.ts` keeps `MAINNET_SELLER` as the
+build's cushion, and `sellerCandidates` dedupes — so while `ACR_API` names the
+same host as `MAINNET_SELLER` there is **one candidate and no cushion at all**,
+which is precisely the pathology that file's own comment was written about. Flip
+the variable and `configured != published`, so `acr-api-mainnet` becomes a live
+second rung instead of a no-op. Do **not** also change the literal: two distinct
+hosts is the point.
+
+Three preconditions, all checked 2026-10-11 rather than assumed: `ACR_CORS_ORIGINS`
+on the probe host already answers `access-control-allow-origin:
+https://arc-compute-rate.vercel.app` (without which the wallet path and `/curve`
+break and nothing else does); `ACR_ARC_CHAIN_ID=5042` matches `buildChainId=5042`,
+so `chainMismatch` allows it; and it does not sleep, per the row above.
+
+**AND NOBODY IS POSTING PRINTS RIGHT NOW.** Worth separating from the above,
+because the repoint neither causes nor fixes it. `acr-api-mainnet` holds the
+signer (`signer: local`, `0x1547…5379`) and reports **`posts: 0`** with
+`note: "error"` on all three indices since its 07:17Z boot; the probe host has
+no signer by design. Read straight off the gateway, the newest print was **1.61
+hours old** against a 2-hour settle window and a 1.5-hour warn line, so the
+oracle is drifting toward stale with no press able to write. The chain itself is
+healthy — the subgraph is synced to the head, `hasIndexingErrors: false`.
 
 The service is declared in [`render.yaml`](../render.yaml) at the repo root: a
 `runtime: image` web service pulling `docker.io/kaushtubh02/acr-api:latest`, health-
@@ -49,14 +132,27 @@ Deploy order for a normal change — **Render first, then Vercel**, because the
 Terminal reads the API:
 
 ```bash
-# 1. API: rebuild and push the image render.yaml points at, then redeploy
-#    the service from the Render dashboard (Manual Deploy).
-docker build -t kaushtubh02/acr-api:latest .
-docker push kaushtubh02/acr-api:latest
+# 1. API: rebuild and push. --platform is MANDATORY from Apple silicon: an
+#    arm64 push produces an image Render accepts and then cannot start, and
+#    the symptom is a port-scan timeout rather than an arch error.
+#    Tag dated AND latest: the dated tag is the rollback target and the only
+#    thing a PINNED service can be pointed at; `latest` is what the testnet
+#    service tracks.
+TAG=$(date -u +%Y-%m-%d-%H%M)
+docker build --platform linux/amd64 -t kaushtubh02/acr-api:$TAG -t kaushtubh02/acr-api:latest .
+docker push kaushtubh02/acr-api:$TAG && docker push kaushtubh02/acr-api:latest
 
-# 2. Confirm the new build is actually being served before moving on.
-#    (Free plan: the first call takes ~20 s while the instance wakes.)
-curl -s https://acr-api-mainnet.onrender.com/health
+# 1b. Run it before you ship it. Thirty seconds, and it is the only check that
+#     catches a bad image while it is still only yours:
+docker run --rm -p 8097:8000 --platform linux/amd64 \
+  -e ACR_ARC_CHAIN_ID=5042002 -e ACR_HUMANID_MODE=dev kaushtubh02/acr-api:$TAG
+#     then: curl -s localhost:8097/openapi.json | jq '.paths | keys | length'
+
+# 2. Confirm the new build is SERVED, with a witness that could not pass
+#    against the old image. /health cannot do this — every image answers it.
+#    Use a route the new image added, and the strict drift gate:
+VERIFY_DRIFT_HOSTS=https://acr-api-mainnet.onrender.com VERIFY_DRIFT_STRICT=1 \
+  uv run python scripts/verify_deploy_drift.py
 
 # 3. Terminal: Vercel deploys are MANUAL for this project — trigger from the
 #    Vercel dashboard (or `vercel --prod` from apps/terminal).
@@ -158,19 +254,36 @@ vercel deploy --prod \
 - `NEXT_PUBLIC_ACR_API` — the browser `/docs` link on `/developers` (build-time inlined).
 
 Output: the public dashboard on the linked Vercel project (project name
-`terminal` — deployed at `https://arccomputerate.in`). While the
+`terminal` — deployed at `https://arc-compute-rate.vercel.app`). While the
 API is unreachable (free-tier cold start) the terminal walks its connection
 ladder honestly: instant shell + skeletons, "waking the press", direct
 ACROracle reads via `/api/onchain`, and the bundled `lib/fallback.json`
 archived edition as the floor.
 
-### 2a. The custom domain — `arccomputerate.in`
+### 2a. The custom domain — `arccomputerate.in` — NOT IN USE
 
-Live since 2026-10-08. `arc-compute-rate.vercel.app` still resolves as the project
-alias, so every link published before the move still works. The apex is canonical
-and `www` 307s to it via a `has: host` rule in `apps/terminal/next.config.mjs`
-(in the repo rather than Vercel's domain settings: a dashboard redirect is
-invisible from the tree and lost if the project is ever recreated).
+**Set aside 2026-10-09. The canonical host is `arc-compute-rate.vercel.app`.**
+
+This section is kept as the record of how to finish the move, not as a
+description of the current state. What happened: the domain was added to the
+Vercel project and both it and `www` report `verified: true` — verification only
+proves you control the name — but **the DNS was never changed**. `dig +short A
+arccomputerate.in` answers Hostinger's parking range, and the host returns a
+"Parked Domain name on Hostinger DNS system" page at **HTTP 200**.
+
+That 200 is the whole trap. Three documents, `metadataBase`, `robots.txt`, the
+provider catalog Circle's crawler follows, and the standing liveness gate were
+all moved onto the name, and nothing failed loudly: `tests/test_canonical_host.py`
+compares those places to **each other** and stayed green, and `verify_live.py`
+produced a red run that blamed a Next route. **Verify a host by fetching a page
+and reading what comes back, never by its status code.**
+
+To finish it later: add the two A records below, confirm with a fetch that the
+content is the terminal and not a parking page, then move the canonical host in
+the one place that defines it — `marketplace.PROVIDER_WEBSITE`, which
+`test_canonical_host.py` reads as truth and which drags `metadataBase` and
+`robots.ts` with it. The `www` 307 rule was deleted from
+`apps/terminal/next.config.mjs` as dead config; re-add it with the DNS.
 
 **DNS stays at Hostinger. Do not point the nameservers at Vercel.** The zone
 carries live mail:
@@ -212,10 +325,17 @@ Set them on the Render service (single-key edits — the bulk env PUT replaces
 every var) and redeploy, because env edits alone do not restart a service:
 
 ```
-ACR_CORS_ORIGINS=https://arccomputerate.in,https://www.arccomputerate.in,https://arc-compute-rate.vercel.app
-ACR_PROVIDER_WEBSITE=https://arccomputerate.in
-ACR_PROVIDER_DOCS_URL=https://arccomputerate.in/developers
+ACR_CORS_ORIGINS=https://arc-compute-rate.vercel.app
+ACR_PROVIDER_WEBSITE=https://arc-compute-rate.vercel.app
+ACR_PROVIDER_DOCS_URL=https://arc-compute-rate.vercel.app/developers
 ```
+
+These are the values for the host that actually serves. The block named the
+custom domain for one day, which would have sent Circle's crawler to a parked
+page — and note the live mainnet service still carries the OLD list, which
+**rejects** the custom domain and allows the Vercel origin, because a Render env
+edit does not restart a service. Add the custom-domain origins back when its DNS
+is finished, not before.
 
 `ACR_CORS_ORIGINS` is the one to get right. Every read in the Terminal goes
 through its own `/api/*` proxies, so a wrong value here breaks nothing a visitor

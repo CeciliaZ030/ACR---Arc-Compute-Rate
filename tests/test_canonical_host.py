@@ -1,7 +1,7 @@
 """One canonical host, named in four places that cannot see each other.
 
-Moving the Terminal to `arccomputerate.in` put the same hostname in four files,
-in three languages, and nothing compared them:
+Moving the Terminal to a custom domain put the same hostname in four files, in
+three languages, and nothing compared them:
 
     apps/terminal/app/layout.tsx    `metadataBase` -- with
                                     `alternates: {canonical: "./"}` this is what
@@ -31,6 +31,14 @@ breakage nobody finds from the front door.
 Python reads the TypeScript and the YAML for the reason
 `test_endpoint_register_parity.py` gives: only Python can import the press
 constant, and the alternative is a fourth copy of the hostname in a test.
+
+WHAT THIS FILE CANNOT CATCH, recorded because it happened. It compares the four
+places to EACH OTHER and none of them to reality, so for a day it was green
+while all four agreed on a name whose DNS had never been pointed here — one that
+answered HTTP 200 from a parked-domain page. Agreement is the weaker half of the
+check. The stronger half is that the host serves this site, which only a fetch
+can establish, and that belongs to `verify_live.py` rather than to a unit test.
+So: green here means consistent, not correct.
 """
 
 from __future__ import annotations
@@ -124,8 +132,18 @@ def test_mainnet_cors_names_the_canonical_origin() -> None:
         f"every other surface kept working"
     )
     # There is no `allow_origin_regex` anywhere in the repo, so matching is an
-    # exact string and the apex does NOT cover www.
+    # exact string and an apex does NOT cover its own www.
+    #
+    # ONLY MEANINGFUL FOR A REGISTRABLE APEX. A Vercel project alias has no
+    # `www` sub-label — `www.<project>.vercel.app` is not a name that can be
+    # issued — so demanding one in the allowlist would require an origin that
+    # cannot exist. The premise of the assertion below is real and is real only
+    # for a custom domain, so it is scoped to one rather than deleted: the day
+    # the custom domain actually resolves, this starts guarding again without
+    # anyone remembering to re-add it.
     host = canonical.removeprefix("https://")
+    if host.endswith(".vercel.app"):
+        return
     assert f"https://www.{host}" in origins, (
         f"https://www.{host} is not in {origins}. www 307s to the apex for page "
         f"loads, but a cross-origin fetch is refused before any redirect is "
@@ -142,14 +160,32 @@ def test_the_wildcard_the_guard_would_accept_is_not_in_use() -> None:
     import yaml
 
     doc = yaml.safe_load((ROOT / "render.yaml").read_text(encoding="utf-8"))
+    checked = []
     for svc in doc["services"]:
-        raw = {e["key"]: e.get("value") for e in (svc.get("envVars") or [])}.get(
-            "ACR_CORS_ORIGINS"
-        )
-        if not raw or svc.get("name") != "acr-api-mainnet":
+        env = {e["key"]: e.get("value") for e in (svc.get("envVars") or [])}
+        # KEYED ON THE CHAIN, NOT THE SERVICE NAME. This read
+        # `!= "acr-api-mainnet"` and so inspected exactly one block: a second
+        # mainnet service with a '*' passed the gate untouched. There is now a
+        # second one -- `acr-probe-free`, chain 5042, which `apiBase.ts` lists
+        # as MAINNET_PRESSES[1] -- and the name test skipped it silently, which
+        # is the failure shape nobody investigates. The testnet service is
+        # still exempt and its '*' is open by design: agents call it from
+        # anywhere, and its guardrails are server-side.
+        if str(env.get("ACR_ARC_CHAIN_ID") or "") != "5042":
+            continue
+        raw = env.get("ACR_CORS_ORIGINS")
+        if not raw:
             continue
         origins = [o.strip() for o in str(raw).split(",") if o.strip()]
         assert "*" not in origins, (
             f"{svc['name']}: ACR_CORS_ORIGINS contains a '*' entry, which passes "
             f"mainnet_guard's two-literal check and then allows every origin"
         )
+        checked.append(svc["name"])
+
+    # A loop that matches nothing passes. Both mainnet presses must be reached,
+    # or this is a gate asserting something about an empty set.
+    assert len(checked) >= 2, (
+        f"only {checked} were checked -- every chain-5042 service in render.yaml "
+        f"needs an ACR_CORS_ORIGINS this looks at"
+    )

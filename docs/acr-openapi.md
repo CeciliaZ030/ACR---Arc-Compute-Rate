@@ -6,11 +6,39 @@ paginate: true
 # ACR — The Arc Compute Rate
 ## OpenAPI 3.1.0 · endpoint reference
 
-Live spec: `https://acr-api-mainnet.onrender.com/openapi.json`
-Catalog: `https://acr-api-mainnet.onrender.com/marketplace/catalog`
+## Where to send it
+
+| host | chain | serves |
+|---|---|---|
+| `https://acr-api-1fto.onrender.com` | Arc testnet (5042002) | **start here** — all 50 routes, and a faucet, so nothing costs real money |
+| `https://acr-probe-free.onrender.com` | Arc mainnet (5042) | all 50 routes, reading real mainnet state. Holds no signing key |
+| `https://acr-api-mainnet.onrender.com` | Arc mainnet (5042) | 44 of 50: `/par` and `/operator/*` answer 404 until its image is rebuilt |
+
+Live spec: `https://acr-api-1fto.onrender.com/openapi.json`
+Catalog: `https://acr-api-1fto.onrender.com/marketplace/catalog`
+
+### One call, runnable as written
+
+`/par` prices a real invoice against published third-party list prices.
+It needs no key, no card and no payment:
+
+```bash
+curl -s 'https://acr-api-1fto.onrender.com/par?unit=%24%2F1k%20tokens&billed_usdc=0.02&quantity=10'
+```
+
+All three query params are required (it answers 422 without them), and the
+unit is one of `$/1k tokens`, `$/GPU-sec`, `$/MB`, percent-encoded.
+
+Read `basket.status` before the verdict: **`ok`** and **`aging`** both price
+against the market, the SCREAMING values (`STALE`, `ABSENT`, `NO_ROWS`) mean
+it fell back to our own sellers, which `benchmarked_against` names. The basket
+carries `age_s` beside `max_age_s`, so its age is readable without guessing
+the window.
 
 Index endpoints: **$0.0001 USDC per request**, x402 `exact` scheme,
-Circle Gateway (GatewayWalletBatched), network `eip155:5042` (Arc mainnet).
+Circle Gateway (GatewayWalletBatched), on the chain the host you called is
+on: `eip155:5042` for Arc mainnet, `eip155:5042002` for testnet. `GET
+/x402/info` on that host states its own, and is the field to trust.
 Fleet sellers (`/compute/{label}`) price per unit; the catalog carries each one's terms.
 
 Agent-to-agent calls may present an `AGENT-CARD` (see `GET /agent/challenge`);

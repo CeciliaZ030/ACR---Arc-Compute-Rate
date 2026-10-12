@@ -45,6 +45,7 @@ import hashlib
 import json
 import statistics
 import sys
+import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
@@ -54,15 +55,16 @@ from acr_core import ALL_INDEX_IDS, spec_for
 # The two numbers the SERVING path uses, imported rather than restated. `par`
 # decides what counts as a market and when a basket stops being a price; a
 # second copy of either here would be free to drift from the one that acts.
-from index_api.par import ANCHOR_MAX_AGE_S, MIN_SELLERS
+#
+# AGE_WARN_FRACTION used to be DECLARED here, and that is why `/par` spent the
+# whole six-day warning window answering "ok": the number that decides when a
+# basket is worth mentioning lived in a script, so the only thing that ever
+# consulted it was `make ci` — against the anchors in the REPO, while the press
+# reads the ones baked into its image. It now lives beside the cliff it divides
+# and is imported, on the same argument the line below already makes.
+from index_api.par import AGE_WARN_FRACTION, ANCHOR_MAX_AGE_S, MIN_SELLERS
 
 ANCHOR_SCHEMA = "acr.anchor/1"
-#: How much of `ANCHOR_MAX_AGE_S` may elapse before `--check` goes red. Under 1
-#: on purpose: at the cliff itself `/par` has ALREADY begun pricing outsiders
-#: against our own fleet, so a gate that fires there reports a fortnight of
-#: wrong answers instead of preventing them. 0.8 of 30 days is about six days
-#: of warning.
-AGE_WARN_FRACTION = 0.8
 #: Bumped when the aggregation RULE changes, like POLICY_VERSION in cleaning.py.
 #: One idiom in this repo for "the rule moved", not two.
 TOOL_VERSION = 1
@@ -495,13 +497,83 @@ def render_gap_report(docs: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def check_live(host: str, unit: str = "$/1k tokens") -> list[str]:
+    """Ask a RUNNING PRESS how old the basket it is actually serving is.
+
+    WHY THIS EXISTS, AND WHY `--check` CANNOT ANSWER IT. `--check` reads the
+    anchors in this working tree. The press reads the ones COPYd into its image
+    at build time (`Dockerfile`), so the two are the same file only until
+    somebody re-anchors — and nothing couples them. On 2026-10-12 production
+    ran images dated 10-08 and 10-09 while CI was green on `main`: identical
+    today, free to diverge tomorrow, and the divergence would be invisible
+    because the gate was asking the wrong artifact. A gate's witness has to be
+    the thing that serves.
+
+    Deliberately NOT in CI, which is why it reads a host rather than a fixture:
+    the presses are free-tier, they cold-start, and a gate that goes red
+    because a service was asleep teaches its operator to ignore it. It is a
+    `make` target an owner runs, like `make verify-drift`.
+
+    STRICT ON AN UNREADABLE HOST. "I could not ask" is a failure here, not a
+    pass — the opposite default to a report, and the same correction
+    `VERIFY_DRIFT_STRICT=1` exists to make.
+    """
+    base = host.rstrip("/")
+    url = (f"{base}/par?unit={urllib.parse.quote(unit)}"
+           f"&billed_usdc=1&quantity=1000")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "acr-anchors/1"})
+        with urllib.request.urlopen(req, timeout=90) as r:  # noqa: S310 — our own host
+            doc = json.loads(r.read().decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return [f"{base}: could not be read ({exc}), so its basket cannot be "
+                f"shown to be fresh. Wake it (curl {base}/health) and re-run."]
+
+    b = doc.get("basket") or {}
+    age_s, max_age_s = b.get("age_s"), b.get("max_age_s")
+    warn_s = b.get("warn_after_s")
+    if age_s is None or not max_age_s:
+        return [f"{base}: serves no `basket.age_s`/`max_age_s`, so it predates "
+                f"the fields that state its own clock. Its image is older than "
+                f"2026-10-12 and nothing here can date the basket it is using."]
+
+    days, limit = age_s / 86_400, max_age_s / 86_400
+    print(f"  {base}")
+    print(f"    basket  {b.get('index_id')} · {b.get('rows')}/{b.get('requested')} rows "
+          f"· {days:.1f}d old of {limit:.0f}d · status {b.get('status')!r}")
+    print(f"    priced  against {doc.get('benchmarked_against')!r}")
+
+    if age_s > max_age_s:
+        return [f"{base}: the SERVED basket is {days:.1f} days old against its own "
+                f"{limit:.0f}-day limit, so this host is already pricing bills from "
+                f"outside the fleet against the fleet. Rebuild its image."]
+    if warn_s and age_s > warn_s:
+        return [f"{base}: the SERVED basket is {days:.1f} days old and this host stops "
+                f"trusting it at {limit:.0f}. Re-anchor and rebuild the image before "
+                f"then, or every answer silently moves onto our own scale."]
+    return []
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--fetch", action="store_true", help="hit the network and write today's anchors")
     ap.add_argument("--report", action="store_true", help="regenerate anchors/GAP.md")
     ap.add_argument("--check", action="store_true", help="offline assertions (CI-safe)")
+    ap.add_argument("--check-live", metavar="HOST", default=None,
+                    help="ask a running press how old the basket it SERVES is "
+                         "(network; manual, never CI)")
     args = ap.parse_args()
     sys.stdout.reconfigure(line_buffering=True)
+
+    if args.check_live:
+        fails = check_live(args.check_live)
+        if fails:
+            print("  ✗ served anchors:")
+            for f in fails:
+                print(f"    {f}")
+            return 1
+        print("  ✓ the basket this host SERVES is inside its own window")
+        return 0
 
     if args.fetch:
         models, sha = fetch_openrouter()

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { LOCAL_SELLER, MAINNET_SELLER, chainMismatch, isHostFailure, publishedSeller, sellerBase, sellerCandidates } from "./apiBase";
+import { LOCAL_SELLER, MAINNET_PRESSES, MAINNET_SELLER, PROBE_SELLER, chainMismatch, isHostFailure, publishedSeller, sellerBase, sellerCandidates, servesPath, shouldTryNextHost } from "./apiBase";
 
 /* The default that matters is the one nobody sets. Eight places spelled
    `?? "http://127.0.0.1:8000"`, which is wrong in the only place it is ever
@@ -77,6 +77,34 @@ test("whitespace is not a host", () => {
   assert.deepEqual(sellerCandidates("   ", MAINNET_SELLER), [MAINNET_SELLER]);
 });
 
+test("alternates are what stop the collapse above being the end of the story", () => {
+  /* The three tests above are all correct AND all describe a cushion that does
+     not exist, which is why they passed while the live site served the archive.
+     Each one ends with a single candidate; `makeLadder` has nothing to try.
+
+     The primitive did not change its mind about dedupe — it gained a third
+     argument. The caller passes the presses it KNOWS, so removing a duplicate
+     leaves the others rather than leaving nothing. `chainChoice.test.ts` pins
+     the chain-aware behaviour; these are the pure-function cases. */
+  // The exact live configuration: override == published, one known alternate.
+  assert.deepEqual(sellerCandidates(MAINNET_SELLER, MAINNET_SELLER, [MAINNET_SELLER, PROBE_SELLER]), [
+    MAINNET_SELLER,
+    PROBE_SELLER,
+  ]);
+  // Order is configured, then published, then the rest — and each appears once.
+  assert.deepEqual(
+    sellerCandidates(PROBE_SELLER, MAINNET_SELLER, [MAINNET_SELLER, PROBE_SELLER]),
+    [PROBE_SELLER, MAINNET_SELLER],
+  );
+  // A trailing slash is the same host in the alternates list too, not a fourth rung.
+  assert.deepEqual(sellerCandidates("", `${MAINNET_SELLER}/`, [MAINNET_SELLER, PROBE_SELLER]), [
+    MAINNET_SELLER,
+    PROBE_SELLER,
+  ]);
+  // Default stays empty, which is the whole reason the tests above still hold.
+  assert.deepEqual(sellerCandidates("", MAINNET_SELLER, []), [MAINNET_SELLER]);
+});
+
 test("only 5xx means the host is not serving", () => {
   // The exact fault this rung exists for: Render's suspended-service page.
   assert.equal(isHostFailure(503), true);
@@ -139,4 +167,88 @@ test("a build with no known chain polices nothing", () => {
   for (const build of [0, -1, NaN]) {
     assert.equal(chainMismatch(build, 5042002), null);
   }
+});
+
+// ───────────────────── does this host have the route at all?
+
+test("servesPath matches a templated route against a concrete one", () => {
+  const served = ["/health", "/par", "/operator/statement/{business}", "/tca/{payer}", "/tca/human"];
+  assert.ok(servesPath(served, "/par"));
+  assert.ok(servesPath(served, "/par?unit=%24%2F1k%20tokens&billed_usdc=1"), "a query is not part of the path");
+  assert.ok(servesPath(served, "/operator/statement/acr-fleet"));
+  assert.ok(servesPath(served, "/operator/statement/acr-fleet?days=30"));
+  assert.ok(servesPath(served, "/tca/0xabc"));
+});
+
+test("servesPath says no for a route this host simply does not have", () => {
+  /* The live case: the mainnet press serves 44 routes and none of these. It
+     answers 404 — healthily — and the terminal used to report that as "the
+     press did not answer", which told a visitor a running service was down. */
+  const served = ["/health", "/prints", "/tca/{payer}"];
+  assert.equal(servesPath(served, "/par"), false);
+  assert.equal(servesPath(served, "/operator/traction"), false);
+  assert.equal(servesPath(served, "/operator/statement/acr-fleet"), false);
+});
+
+test("a template does not match across segment boundaries", () => {
+  // `{business}` is one segment. Without this, `/operator/statement/a/b` would
+  // look served, and a genuine 404 would be mislabelled as a present route.
+  const served = ["/operator/statement/{business}"];
+  assert.equal(servesPath(served, "/operator/statement/a/b"), false);
+  assert.equal(servesPath(served, "/operator/statement"), false);
+});
+
+test("a host that lists the route keeps its ordinary 404", () => {
+  /* THE DISTINCTION THIS IS FOR. An unknown business on a press that HAS the
+     route is a real not-found and must not be reported as a stale deployment —
+     otherwise every typo in a slug would blame the operator's image. */
+  const served = ["/operator/statement/{business}"];
+  assert.ok(servesPath(served, "/operator/statement/nobody"), "the route exists; the business does not");
+});
+
+test("the availability check and the ledger's 404 agree about one host", () => {
+  /* THE CONFLATION THIS CLOSES. The press answers 404 both for a route it does
+     not have and for `no business registered as 'x'`. `/developers` uses this
+     to decide whether to offer a run button and the ledger proxy uses it to
+     decide whether "not on this press" is the honest label — so they must
+     reach the same verdict from the same list, or the page will offer a button
+     for a route the download already calls missing. */
+  const press = ["/health", "/operator/ledger/{business}", "/operator/traction"];
+  assert.ok(servesPath(press, "/operator/ledger/acr-fleet"), "the route exists");
+  assert.ok(servesPath(press, "/operator/ledger/nobody"), "and still exists for a bad slug");
+  assert.equal(servesPath(press, "/par"), false, "this one genuinely is not here");
+
+  const older = ["/health", "/prints"];
+  assert.equal(servesPath(older, "/operator/ledger/acr-fleet"), false);
+  assert.equal(servesPath(older, "/operator/traction"), false);
+});
+
+
+test("a route the host does not carry sends the ladder on; a bad slug does not", () => {
+  // The bug: `hostFailed` was `isHostFailure(status)`, so a 404 stopped the
+  // ladder at the first candidate. Measured 2026-10-12 — acr-api-mainnet serves
+  // 44 routes and 404s all five /operator/* and /par, while acr-probe-free, the
+  // SECOND entry in MAINNET_PRESSES on the same chain, serves 50 including every
+  // one of them. /spend rendered an absence while a host one line below had the
+  // rows.
+  assert.equal(shouldTryNextHost(404, true), true, "absent route: try the next press");
+
+  // And the half that must NOT change. A 404 on a route the host DOES declare is
+  // the resource answering: no such business. Asking a second press about
+  // somebody's typo only agrees, slower.
+  assert.equal(shouldTryNextHost(404, false), false, "declared route, bad slug: stop");
+
+  // Everything else keeps the behaviour `isHostFailure` already had.
+  assert.equal(shouldTryNextHost(503, false), true, "a suspended host is a failure");
+  assert.equal(shouldTryNextHost(500, false), true);
+  assert.equal(shouldTryNextHost(402, false), false, "the paywall is the seller working");
+  assert.equal(shouldTryNextHost(401, false), false, "never ask a second press about a credential");
+});
+
+test("the probe press is a real alternate for mainnet, not decoration", () => {
+  // The fix above is only useful because the list has somewhere to walk TO.
+  // Both are chain 5042, so `chainMismatch` accepts either.
+  assert.ok(MAINNET_PRESSES.includes(MAINNET_SELLER));
+  assert.ok(MAINNET_PRESSES.includes(PROBE_SELLER), "a one-entry ladder cannot fall through");
+  assert.ok(MAINNET_PRESSES.length >= 2);
 });

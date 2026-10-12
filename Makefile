@@ -624,7 +624,7 @@ graph-build: graph-codegen
 	cd graph && npx graph build --network $(NETWORK)
 
 graph-test:
-	cd graph && npx graph test
+	cd graph && npm test   # pinned matchstick binary; see graph/package.json
 
 # Studio deploy is an operator step: it needs network access and a Studio key.
 #   cd graph && npx graph auth <deploy-key>
@@ -637,7 +637,9 @@ VERSION ?= v0.1.0
 #: one, and Studio answers an unknown slug with a bare "Subgraph not found"
 #: that looks exactly like a bad deploy key. Create it at thegraph.com/studio,
 #: then `make graph-deploy SUBGRAPH=<slug>`.
-SUBGRAPH ?= ethonline
+#: `acr` since 2026-10-11 (mainnet, account 1763111). The older `ethonline`
+#: slug on account 1758707 holds the TESTNET deployment — see GRAPH-RUNBOOK §5.
+SUBGRAPH ?= acr
 
 graph-deploy: graph-build
 	@grep -q '"0x0000000000000000000000000000000000000000"' graph/subgraph.yaml \
@@ -705,6 +707,48 @@ anchors-report:
 
 anchors-check:
 	uv run python scripts/anchors.py --check
+
+# Walk the DEMO's own path against the live hosts and say what a viewer sees.
+# `test` says the code is right and `verify-drift` says the deployment serves
+# what we built; neither answers "does the thing we are about to show in front
+# of people work right now". Reads only: no transaction, no signature, no spend.
+# Strict by default, because at rehearsal time "I could not read the host" is
+# the most important failure — a sleeping free-tier press is exactly what
+# happens on stage.
+#   make rehearse
+#   make rehearse REHEARSE_API=https://acr-api-mainnet.onrender.com   # the control
+rehearse:
+	uv run python scripts/rehearse_demo.py
+
+# The same demo, driven in a real browser. `rehearse` above reads the /api/*
+# envelopes; the demo shows PAGES, and every page here is client-rendered — so a
+# hydration error or a className that no longer matches the CSS leaves the API
+# green and the screen blank. Needs Chrome; SKIPS cleanly without it, and is out
+# of `make ci` for the same reason smoke and anchors-live are.
+#   make rehearse-pages
+#   make rehearse-pages REHEARSE_CHAIN=mainnet   # the control: the empty state
+rehearse-pages:
+	uv run python scripts/rehearse_pages.py
+
+# Has mcp/package.json's version already been published? npm refuses a duplicate
+# and `npx -y acr-mcp` keeps serving the old build, so the repo can look shipped
+# while nothing moved. `prepublishOnly` cannot see this: it builds and tests, and
+# neither knows what the registry holds. Network, never CI, strict on an
+# unreadable registry. Run it before `npm run release`.
+mcp-version-check:
+	uv run python scripts/mcp_version_check.py
+
+# The same clock, read off the HOST instead of the working tree. `anchors-check`
+# above reads the files in this checkout; the press reads the ones baked into its
+# image, so they agree only until somebody re-anchors and nothing couples them.
+# Network, and NOT in CI on purpose: the presses are free-tier and cold-start, and
+# a gate that goes red because a service was asleep gets ignored. Run it after a
+# deploy, beside `make verify-drift`.
+#   make anchors-live                                    # the probe press
+#   make anchors-live HOST=https://acr-api-1fto.onrender.com
+HOST ?= https://acr-probe-free.onrender.com
+anchors-live:
+	uv run python scripts/anchors.py --check-live $(HOST)
 
 # ── the auto-rater ───────────────────────────────────────────────────────────
 # Frozen eval sets on five scenarios per index (three of them held-out seeds),
