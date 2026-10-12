@@ -112,6 +112,11 @@ def bad(msg: str) -> None:
 
 
 def note(msg: str) -> None:
+    # DEDUPED. Both chains hit the registry, so the same "acr-operator is not in
+    # the live registry" fired twice and the summary listed it twice. A repeated
+    # note is noise, and noise is how a reader learns to skip the notes.
+    if msg in notes:
+        return
     print(f"  · {msg}")
     notes.append(msg)
 
@@ -291,6 +296,47 @@ TERMINAL_ROUTES = (
 )
 
 
+def first_candidate_health() -> None:
+    """Why the default chain's result is whatever it is.
+
+    THIS IS THE FIELD THAT EXPLAINS EVERYTHING. `acr-api-mainnet` is the first
+    mainnet candidate and it answers 404 for the operator routes, so the
+    deployed ladder stops there WHEN IT IS HEALTHY and walks past it to
+    `acr-probe-free` when it is not. Observed on 2026-10-13: restarts at
+    18:49:55Z and again at 19:57:55Z, a /health taking 50.4s against the
+    probe's 0.45s, and the default chain flipping from broken to working
+    between two runs of this gate an hour apart.
+
+    So a bare red or green on the default chain is a mystery without this, and
+    the uptime plus the latency is the whole explanation. Reported, never
+    asserted on: a flapping press is a fact about today, not a failure of the
+    demo.
+    """
+    import urllib.request as _u
+
+    for host, label in (("acr-api-mainnet", "first candidate"),
+                        ("acr-probe-free", "second candidate")):
+        url = f"https://{host}.onrender.com/health"
+        t0 = time.monotonic()
+        try:
+            req = _u.Request(url, headers={"User-Agent": "acr-rehearse/1"})
+            with _u.urlopen(req, timeout=120) as r:  # noqa: S310 — our own host
+                d = json.load(r)
+            lat = time.monotonic() - t0
+            started = d.get("process_started_at")
+            up = (time.time() - started) / 60 if started else None
+            flag = ""
+            if up is not None and up < 15:
+                flag = "  <- RESTARTED RECENTLY, so the ladder's choice may move"
+            if lat > 10:
+                flag += "  <- SLOW, which is what makes the ladder walk past it"
+            print(f"     {label:<17} {host}: up {up:.0f} min, /health in "
+                  f"{lat:.1f}s, signer {d.get('signer')!r}{flag}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"     {label:<17} {host}: unreadable ({type(exc).__name__}) "
+                  "<- the ladder will walk past it, which makes the page WORK")
+
+
 def rehearse_terminal(chain: str, *, is_demo: bool) -> None:
     """The terminal's own pages, on ONE chain.
 
@@ -303,6 +349,12 @@ def rehearse_terminal(chain: str, *, is_demo: bool) -> None:
     """
     which = "THE DEMO" if is_demo else "a visitor landing on the default chain"
     step(f"5{'a' if is_demo else 'b'}. The live terminal on {chain} \u2014 {which}")
+
+    if not is_demo:
+        # The default chain's verdict is decided by the first candidate's
+        # health, so print it beside the verdict rather than leaving a reader
+        # to wonder why the same gate said the opposite an hour ago.
+        first_candidate_health()
 
     health = get(f"{TERMINAL}/api/health", chain=chain)
     if health:
