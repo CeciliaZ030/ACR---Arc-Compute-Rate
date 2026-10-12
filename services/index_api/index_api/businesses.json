@@ -5,10 +5,10 @@
     "unconsented business still counts and still gets a published ledger, under",
     "the pseudonym `business <slug>`.",
     "`policy_wallet` empty means the operator can price and meter for them but",
-    "cannot spend \u2014 which is what an evaluation looks like, and a real state.",
+    "cannot spend — which is what an evaluation looks like, and a real state.",
     "`chain` is per business because mainnet and testnet totals are reported",
     "separately and must never be added together.",
-    "`sandbox: true` is a DEMONSTRATION, not a customer. It renders wherever a business renders \u2014 the escalation queue and the decision table cannot be shown at all without one \u2014 and `businesses.real()` excludes it from every traction figure. Its decisions live in operator_decisions.sandbox.jsonl so that anyone auditing what the agent really did reads only real rows."
+    "`sandbox: true` is a DEMONSTRATION, not a customer. It renders wherever a business renders — the escalation queue and the decision table cannot be shown at all without one — and `businesses.real()` excludes it from every traction figure. Its decisions live in operator_decisions.sandbox.jsonl so that anyone auditing what the agent really did reads only real rows."
   ],
   "businesses": [
     {
@@ -40,6 +40,20 @@
       "onboarded_at": 1790866800,
       "sandbox": true,
       "note": "A demonstration so the escalation queue, the meter, the counterparty screen and the dry-run labelling can all be seen working. Hand-written decisions, not a real business, excluded from every traction number. No PolicyWallet on purpose: inventing contract state would make the page's own sentence about reading budgets from the contract false, and `spends: false` is both true here and the state the real business is in until a wallet is funded."
+    },
+    {
+      "slug": "acr-operator",
+      "name": "ACR operator wallet",
+      "treasury": "0x784e6D2d4870174aD1aEa3d7446F2377D0c6A05d",
+      "policy_wallet": "0xa67F188746f479A9d93D112BeeB7aadB90bE834b",
+      "consented": true,
+      "tier": "own",
+      "chain": "testnet",
+      "categories": [
+        "machine-services"
+      ],
+      "onboarded_at": 1791802047,
+      "note": "ACR's own operating wallet, tier `own` — this is us, not a customer, and `by_tier` says so. It exists because the first testnet PolicyWallet (0xA755f87B…) has an owner() whose key is held by nobody, which makes every onlyOwner path there — setAgent, setBudget, withdraw, spendAsOwner and spendApproved — unreachable forever. acr-fleet keeps that wallet and its history; this one carries the working escalation ladder. Deployed 2026-10-12 with the owner key in hand and the agent authorised at deploy time, so owner ≠ agent and an approval cannot authorise itself."
     }
   ]
 }

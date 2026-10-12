@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 from acr_oracle_client.policy import (
+    POLICY_ABI,
     USDC,
     PolicyClient,
     category_id,
@@ -353,3 +354,43 @@ def test_the_owner_path_refuses_when_unconfigured():
     c = _client(agent_signer=None, owner_signer=None)
     with pytest.raises(RuntimeError, match="not configured"):
         c.spend_as_owner("infra", OTHER, 1, {"rule": "pay"})
+
+
+def test_every_contract_call_the_client_makes_is_declared_in_its_abi():
+    """The ABI must carry every function the client actually calls.
+
+    `balance_usdc()` reads the token address from the wallet's own `usdc()`
+    getter — deliberately, so the figure cannot drift from what `spend`
+    transfers. That getter was never declared in POLICY_ABI, so every live call
+    raised `The function 'usdc' was not found in this contract's abi` and the
+    cash rung reported "not measured" against a wallet holding 20 USDC on Arc
+    testnet.
+
+    The existing balance tests could not catch it: they stub web3, so the fake
+    answers a call the real ABI cannot even build. `test_a_chain_that_refuses…`
+    asserts `balance_usdc() is None`, which passed for the wrong reason — a
+    missing ABI entry looks exactly like an unreachable node.
+
+    So this checks the ABI against the call sites instead of against a mock.
+    """
+    declared = {e["name"] for e in POLICY_ABI if e.get("type") == "function"}
+
+    # Only calls made against the POLICY contract, i.e. through `self._contract()`.
+    # `erc20.functions.balanceOf(...)` targets the USDC token with its own ABI and
+    # is correctly absent from this one — which is why the pattern is anchored on
+    # `_contract()` rather than on any `functions.` call.
+    import re
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1] / "acr_oracle_client" / "policy.py"
+    called = set(
+        re.findall(r"_contract\(\)\.functions\.([A-Za-z_][A-Za-z0-9_]*)\(", src.read_text())
+    )
+    assert called, "the pattern matched nothing; the call style changed"
+
+    missing = sorted(called - declared)
+    assert not missing, (
+        f"policy.py calls {missing} but POLICY_ABI does not declare them, so the "
+        "call raises at runtime and looks like an unreachable chain"
+    )
+    assert "usdc" in declared, "the getter balance_usdc() depends on"
