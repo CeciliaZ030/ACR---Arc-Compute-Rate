@@ -696,11 +696,21 @@ export async function callTool(
         const par = (await readJson(f, `${api}/par?${q}`)) as {
           error?: string;
           body?: unknown;
-          basket?: { fetched_at?: number; status?: unknown };
+          basket?: { fetched_at?: number; status?: unknown; age_s?: number | null };
         };
         // The same reference, the same age — see `check_spend` below for why.
         if (!par?.error) {
-          return { ...par, reference: basketStaleness(par.basket?.fetched_at, par.basket?.status) };
+          return {
+            ...par,
+            reference: basketStaleness(
+              par.basket?.fetched_at,
+              par.basket?.status,
+              undefined,
+              // The press's own subtraction, so the caller is not handed
+              // two ages for one basket on two clocks.
+              par.basket?.age_s,
+            ),
+          };
         }
         if (par.error !== "HTTP 404") {
           return {
@@ -844,7 +854,7 @@ export async function callTool(
         over_rate_bp?: number | null;
         verdict?: { verdict?: unknown; saving_usdc?: unknown; best_seller?: unknown };
         par?: { par_usdc?: number | null; best_usdc?: number | null; best_seller?: string | null };
-        basket?: { status?: unknown; fetched_at?: number };
+        basket?: { status?: unknown; fetched_at?: number; age_s?: number | null };
       };
       if (!par?.error) {
         /* RECORDED, AND SAID OUT LOUD ON THE SAME BREATH. `recorded_to` rides on
@@ -884,7 +894,12 @@ export async function callTool(
         return {
           ...par,
           recorded_to,
-          reference: basketStaleness(par.basket?.fetched_at, par.basket?.status),
+          reference: basketStaleness(
+            par.basket?.fetched_at,
+            par.basket?.status,
+            undefined,
+            par.basket?.age_s,
+          ),
         };
       }
       if (par.error === "HTTP 404") {

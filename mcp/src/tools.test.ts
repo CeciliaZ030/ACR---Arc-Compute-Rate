@@ -415,6 +415,34 @@ test("the version the server reports is the version npm publishes", () => {
   assert.equal(declared, pkg.version, "server.ts and package.json disagree about the version");
 });
 
+test("the version the repo ADVERTISES is the version it would publish", () => {
+  /* THE GATE ABOVE GUARDS ONE DIRECTION. It pins the two CODE copies —
+     `server.ts` and `package.json` — and they have never disagreed. What
+     drifted is the PROSE: the root README said `v0.3.0` while npm served
+     0.3.1, in the one table a reader consults to learn what to install.
+
+     Scoped to the root README's "Packaged as `acr-mcp` (vX.Y.Z" — a
+     CURRENT-STATE claim about what the package is. Deliberately NOT a sweep
+     for every version-shaped string: `McpSnippet.tsx` says "`acr-mcp@0.3.0`
+     published that evening", which is a true sentence about 2026-10-10 inside
+     a comment explaining why a clause was removed. A gate that forced history
+     to track the current version would turn an accurate record into a lie, so
+     the rule is that only claims in the present tense are pinned. */
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const pkg = JSON.parse(readFileSync(join(root, "mcp", "package.json"), "utf8")) as {
+    version: string;
+  };
+  const readme = readFileSync(join(root, "README.md"), "utf8");
+  const claimed = /Packaged as `acr-mcp` \(v([0-9]+\.[0-9]+\.[0-9]+)/.exec(readme)?.[1];
+  assert.ok(claimed, "the README no longer states which acr-mcp version it packages");
+  assert.equal(
+    claimed,
+    pkg.version,
+    `README.md advertises acr-mcp v${claimed} but mcp/package.json is ${pkg.version} — ` +
+      "a reader installs what npm has, not what the table says",
+  );
+});
+
 test("the README's stated tool count is the number of tools there are", () => {
   /* NOTHING GATED THE PROSE. `mcpsnippet.test.ts` pins the terminal's tool
      NAMES against this file, but the counts written in English drifted

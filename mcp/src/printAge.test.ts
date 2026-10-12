@@ -171,6 +171,53 @@ test("the press's refusal is passed through, not re-derived", () => {
   }
 });
 
+test("an AGING basket still prices, so nothing may say the comparison fell back", () => {
+  /* The press gained a third band on 2026-10-12: `aging` is the six days
+     between the warn mark and the cliff, and it is a LABEL, not a refusal —
+     `basket.usable` stays true and `benchmarked_against` stays `market`.
+
+     THE BUG THIS PINS. The branch below read `status.toLowerCase() !== "ok"`,
+     so `aging` fell into the refusal arm and this function told an integrating
+     agent "Its comparison fell back to whatever `benchmarked_against` names".
+     That is a false statement about a live benchmark: nothing fell back. An
+     agent acting on it would discard a verdict that was sound.
+
+     The casing is the contract — the two lowercase words price, the SCREAMING
+     ones refuse — so the test asserts on that rule rather than on one word. */
+  const twentyFive = Math.floor(Date.now() / 1000) - Math.round(25 * 86400);
+  const r = basketStaleness(twentyFive, "aging");
+
+  assert.equal(r.stale, false, "aging is not stale: the press still priced with it");
+  assert.equal(r.status, "aging");
+  assert.doesNotMatch(
+    String(r.note ?? ""),
+    /fell back/,
+    "an aging basket is still benchmarked against the market; saying otherwise is false",
+  );
+  // It is worth saying SOMETHING — this is the band that exists to be acted on.
+  assert.match(String(r.note ?? ""), /days ago/, "an aging basket should report its age");
+
+  // And the refusals must be untouched by the new branch.
+  const young = Math.floor(Date.now() / 1000) - 60;
+  assert.match(String(basketStaleness(young, "STALE").note), /fell back|benchmarked_against/);
+  assert.equal(basketStaleness(young, "STALE").stale, true);
+});
+
+test("the press's own age is preferred over a second subtraction", () => {
+  /* Two clocks for one quantity is the thing the press's `age_s` exists to
+     end. When it sends one, use it; the local `now - fetched_at` stays as the
+     fallback for a press too old to send it. A skewed client clock otherwise
+     disagrees with the host about a number the host already computed. */
+  const fetched = Math.floor(Date.now() / 1000) - 600; // local maths says 10 min
+  const pressSaysOlder = 25 * 86_400; // the press says 25 days
+  const r = basketStaleness(fetched, "aging", undefined, pressSaysOlder);
+  assert.equal(r.age_s, pressSaysOlder, "the press's subtraction wins");
+  assert.match(String(r.age), /days ago/);
+  // Absent, nothing changes: the local subtraction still answers.
+  const fallback = basketStaleness(fetched, "ok");
+  assert.ok(Number(fallback.age_s) >= 595 && Number(fallback.age_s) <= 605, fallback.age_s as string);
+});
+
 test("without a press verdict the anchor window is the fallback", () => {
   /* Reached only on a press too old to send `basket.status` — the same
      deployment-skew case `check_spend` already handles for a press with no

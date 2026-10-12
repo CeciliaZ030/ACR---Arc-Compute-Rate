@@ -158,27 +158,55 @@ export function printStaleness(
  *  THE SPLIT THAT MATTERS. The age is ours to report: it is a fact, and an
  *  agent that wants a tighter rule than 30 days needs the number in order to
  *  apply one. The VERDICT is the press's: `/par` already carries
- *  `basket.status` — `"ok"`, `"STALE"`, `"ABSENT"`, `"NO_ROWS"` — computed
- *  against `ANCHOR_MAX_AGE_S` by the same code that decides whether the basket
- *  is usable at all and, when it is not, switches who the bill is benchmarked
- *  against. Two surfaces answering "is this basket stale" on two boundaries is
- *  the thing being removed, not added.
+ *  `basket.status` — **`"ok"` · `"aging"` · `"STALE"` · `"ABSENT"` ·
+ *  `"NO_ROWS"`** — computed against `ANCHOR_MAX_AGE_S` by the same code that
+ *  decides whether the basket is usable at all and, when it is not, switches
+ *  who the bill is benchmarked against. Two surfaces answering "is this basket
+ *  stale" on two boundaries is the thing being removed, not added.
+ *
+ *  FIVE WORDS, NOT FOUR. `aging` arrived 2026-10-12 and is the six days
+ *  between the press's warn mark and its cliff. It still prices, which is why
+ *  it is grouped with `ok` below rather than with the refusals: treating it as
+ *  one told callers the comparison had fallen back to our own prices while it
+ *  was still measuring against the market.
  *
  *  So `status` decides, and our own window is the FALLBACK — reached only when
  *  a press is too old to send one, which is the same deployment-skew case
  *  `check_spend` already handles for a press with no `/par` at all.
  */
+/** The press's words that still PRICE, as against the ones that refuse.
+ *
+ *  THE CASING IS THE CONTRACT, and it is the press's own: the words that still
+ *  hand back quotes are lowercase (`ok`, `aging`), the refusals are SCREAMING
+ *  (`STALE`, `ABSENT`, `NO_ROWS`). Kept as a set rather than a `!== "ok"` test
+ *  because that test is precisely what broke when `aging` arrived — a healthy
+ *  basket was reported as having fallen back to the fleet when it had not. A
+ *  membership check fails safe in the other direction: a word this build has
+ *  never heard is treated as a refusal, which over-warns rather than inventing
+ *  confidence. */
+const PRICING_STATUSES = new Set(["ok", "aging"]);
+
 export function basketStaleness(
   fetchedAt: number | null | undefined,
   pressStatus?: unknown,
   nowS?: number,
+  pressAgeS?: number | null,
 ): Record<string, unknown> {
   const now = nowS ?? Math.floor(Date.now() / 1000);
-  const ageS = fetchedAt && Number.isFinite(fetchedAt) ? Math.max(0, now - fetchedAt) : null;
+  const local = fetchedAt && Number.isFinite(fetchedAt) ? Math.max(0, now - fetchedAt) : null;
+  /* ONE CLOCK. The press sends `basket.age_s` — its own subtraction, against
+     its own window — and until this argument existed we re-derived the same
+     quantity from `fetched_at` against this machine's clock. A client whose
+     clock is off then disagreed with the host about a number the host had
+     already computed, and the caller got two ages for one basket. The local
+     subtraction stays as the fallback for a press too old to send one. */
+  const ageS = typeof pressAgeS === "number" && Number.isFinite(pressAgeS)
+    ? Math.max(0, pressAgeS)
+    : local;
   const status = typeof pressStatus === "string" ? pressStatus.trim() : "";
   const out: Record<string, unknown> = { ...ageBlock(ageS), status: status || null };
 
-  if (status && status.toLowerCase() !== "ok") {
+  if (status && !PRICING_STATUSES.has(status.toLowerCase())) {
     // The press refused this basket. Pass its own word through rather than
     // re-deriving a verdict from the age — a basket can be ABSENT or NO_ROWS at
     // any age, and those are not staleness at all.
@@ -188,6 +216,22 @@ export function basketStaleness(
       (ageS === null ? "" : `, fetched ${ageWords(ageS)}`) +
       ". Its comparison fell back to whatever `benchmarked_against` names, " +
       "so read that before trusting the verdict.";
+    return out;
+  }
+
+  /* AGING: old enough to act on, not old enough to distrust. The press is
+     still pricing against the market with this basket — `usable` is true and
+     `benchmarked_against` stays `market` — so the one thing this note must not
+     do is suggest the comparison moved. What it says instead is the thing an
+     operator can act on: re-anchor before the press stops trusting it. */
+  if (PRICING_STATUSES.has(status.toLowerCase()) && status.toLowerCase() !== "ok") {
+    out.stale = false;
+    out.note =
+      `the press reports this basket as ${status}` +
+      (ageS === null ? "" : `, fetched ${ageWords(ageS)}`) +
+      ". It is still benchmarked against the market, and the press stops " +
+      "trusting it at its own limit — re-anchor (`anchors.py --fetch`, which is " +
+      "manual) before then, or the comparison moves onto our own prices.";
     return out;
   }
 

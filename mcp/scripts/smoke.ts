@@ -148,6 +148,19 @@ function probesFor(PAYER: string, SELLER: string): Probe[] {
       typeof o.reason === "string" && /predates the benchmark/.test(o.reason)
         ? "this press has no /par yet"
         : null,
+    // Same basket blindness as `benchmark_price` below, and this is the tool an
+    // agent actually points at a real invoice. It must say which market
+    // answered, because that is the difference between a verdict and a number.
+    note: (o) => {
+      const ref = o.reference as { status?: unknown; age?: unknown; stale?: unknown } | undefined;
+      const against = typeof o.benchmarked_against === "string" ? o.benchmarked_against : "?";
+      if (ref?.stale === true) {
+        return `answered, but the basket is ${String(ref.age)} and priced against ${against}`;
+      }
+      return typeof ref?.status === "string"
+        ? `answered · against ${against} · basket ${String(ref.status)}`
+        : null;
+    },
   },
   {
     tool: "wallet_tca",
@@ -253,6 +266,31 @@ function probesFor(PAYER: string, SELLER: string): Probe[] {
       typeof o.reason === "string" && /nothing to compare against|predates/.test(o.reason)
         ? "this press has no /par yet"
         : null,
+    /* THE SAME HOLE THE get_rate PROBE ABOVE ALREADY CLOSED, left open here.
+       This probe reported a bare `answered` and never mentioned the basket, so
+       a press serving a basket past the cliff — the state in which /par stops
+       using the market and prices a stranger's bill against OUR OWN fleet at
+       20x to 1250x off — came back as a clean pass. Measured 2026-10-12: all
+       eleven probes answered while `benchmark_price` said nothing about a
+       basket 6.3 days old, and would have said nothing at 31 days either.
+       `basketStaleness` has always put the answer in `reference`; nothing read
+       it. Said via `note` rather than `tolerate` because this is a real answer
+       carrying something worth knowing, not an excused absence. */
+    note: (o) => {
+      const ref = o.reference as { status?: unknown; age?: unknown; stale?: unknown } | undefined;
+      const basket = (o.basket ?? {}) as { status?: unknown; rows?: unknown; requested?: unknown };
+      const status = typeof basket.status === "string" ? basket.status : ref?.status;
+      if (ref?.stale === true) {
+        return `answered, but the basket is ${String(ref.age)} and ${String(status)} — ` +
+          "this press is pricing strangers against our own fleet";
+      }
+      if (typeof status === "string" && status !== "ok") {
+        return `answered · basket ${status}, ${String(ref?.age ?? "age unknown")}`;
+      }
+      return typeof status === "string"
+        ? `answered · basket ${status} · ${String(basket.rows ?? "?")} of ${String(basket.requested ?? "?")} prices`
+        : null;
+    },
   },
   { tool: "query_tape", args: { operation: "settlements", variables: { first: 3 } } },
   { tool: "can_i_pay", args: {} },

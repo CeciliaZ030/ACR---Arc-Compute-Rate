@@ -708,6 +708,14 @@ anchors-report:
 anchors-check:
 	uv run python scripts/anchors.py --check
 
+# Has mcp/package.json's version already been published? npm refuses a duplicate
+# and `npx -y acr-mcp` keeps serving the old build, so the repo can look shipped
+# while nothing moved. `prepublishOnly` cannot see this: it builds and tests, and
+# neither knows what the registry holds. Network, never CI, strict on an
+# unreadable registry. Run it before `npm run release`.
+mcp-version-check:
+	uv run python scripts/mcp_version_check.py
+
 # The same clock, read off the HOST instead of the working tree. `anchors-check`
 # above reads the files in this checkout; the press reads the ones baked into its
 # image, so they agree only until somebody re-anchors and nothing couples them.
