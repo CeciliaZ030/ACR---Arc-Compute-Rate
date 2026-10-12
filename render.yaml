@@ -537,3 +537,205 @@ services:
       # False on 5042 whatever is set here. Recorded so nobody looks for the knob.
       - key: ACR_TESTNET_SURFACES
         value: "0"
+
+  # =====================================================================
+  # Arc MAINNET — the SECOND mainnet press, and the one the terminal
+  # actually falls through to.
+  #
+  # WHY IT IS HERE AT ALL. It was not in this file, and this file exists
+  # precisely so that configuration does not live only in a dashboard. That
+  # omission mattered more than usual, because this host is load-bearing:
+  # `apps/terminal/lib/apiBase.ts` lists it as `MAINNET_PRESSES[1]`, and as of
+  # 2026-10-12 it is the ONLY mainnet press serving `/par` and `/operator/*` —
+  # `acr-api-mainnet` answers 44 routes with none of them. So /spend and
+  # /traction on the default chain are served from here or not at all.
+  #
+  # IT IS ON A DIFFERENT RENDER ACCOUNT FROM `acr-api-mainnet`, and it is the
+  # one of the two that RENDER_API_KEY can actually reach. That is the whole
+  # reason the press redeploy is possible rather than a request to someone else.
+  #
+  # Free plan, and it DOES NOT SLEEP: `ACR_SELF_URL` below points at its own
+  # public URL and its 60-second loop knocks on it, which Render counts as
+  # traffic. Measured 2026-10-11: after 17.5 minutes with no external request
+  # `process_started_at` was unchanged to the second. Read that field, never the
+  # latency — a fast answer can just mean it woke fast.
+  #
+  # NO SIGNER, BY OMISSION RATHER THAN BY CHOICE. `ACR_POSTER_PRIVATE_KEY`,
+  # `ACR_OWNER_PRIVATE_KEY`, `ACR_OPS_TOKEN` and every `ACR_CIRCLE_*`
+  # credential are ABSENT from this service. So it reads mainnet correctly and
+  # can sign nothing: no prints, no escalation, no ops console. That is a
+  # coherent state for a read replica and a trap if anyone mistakes it for the
+  # press — the fixing on this host is whatever `acr-api-mainnet` last posted.
+  # =====================================================================
+  - type: web
+    name: acr-probe-free
+    runtime: image
+    plan: free # see the no-sleep note above; no persistent disk either
+    region: oregon
+    image:
+      # THE RUNNING TAG, not the newest one. A pin here is a declaration and
+      # only the service's own image URL is evidence — the 10-05 pin on the
+      # block above was never what ran for three days, and `make verify-drift`
+      # read six routes short the whole time. So this line says what Render
+      # serves right now.
+      #
+      # 2026-10-12-1118 is BUILT, PUSHED and VERIFIED BY RUNNING IT, and is the
+      # next pin. It is the first image carrying the `acr-operator` registry row
+      # and the `usdc()` entry in POLICY_ABI (54df1cc) — `balance_usdc()` had
+      # never once worked against a real contract without it. Verified in that
+      # image rather than trusting the build:
+      #   docker run -p 8097:8000 --platform linux/amd64 …:2026-10-12-1118
+      #   /openapi.json         -> 50 routes, 5 of them /operator/*, /par present
+      #   /operator/businesses  -> 3 rows: acr-fleet, sandbox, acr-operator
+      #                            (the running 10-09 image serves 2 — this is
+      #                            the witness the old image provably fails)
+      #   POLICY_ABI            -> usdc() declared
+      # `docker images` reports 352MB against the older pins' 1.56GB for the
+      # buildkit-attestation reason recorded on the block above. It is not a
+      # broken build; running the container is what settles it.
+      #
+      # The swap is TWO calls, and a plain deploy is not one of them — a POST to
+      # /deploys on a pinned service re-pulls the same tag and changes nothing:
+      #   render services update srv-db28nc97lnhs73e1tgfg \
+      #     --image docker.io/kaushtubh02/acr-api:2026-10-12-1118 --confirm
+      #   render deploys create srv-db28nc97lnhs73e1tgfg --wait
+      # Both archive preflights were run against this host first and both came
+      # back 0 rows at risk (19 decisions, all 19 already in the repo archive;
+      # 0 live receipts). THAT ORDER IS NOT OPTIONAL on a plan with no disk:
+      # the decision log and the receipt log are erased by the deploy and
+      # rehydrate only from what ships inside the image.
+      url: docker.io/kaushtubh02/acr-api:2026-10-09-1755
+    healthCheckPath: /health
+    envVars:
+      # --- the chain, and the addresses the block above leaves empty ---------
+      # EVERY ONE OF THESE WAS READ OFF THE CHAIN, not copied from a dashboard:
+      # `eth_getCode` on 5042 returns 2247–8243 bytes for all seven. They are
+      # the real mainnet deployment, and until now they existed only in two
+      # Render dashboards — `acr-api-mainnet` above still carries `value: ""`
+      # for all of them. They are NOT filled in there from here: that block is
+      # a different account this key cannot read, and a half-filled block is
+      # the specific hazard its own `ACR_SUBGRAPH_URL` comment warns about.
+      - key: ACR_ARC_CHAIN_ID
+        value: "5042"
+      - key: ACR_ARC_RPC_URL
+        value: https://rpc.mainnet.arc.io # the shared public endpoint, not a keyed provider
+      - key: ACR_ARC_PRIVATE_MAINNET
+        sync: false # a flag, not a secret; its value was not read from here
+      - key: ACR_ORACLE_ADDRESS
+        value: "0xAfe8a941957EbD3C759fEA5365fe4B75f9626D07"
+      - key: ACR_ORACLE_V2_ADDRESS
+        value: "0xF77E763ef710096c0b9F02Ea16F76e68E0312f81"
+      - key: ACR_REGISTRY_ADDRESS
+        value: "0x13CF727d1D25283d58Efe7647dCf30e9cE255096"
+      - key: ACR_FUTURES_ADDRESS
+        value: "0xdb5D7dbB67aD8EC8517982E95c89906abFBC6d3b"
+      - key: ACR_ATTESTOR_ADDRESS
+        value: "0xB9508caD4A5C367C3a62B6767C4837a607EaA490"
+      - key: ACR_RECEIPT_MIRROR_ADDRESS
+        value: "0x1a5390E59d4ce0a386Aa071365A932Dc34d35bE3"
+      - key: ACR_HUMANID_MIRROR_ADDRESS
+        value: "0x7134622a01Add334eA306dDa5A5877b418a940B5"
+
+      # --- the tape ----------------------------------------------------------
+      # THE GATEWAY PATH, which is the one that is not rate-capped. Studio's
+      # development URL is 3,000 queries a day and counted on no dashboard;
+      # this is the published `acr` subgraph through the network gateway, so it
+      # is billed against ACR_GRAPH_API_KEY's 100k/month free tier instead.
+      - key: ACR_SUBGRAPH_URL
+        value: https://gateway.thegraph.com/api/subgraphs/id/48b7j1avjuKapURQmgF3fY25xC6vK4aR4PHU4JTYfY6N
+      - key: ACR_GRAPH_API_KEY
+        sync: false # server-side only: a key in a browser is a key anyone can spend
+      - key: ACR_KEEPER_MIRROR_S
+        value: "120"
+      - key: ACR_TAPE_SOURCE
+        value: sim # labelled on every response; real settlements carry no price signal
+      - key: ACR_SIM_EVENTS_PER_SERVICE
+        value: "2500"
+      - key: ACR_SIM_HORIZON_SECONDS
+        value: "14400"
+      - key: ACR_ATTACK_SIM_EVENTS_PER_SERVICE
+        value: "800"
+      - key: ACR_REFRESH_SECONDS
+        value: "3600"
+      - key: ACR_WAKE_POST_AFTER_S
+        value: "1200"
+
+      # --- the gates ---------------------------------------------------------
+      # `circle` with the MAINNET facilitator, which the guard checks: it
+      # refuses the -testnet host on 5042. There is no ACR_CIRCLE_API_KEY here,
+      # so the x402 gate verifies and settles through the facilitator and this
+      # host never holds custody of anything.
+      - key: ACR_X402_MODE
+        value: circle
+      - key: ACR_X402_FACILITATOR_URL
+        value: https://gateway-api.circle.com
+      # The POSTER EOA — a receiving address, so it carries no authority and
+      # needs no key, which is why it sits beside a service that holds none.
+      - key: ACR_X402_PAY_TO
+        value: "0x1547B0d3C334F264D28B087566B512AB5CD85379"
+      - key: ACR_CIRCLE_BASE_URL
+        value: https://api.circle.com
+      - key: ACR_PASS_PRICE_USDC
+        value: "1.0"
+      - key: ACR_PASS_WINDOW_S
+        value: "86400"
+
+      # --- CORS, and the one gap worth naming --------------------------------
+      # ONLY THE vercel.app ORIGIN. There is no `allow_origin_regex` anywhere —
+      # `app.py` matches the exact string after splitting on commas — so if
+      # `NEXT_PUBLIC_ACR_API` is ever pointed at this host, pay-with-wallet on
+      # /developers and the /curve shop floor break for visitors arriving on
+      # https://arccomputerate.in and on www, and nothing else does. Every
+      # READ reaches this host through the Next proxies on the terminal's own
+      # origin, so the ladder fix needs nothing here; only the browser-pays
+      # path reads `sellerBase()` cross-origin. Add the apex and www before
+      # making this the browser's seller. `*` would fail the mainnet guard.
+      - key: ACR_CORS_ORIGINS
+        value: https://arc-compute-rate.vercel.app
+
+      # --- the agent gate + the screen ---------------------------------------
+      - key: ACR_AGENT_AUDIENCE
+        value: acr-index-api
+      - key: ACR_ARMOR_MODE
+        value: auto
+      - key: ACR_ARMOR_PROJECT_ID
+        value: gen-lang-client-0589290672
+      - key: ACR_ARMOR_LOCATION
+        value: asia-south1
+      - key: ACR_ARMOR_TEMPLATE
+        value: EthOnline_Project
+      - key: ACR_ARMOR_CREDENTIALS_FILE
+        value: /etc/secrets/acr_armor_sa.json
+      # `agentkit` with sandbox OFF on mainnet, against a TEST app id. Recorded
+      # because the pair is odd on purpose and reads like a mistake: the mirror
+      # address above is the chain-side source of truth, and with no
+      # ACR_HUMANID_SALT set the gate refuses human claims and says so.
+      - key: ACR_HUMANID_MODE
+        value: agentkit
+      - key: ACR_HUMANID_APP_ID
+        value: test_app_62
+      - key: ACR_HUMANID_SANDBOX
+        value: "false"
+
+      # --- paths + self ------------------------------------------------------
+      # No disk on this plan, so every one of these is empty on each boot and
+      # the archives inside the image are the only history. ACR_SELF_URL is the
+      # anti-sleep loop described at the top of this block.
+      - key: ACR_SELF_URL
+        value: https://acr-probe-free.onrender.com
+      - key: ACR_RECEIPT_LOG_PATH
+        value: data/x402_receipts.jsonl
+      - key: ACR_RECEIPT_ARCHIVE_PATH
+        value: services/index_api/index_api/receipts_live.jsonl
+      - key: ACR_OPERATOR_LOG_PATH
+        value: data/operator_decisions.jsonl
+      # `off`, and with no signer on this host `live` could not pay anyway.
+      - key: ACR_OPERATOR_AUTORUN
+        value: "off"
+      - key: ACR_OPS_AUDIT_PATH
+        value: data/ops_actions.jsonl
+      - key: ACR_WEBHOOK_LOG_PATH
+        value: data/webhook_events.jsonl
+      # No faucet, no demo buyer, no attack lab: False on 5042 regardless.
+      - key: ACR_TESTNET_SURFACES
+        value: "0"

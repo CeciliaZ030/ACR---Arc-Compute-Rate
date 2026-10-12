@@ -160,14 +160,32 @@ def test_the_wildcard_the_guard_would_accept_is_not_in_use() -> None:
     import yaml
 
     doc = yaml.safe_load((ROOT / "render.yaml").read_text(encoding="utf-8"))
+    checked = []
     for svc in doc["services"]:
-        raw = {e["key"]: e.get("value") for e in (svc.get("envVars") or [])}.get(
-            "ACR_CORS_ORIGINS"
-        )
-        if not raw or svc.get("name") != "acr-api-mainnet":
+        env = {e["key"]: e.get("value") for e in (svc.get("envVars") or [])}
+        # KEYED ON THE CHAIN, NOT THE SERVICE NAME. This read
+        # `!= "acr-api-mainnet"` and so inspected exactly one block: a second
+        # mainnet service with a '*' passed the gate untouched. There is now a
+        # second one -- `acr-probe-free`, chain 5042, which `apiBase.ts` lists
+        # as MAINNET_PRESSES[1] -- and the name test skipped it silently, which
+        # is the failure shape nobody investigates. The testnet service is
+        # still exempt and its '*' is open by design: agents call it from
+        # anywhere, and its guardrails are server-side.
+        if str(env.get("ACR_ARC_CHAIN_ID") or "") != "5042":
+            continue
+        raw = env.get("ACR_CORS_ORIGINS")
+        if not raw:
             continue
         origins = [o.strip() for o in str(raw).split(",") if o.strip()]
         assert "*" not in origins, (
             f"{svc['name']}: ACR_CORS_ORIGINS contains a '*' entry, which passes "
             f"mainnet_guard's two-literal check and then allows every origin"
         )
+        checked.append(svc["name"])
+
+    # A loop that matches nothing passes. Both mainnet presses must be reached,
+    # or this is a gate asserting something about an empty set.
+    assert len(checked) >= 2, (
+        f"only {checked} were checked -- every chain-5042 service in render.yaml "
+        f"needs an ACR_CORS_ORIGINS this looks at"
+    )
