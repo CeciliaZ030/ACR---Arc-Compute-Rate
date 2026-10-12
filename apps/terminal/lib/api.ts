@@ -20,7 +20,7 @@
  * lib/envelope.ts, or `cookies()` in a page) and passes it down.
  */
 
-import { chainMismatch, isHostFailure, publishedSeller, servesPath } from "./apiBase";
+import { chainMismatch, isHostFailure, publishedSeller, servesPath, shouldTryNextHost } from "./apiBase";
 import { CHAINS, chainCandidates, emptyTerminal, type ChainKey } from "./chainChoice";
 import { makeLadder } from "./sellerLadder";
 import type { Envelope, TerminalData } from "./types";
@@ -381,7 +381,9 @@ export async function fetchLiveMeta<T>(
       const absent = res.status === 404 && (await routeAbsent(rig, base, path));
       return {
         ok: false,
-        hostFailed: isHostFailure(res.status),
+        // An absent route keeps the ladder walking; a declared route with a bad
+        // slug does not. The distinction, and the measurement, are on `shouldTryNextHost`.
+        hostFailed: shouldTryNextHost(res.status, absent),
         value: {
           data: null,
           upstream: absent ? "absent" : "error",

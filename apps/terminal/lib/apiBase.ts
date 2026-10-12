@@ -150,6 +150,29 @@ export function isHostFailure(status: number): boolean {
   return status >= 500;
 }
 
+/** Whether the ladder should walk past this host for THIS path.
+ *
+ *  `isHostFailure` answers "is this host serving at all". This answers the
+ *  narrower question the ladder actually asks, and the two differ in exactly one
+ *  case: a **404 on a route the host does not declare**. That is not an answer
+ *  about the resource — it is a fact about the deployment, and `MAINNET_PRESSES`
+ *  exists because a second host carries what the first does not.
+ *
+ *  Measured 2026-10-12: `acr-api-mainnet` serves 44 routes and 404s all five
+ *  `/operator/*` and `/par`; `acr-probe-free` — already the second candidate, same
+ *  chain 5042 — serves 50 including every one. The ladder stopped at the first,
+ *  so /spend showed an absence while a host one line below had the rows.
+ *
+ *  `absent` must come from `routeAbsent`, which asks the host's own
+ *  `/openapi.json`. A DECLARED route with a bad slug is `absent: false` and still
+ *  ends the ladder — asking a second press about somebody's typo only agrees
+ *  slower. Separated from the fetch closure so a test can reach it, which is the
+ *  same argument `lib/envelope.ts` and `lib/readResult.ts` already make.
+ */
+export function shouldTryNextHost(status: number, absent: boolean): boolean {
+  return isHostFailure(status) || absent;
+}
+
 /** Does a host that serves `served` have a route for this concrete path?
  *
  *  WHY THIS EXISTS. A press that predates a feature answers **404** for its

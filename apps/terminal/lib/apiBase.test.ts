@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { LOCAL_SELLER, MAINNET_SELLER, PROBE_SELLER, chainMismatch, isHostFailure, publishedSeller, sellerBase, sellerCandidates, servesPath } from "./apiBase";
+import { LOCAL_SELLER, MAINNET_PRESSES, MAINNET_SELLER, PROBE_SELLER, chainMismatch, isHostFailure, publishedSeller, sellerBase, sellerCandidates, servesPath, shouldTryNextHost } from "./apiBase";
 
 /* The default that matters is the one nobody sets. Eight places spelled
    `?? "http://127.0.0.1:8000"`, which is wrong in the only place it is ever
@@ -221,4 +221,34 @@ test("the availability check and the ledger's 404 agree about one host", () => {
   const older = ["/health", "/prints"];
   assert.equal(servesPath(older, "/operator/ledger/acr-fleet"), false);
   assert.equal(servesPath(older, "/operator/traction"), false);
+});
+
+
+test("a route the host does not carry sends the ladder on; a bad slug does not", () => {
+  // The bug: `hostFailed` was `isHostFailure(status)`, so a 404 stopped the
+  // ladder at the first candidate. Measured 2026-10-12 — acr-api-mainnet serves
+  // 44 routes and 404s all five /operator/* and /par, while acr-probe-free, the
+  // SECOND entry in MAINNET_PRESSES on the same chain, serves 50 including every
+  // one of them. /spend rendered an absence while a host one line below had the
+  // rows.
+  assert.equal(shouldTryNextHost(404, true), true, "absent route: try the next press");
+
+  // And the half that must NOT change. A 404 on a route the host DOES declare is
+  // the resource answering: no such business. Asking a second press about
+  // somebody's typo only agrees, slower.
+  assert.equal(shouldTryNextHost(404, false), false, "declared route, bad slug: stop");
+
+  // Everything else keeps the behaviour `isHostFailure` already had.
+  assert.equal(shouldTryNextHost(503, false), true, "a suspended host is a failure");
+  assert.equal(shouldTryNextHost(500, false), true);
+  assert.equal(shouldTryNextHost(402, false), false, "the paywall is the seller working");
+  assert.equal(shouldTryNextHost(401, false), false, "never ask a second press about a credential");
+});
+
+test("the probe press is a real alternate for mainnet, not decoration", () => {
+  // The fix above is only useful because the list has somewhere to walk TO.
+  // Both are chain 5042, so `chainMismatch` accepts either.
+  assert.ok(MAINNET_PRESSES.includes(MAINNET_SELLER));
+  assert.ok(MAINNET_PRESSES.includes(PROBE_SELLER), "a one-entry ladder cannot fall through");
+  assert.ok(MAINNET_PRESSES.length >= 2);
 });
