@@ -135,3 +135,42 @@ test("the worked examples use addresses that have rows at the plugin's default w
   );
   assert.ok(!/this week/.test(s.ask), "the default window is 30 days, so the question must not say a week");
 });
+
+test("a press that cannot serve the tools is not pinned into the config", () => {
+  /* THE CONFIG USED TO BE WORSE THAN NONE. `ACR_API` was pinned to
+     `baseState().active` — whichever host last answered, which for most of this
+     deployment's life was `acr-api-mainnet`. That host serves /terminal/data
+     and answers 404 for /par and all five /operator/*, so the paste-ready
+     block OVERRODE the npm package's own correct default (`acr-probe-free`)
+     with the one host where five of eleven tools cannot work.
+
+     Null omits the line. The caller decides by asking the host —
+     `servesPath(served, "/par")` — not from a hostname list that would go
+     stale the moment an image is rebuilt. */
+  const pinned = snippets("https://acr.test");
+  const unpinned = snippets(null);
+
+  assert.match(pinned.config, /"ACR_API": "https:\/\/acr.test"/);
+  assert.doesNotMatch(unpinned.config, /ACR_API/, "a host that cannot serve it must not be named");
+  assert.doesNotMatch(unpinned.pay, /ACR_API/, "and the paying config is the same decision");
+
+  // BOTH SHAPES MUST STILL PARSE. This is pasted into a JSON config file, so a
+  // dangling comma or an orphaned brace is a support question rather than a
+  // typo. JSON has no comments, which is why the explanation for the missing
+  // line lives in the component's prose and not in the snippet.
+  for (const [name, snip] of [["pinned", pinned.config], ["unpinned", unpinned.config]] as const) {
+    const parsed = JSON.parse(snip) as {
+      mcpServers: { "acr-tca": { env: Record<string, string>; args: string[] } };
+    };
+    const server = parsed.mcpServers["acr-tca"];
+    assert.deepEqual(server.args, ["-y", "acr-mcp"], `${name}: still installs the package`);
+    assert.ok(
+      "ACR_AGENT_PRIVATE_KEY" in server.env,
+      `${name}: the card key is what makes the tools carded, and must survive`,
+    );
+  }
+  assert.equal(
+    "ACR_API" in JSON.parse(unpinned.config).mcpServers["acr-tca"].env,
+    false,
+  );
+});

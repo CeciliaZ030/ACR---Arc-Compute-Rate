@@ -11,7 +11,7 @@
 
 **Live right now (Arc **mainnet**, chain 5042, since 2026-09-27):**
 - **Terminal (dashboard):** https://arc-compute-rate.vercel.app
-- **Seller API (x402-gated):** https://acr-api-mainnet.onrender.com
+- **Seller API (x402-gated):** https://acr-probe-free.onrender.com on mainnet, https://acr-api-1fto.onrender.com on testnet. https://acr-api-mainnet.onrender.com is the same chain as the first but serves **44 of 50**: `/par` and all five `/operator/*` answer 404 until its image is rebuilt.
 - **ACROracle:** [`0xAfe8…6D07`](https://explorer.arc.io/address/0xAfe8a941957EbD3C759fEA5365fe4B75f9626D07) · **ACROracleV2:** [`0xF77E…2f81`](https://explorer.arc.io/address/0xF77E763ef710096c0b9F02Ea16F76e68E0312f81) · **ACRFutures:** [`0xdb5D…6d3b`](https://explorer.arc.io/address/0xdb5D7dbB67aD8EC8517982E95c89906abFBC6d3b) · **AttestationRegistry:** [`0x13CF…5096`](https://explorer.arc.io/address/0x13CF727d1D25283d58Efe7647dCf30e9cE255096) · **ReceiptMirror:** [`0x1a53…5bE3`](https://explorer.arc.io/address/0x1a5390E59d4ce0a386Aa071365A932Dc34d35bE3) · **HumanIdMirror:** [`0x7134…40B5`](https://explorer.arc.io/address/0x7134622a01Add334eA306dDa5A5877b418a940B5) · **FeedAccessAttestor:** [`0xB950…A490`](https://explorer.arc.io/address/0xB9508caD4A5C367C3a62B6767C4837a607EaA490) — the full mainnet set is in [`README.md`](../README.md#live-right-now)
 - **CI:** 4 jobs (python · contracts · agent · terminal) on every push — `.github/workflows/ci.yml`
 
@@ -219,7 +219,7 @@ The arrows carry the sequence; this is also the **live-demo narration order** �
 |---|---|
 | `packages/` | The estimator core: `acr_core` · `acr_estimator` · `acr_tape` · `acr_sim` · `acr_instrument` · `acr_oracle_client` |
 | `contracts/` | `ACROracle.sol` + `AttestationRegistry.sol` + `ACRFutures.sol` + `FeedAccessAttestor.sol` (Foundry, 60 tests incl. invariants) — all deployed on Arc testnet |
-| `services/index_api/` | The x402-gated seller API (FastAPI) — deployed at acr-api-mainnet.onrender.com |
+| `services/index_api/` | The x402-gated seller API (FastAPI) — deployed three times: `acr-api-1fto` (testnet) and `acr-probe-free` (mainnet) serve all 50 routes, `acr-api-mainnet` serves 44 |
 | `apps/terminal/` | The ACR Terminal (Next.js) — deployed at arc-compute-rate.vercel.app |
 | `apps/agent/` | The machine buyer (Circle Gateway `x402-batching` client) |
 | `.github/workflows/` | CI (4 jobs) + the keep-alive ping for the free-tier press |

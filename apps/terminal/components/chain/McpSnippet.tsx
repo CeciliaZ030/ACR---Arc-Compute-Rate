@@ -41,8 +41,28 @@ export const TOOLS = [
   "query_tape",
 ] as const;
 
-/** The three snippets, built from the API this page is looking at. Pure, so a test can pin them. */
-export function snippets(api: string): Record<Tab, string> {
+/** The three snippets, built from the API this page is looking at. Pure, so a test can pin them.
+ *
+ *  `api` IS NULLABLE, AND THAT IS THE POINT. This pinned `ACR_API` to whatever
+ *  host the page was looking at, and `baseState().active` is whichever host
+ *  last answered — `/terminal/data`, usually, which `acr-api-mainnet` serves
+ *  perfectly well while answering 404 for `/par` and all five `/operator/*`.
+ *  So the paste-ready config OVERRODE the npm package's own correct default
+ *  (`acr-probe-free`) with the one host where five of eleven tools cannot
+ *  work. A config that pins the wrong host is worse than one that pins none.
+ *
+ *  Pass null and the `ACR_API` line is omitted, which is not a degradation:
+ *  `acr-mcp` defaults to a mainnet press that serves every tool, so the
+ *  package is right about this and the page was wrong. The caller decides by
+ *  asking the host itself — `servesPath(served, "/par")` — rather than from a
+ *  list of hostnames here that would go stale the moment an image is rebuilt.
+ */
+export function snippets(api: string | null): Record<Tab, string> {
+  /* One line, or none. Kept as a string rather than a ternary inside the
+     template so the trailing comma stays correct in both shapes — a config
+     block a developer pastes has to be valid JSON, and "nearly valid" is a
+     support question. */
+  const apiLine = api ? `        "ACR_API": "${api}",\n` : "";
   return {
     config: `{
   "mcpServers": {
@@ -50,8 +70,7 @@ export function snippets(api: string): Record<Tab, string> {
       "command": "npx",
       "args": ["-y", "acr-mcp"],
       "env": {
-        "ACR_API": "${api}",
-        "ACR_AGENT_PRIVATE_KEY": "0x<any 32-byte key: the card, not a wallet>",
+${apiLine}        "ACR_AGENT_PRIVATE_KEY": "0x<any 32-byte key: the card, not a wallet>",
         "ACR_HUMAN_AGENT_KEY": "0x<optional: a wallet in AgentBook, for wallet_tca(\\"me\\")>"
       }
     }
@@ -66,8 +85,7 @@ export function snippets(api: string): Record<Tab, string> {
       "command": "npx",
       "args": ["-y", "acr-mcp"],
       "env": {
-        "ACR_API": "${api}",
-        "ACR_PAYER_PRIVATE_KEY": "0x<a wallet YOU control, deposited into Circle Gateway>",
+${apiLine}        "ACR_PAYER_PRIVATE_KEY": "0x<a wallet YOU control, deposited into Circle Gateway>",
         "ACR_MAX_SPEND_USDC": "0.01"
       }
     }
@@ -103,7 +121,7 @@ export function snippets(api: string): Record<Tab, string> {
   };
 }
 
-export function McpSnippet({ api }: { api: string }) {
+export function McpSnippet({ api }: { api: string | null }) {
   const [tab, setTab] = useState<Tab>("config");
   const [copied, setCopied] = useState(false);
   const code = snippets(api)[tab];
@@ -130,6 +148,18 @@ export function McpSnippet({ api }: { api: string }) {
         x="Eleven tools any MCP host can call. Ten are reads: check_spend runs the spend agent\u2019s own ladder over any vendor\u2019s invoice, and spend_report totals every bill it has priced. One spends, and only when you set a payer key."
         p="Eleven questions an AI assistant can ask, including whether a bill is fair and whether your agent has been overpaying."
       />
+      {api === null ? (
+        /* OUTSIDE THE CODE BLOCK, because the config tab is pasted into a JSON
+           file and JSON has no comments: a `#` note prepended to it would make
+           the one snippet that must parse, not parse. */
+        <Ed
+          as="p"
+          className="muted"
+          style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+          x="No ACR_API line below, on purpose. The press this page is reading does not carry /par, and the package already defaults to one where every tool answers."
+          p="The config has no address in it on purpose. The tool already knows where to look."
+        />
+      ) : null}
       <div className="register-row" style={{ fontSize: 13 }}>
         <span className="muted" style={{ minWidth: 132 }}>
           <Ed x="tools" p="questions" />

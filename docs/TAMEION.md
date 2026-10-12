@@ -26,11 +26,14 @@ and so do `/spend` and `/traction`. What those two pages show in production is
 |---|---|
 | the operator's data | lives on the **testnet** API, `acr-api-1fto` (chain `5042002`), which serves all five `/operator/*` routes. Every link in the tables below points there |
 | the terminal | is built for Arc **mainnet** and refuses a press reporting a different chain id (`lib/apiBase.ts` `chainMismatch`). That guard exists because a resumed testnet seller once served live testnet data under a mainnet masthead |
-| the **mainnet** API | serves **44 routes and none of them is `/operator/*`** — the running image predates them. Measured 2026-10-07; `make verify-drift` reports it |
+| the **mainnet** API | is TWO presses. `acr-probe-free` serves all 50 routes including every `/operator/*` and `/par`; `acr-api-mainnet` serves **44 and none of them is `/operator/*`** — its image predates them. Measured 2026-10-12; `make verify-drift` reports both |
 
 So `/spend` reads "No businesses onboarded yet" on a product that has one business and nineteen
-decisions. The copy is honest about what it can see; what it can see is the wrong host. **One
-redeploy of the mainnet API closes this**, and nothing else has to change. Until then the API links
+decisions. The copy is honest about what it can see; what it can see is the wrong host. **That is
+fixed in the terminal rather than by a redeploy** (`9c7033d`): the seller ladder's walk
+signal was `status >= 500`, so a **404** stopped it on the first candidate even though
+`acr-probe-free` — same chain, next in the list — serves every one of these routes. A
+healthy host that does not carry a route now gets walked past. Until then the API links
 below are the live surface, and `make api && make terminal` renders the pages locally against
 whichever press you point `ACR_API` at.
 

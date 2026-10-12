@@ -1425,7 +1425,76 @@ _PRICEABLE_UNITS = tuple(spec_for(i).unit for i in ALL_INDEX_IDS)
 _NO_VENDOR = "0x" + "11" * 20
 
 
-@app.get("/par")
+class ParBasketOut(BaseModel):
+    """The comparison set `/par` answered from, and how old it is.
+
+    READ `status` BEFORE THE VERDICT. `ok` and `aging` both price against real
+    third-party list prices; the SCREAMING values mean the basket was unusable
+    and the comparison fell back to sellers THIS DEPLOYMENT OPERATES, at a scale
+    `anchors/GAP.md` records as 20x to 1250x off market. `benchmarked_against`
+    names which happened, and a verdict read without it is not a verdict.
+    """
+
+    index_id: str
+    #: `ok` · `aging` · `STALE` · `ABSENT` · `NO_ROWS`. The two lowercase words
+    #: still price; the rest are refusals. `aging` is the band before the cliff:
+    #: old enough to re-anchor, still measuring against the market.
+    status: str
+    #: Unix SECONDS the basket was fetched.
+    fetched_at: float
+    #: How old it is, in seconds. **`null` when unknowable**, never 0 — a zero
+    #: would read as "fetched this instant", the freshest possible answer for
+    #: the least evidence.
+    age_s: float | None
+    #: Past this the press refuses the basket and reprices against the fleet.
+    max_age_s: float
+    #: Where `aging` begins. Always below `max_age_s`.
+    warn_after_s: float
+    #: Prices the basket HAS and prices it ASKED FOR. A basket that shrinks
+    #: silently re-medians a different population, so both travel.
+    rows: int
+    requested: int
+
+
+class ParCheckOut(BaseModel):
+    """What `GET /par` answers.
+
+    DOCUMENTATION, NOT A FILTER — attached through `responses=` rather than
+    `response_model=` on purpose. A `response_model` makes FastAPI serialize
+    through the model, so any field this class failed to declare would be
+    silently dropped from a live response: a doc improvement that quietly
+    breaks the terminal and every integrator. This way the route keeps
+    returning exactly what it returns, and the schema is a description that
+    `test_par_schema.py` holds to the truth in both directions.
+
+    It is the only route here with a documented response, because it is the
+    only one a stranger can exercise with no key, no card and no payment — and
+    the one third parties were given no way to learn the shape of.
+    """
+
+    unit: str
+    billed_usdc: float
+    quantity: float
+    vendor: str | None
+    vendor_supplied: bool
+    #: `market` or `fleet` — WHOSE prices answered.
+    benchmarked_against: str
+    basket: ParBasketOut
+    #: How far over the going rate, in basis points. THIS is the number to
+    #: show; `verdict.verdict` answers a different question and disagrees on
+    #: purpose, reading `over_par` whenever material money sits at the cheapest
+    #: row even for a bill at exactly the market median.
+    over_rate_bp: float | None
+    par: dict
+    verdict: dict
+    #: What the spend operator WOULD do with this bill, without doing it.
+    would: dict
+
+
+@app.get(
+    "/par",
+    responses={200: {"model": ParCheckOut, "description": "The bill, priced, with its basis."}},
+)
 def price_check(
     request: Request,
     unit: str,

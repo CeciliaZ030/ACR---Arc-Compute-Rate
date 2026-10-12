@@ -431,7 +431,7 @@ and it proves its own tamper-resistance.
   built — and the money is real.*
 - **Vercel** — the host serving the Terminal (`arc-compute-rate.vercel.app`). *The
   landlord for the storefront website.*
-- **Render** — the host serving the seller API (`acr-api-mainnet.onrender.com`), which
+- **Render** — the host serving the seller API. THREE services, not one: `acr-api-1fto` (testnet) and `acr-probe-free` (mainnet) serve all 50 routes, while `acr-api-mainnet.onrender.com` serves 44 and answers 404 for `/par` and `/operator/*`. It
   posts a Circle-signed oracle price every hour. *The landlord for the back office.*
 - **arcscan (`testnet.arcscan.app`)** — Arc's block explorer, where anyone can look
   up a contract or transaction. *The public land registry for the chain.*

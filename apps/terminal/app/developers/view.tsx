@@ -349,7 +349,14 @@ export function DevelopersView({
           that names a host the page itself will not call is worse than no snippet,
           because it looks checked. */}
       <AgentCardSnippet api={activeApi} />
-      <McpSnippet api={activeApi} />
+      {/* ASK THE HOST, DO NOT NAME IT. `activeApi` is whichever press last
+          answered, and `acr-api-mainnet` answers /terminal/data while 404ing
+          /par and every /operator/* — so pinning it here handed a developer a
+          config in which five of eleven tools cannot work, overriding the npm
+          package's own correct default to do it. Null omits the line and lets
+          the package choose. `served` is the host's own /openapi.json, which is
+          the same evidence the endpoint table below uses. */}
+      <McpSnippet api={served && !servesPath(served, "/par") ? null : activeApi} />
 
       {/* The contracts, named where a developer looks for them. This page knew
           the chain well enough to build explorer links and never once said
