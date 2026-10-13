@@ -67,17 +67,24 @@ acr  › 0.49773 (CI 0.49449–0.49780) · costs 0.0156 USDC to move by 1 bp · 
 
 ## Verified
 
-- **SDK pin = what Aomi's backend requires today.** `GET https://api.aomi.dev/api/platforms/server-tags`
-  answers `{"server_tags":["prod"],"sdk_version":"5.1.1"}`. `Cargo.toml` pins `=5.1.1` and
-  `Cargo.lock` resolves `5.1.1`, which is the comparison `aomi-build sdk check` makes.
-- **It loads the way the backend loads it.** Through `DynFnHandle`: the manifest reads
-  `acr-compute-rate 0.1.0 · sdk 5.1.1 · namespaces []` with five tools.
+- **SDK pin = what Aomi's backend requires today.** `aomi-build sdk check` (the 5.1.1 CLI)
+  asks `api.aomi.dev` and passes: required 5.1.1, `Cargo.toml` exact 5.1.1, `Cargo.lock`
+  5.1.1. The backend's own answer, `GET /api/platforms/server-tags`, is
+  `{"server_tags":["prod"],"sdk_version":"5.1.1"}`.
+- **It loads the way the backend loads it.** Through `DynFnHandle`, and read back by
+  `aomi-build manifest`: `acr-compute-rate 0.1.0 · sdk 5.1.1 · namespaces []`, five tools,
+  one optional secret slot (`ACR_API`).
+- **It builds the way Aomi's builder builds it.** The builder stages this folder on its
+  own, so it was copied out of the repo by itself and passed `cargo test --locked` and
+  `cargo build --release --locked` there.
 - **Every tool answers from a plain thread AND from inside a Tokio runtime.** HTTP uses
   `reqwest`'s blocking client, as Aomi's template prescribes, because a tool runs inside a
   synchronous FFI boundary.
-- **Tests.** `cargo test`: 21 deterministic tests run on recorded live responses, each
-  watched failing on a deliberately broken tool. `cargo test -- --ignored` runs all five
-  tools against the real press. ACR's CI runs the suite on every push.
+- **Tests.** `cargo test`: 22 deterministic tests. 21 run the tools on recorded live
+  responses, each watched failing on a deliberately broken tool. The 22nd fails if the
+  SDK pin Aomi's deploy gate reads (the repo-root `Cargo.toml`) and the pin this App
+  builds with ever differ. `cargo test -- --ignored` runs all five tools against the real
+  press. ACR's CI runs the suite on every push.
 
 ## Deploy it from the dashboard
 
@@ -94,13 +101,21 @@ an App in a subdirectory.
 `aomi.toml` declares `server_tags = ["prod"]`, because `api.aomi.dev` advertises only
 `prod`, and an App left on the default `["staging"]` would never load there.
 
-**From a terminal instead** (needs a community activation token from the Aomi team):
+The repo root also holds a small `Cargo.toml` that builds nothing. Aomi's deploy gate reads
+the SDK pin only from the root of a repository, and stops with "no Cargo.toml found"
+without one. So that file declares the pin and excludes this folder, which Aomi's builder
+compiles on its own.
+
+**From a terminal instead.** A human deploy signs in with GitHub, so no activation token
+is needed. The Aomi Build GitHub App must be installed on the repo (step 2 above), and
+the commit being shipped must be pushed.
 
 ```bash
-cargo install aomi-sdk --version 5.1.1 --locked --features cli
+cargo install aomi-sdk --version 5.1.1 --locked --features cli   # installs aomi-build
 export AOMI_BACKEND_URL=https://api.aomi.dev
-aomi-build connect --platform community --repo kaustubh76/ACR---Arc-Compute-Rate
-aomi-build deploy --activation-token <community-token>
+aomi-build sdk check --path .                                     # from the repo root
+aomi-build login --build-url https://build.aomi.dev               # opens GitHub in a browser
+aomi-build deploy --repo kaustubh76/ACR---Arc-Compute-Rate        # preflight, PR, build, activate
 ```
 
 **Optional setting:** `ACR_API`, set in the App's Environment tab, points the tools at
@@ -110,7 +125,7 @@ unset, the App reads the default Arc mainnet press.
 ## Develop
 
 ```bash
-cargo test                       # 21 deterministic tests
+cargo test                       # 22 deterministic tests
 cargo test -- --ignored          # every tool against the live ACR press
 cargo build --release            # target/release/libacr_compute_rate.{dylib,so}
 ```

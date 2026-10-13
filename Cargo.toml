@@ -1,0 +1,21 @@
+# THIS FILE EXISTS FOR AOMI'S DEPLOY GATE, NOT TO BUILD ANYTHING.
+#
+# `aomi-build deploy` (and its wizard) check the aomi-sdk pin in the Cargo.toml
+# at the REPOSITORY ROOT, never in the App's folder (aomi-sdk 5.1.1,
+# bin/build/deploy/cli/deploy.rs → sdk_guard::ensure_project_sdk(git_root)).
+# Without this file the deploy stops with "no Cargo.toml found" before it
+# reaches Aomi at all. The gate accepts a [workspace.dependencies] pin and a
+# missing root Cargo.lock, so that is all this declares.
+#
+# The App itself stays OUTSIDE this workspace (`exclude`): Aomi's builder stages
+# integrations/aomi/ on its own, so that folder must build from its own
+# Cargo.toml and Cargo.lock. Its pin and this one must agree; a test in
+# integrations/aomi/src/lib.rs fails if they do not.
+
+[workspace]
+resolver = "3"
+members  = []
+exclude  = ["integrations/aomi"]
+
+[workspace.dependencies]
+aomi-sdk = "=5.1.1"

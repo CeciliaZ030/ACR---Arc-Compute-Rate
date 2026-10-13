@@ -63,3 +63,34 @@ dyn_aomi_app!(
     )],
     namespaces = []
 );
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    /// The `aomi-sdk = "…"` requirement in a Cargo.toml.
+    fn sdk_pin(manifest: &str) -> Option<String> {
+        manifest
+            .lines()
+            .find(|l| l.trim_start().starts_with("aomi-sdk"))
+            .and_then(|l| l.split('"').nth(1))
+            .map(str::to_string)
+    }
+
+    /// Aomi's deploy gate reads the pin from the repo-root Cargo.toml; Aomi's
+    /// builder compiles this folder with its own. If they drift, the gate passes
+    /// a commit whose App was built against another SDK, and the backend refuses
+    /// to load it long after the deploy said yes.
+    #[test]
+    fn the_pin_aomi_checks_is_the_pin_this_app_builds_with() {
+        let here = sdk_pin(include_str!("../Cargo.toml")).expect("this App pins aomi-sdk");
+        let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        if !repo.join(".aomi/config.json").is_file() {
+            return; // staged on its own by Aomi's builder: there is no repo root to agree with
+        }
+        let root = std::fs::read_to_string(repo.join("Cargo.toml"))
+            .expect("the ACR repo root needs the Cargo.toml Aomi's deploy gate reads");
+        assert_eq!(sdk_pin(&root).as_deref(), Some(here.as_str()), "root pin ≠ App pin");
+        assert!(here.starts_with('='), "Aomi loads only an exact SDK pin, got {here}");
+    }
+}
