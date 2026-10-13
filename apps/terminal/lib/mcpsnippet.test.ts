@@ -136,6 +136,29 @@ test("the worked examples use addresses that have rows at the plugin's default w
   assert.ok(!/this week/.test(s.ask), "the default window is 30 days, so the question must not say a week");
 });
 
+test("the bill example names no vendor, because an ACR seller cannot be priced against the market", () => {
+  /* MEASURED 2026-10-13 through the published plugin. The example read "billed
+     0.47 USDC for 23 thousand tokens BY 0xefe0…" — and 0xefe0… is ACR's own
+     seller, which the press prices only against ACR's fleet, never the open
+     market. The answer was "pay, unbenchmarked" on mainnet and "pay, −9,609 bp"
+     on testnet, while the same bill with no vendor was "escalate, +500,870 bp"
+     against five cited market prices. The page's demo of token spend was the one
+     case the tool is built to refuse.
+
+     The seller_rating example SHOULD keep that address (it rates a seller); only
+     the question check_spend answers must not carry one. */
+  const lines = snippets("https://acr.test").ask.split("\n");
+  const arrow = lines.findIndex((l) => /->\s*check_spend\b/.test(l));
+  assert.ok(arrow > 0, "the ask tab must still teach check_spend");
+  const question = lines.slice(0, arrow).reverse().find((l) => l.startsWith('"')) ?? "";
+  assert.match(question, /tokens/, "the check_spend example should be a token bill");
+  assert.doesNotMatch(
+    question,
+    /0x[0-9a-fA-F]{40}/,
+    `the check_spend example names a vendor address: ${question}`,
+  );
+});
+
 test("a press that cannot serve the tools is not pinned into the config", () => {
   /* THE CONFIG USED TO BE WORSE THAN NONE. `ACR_API` was pinned to
      `baseState().active` — whichever host last answered, which for most of this

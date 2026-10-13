@@ -22,7 +22,7 @@ from pathlib import Path
 import pytest
 from acr_oracle_client.policy import PolicyClient, category_id, decision_hash
 from acr_oracle_client.signer import LocalKeySigner
-from index_api.operator import ESCALATE, PAY, Obligation, run_obligation
+from index_api.operator import ESCALATE, PAY, Obligation, hashable_record, run_obligation
 from web3.logs import DISCARD
 
 #: Overridable because this machine runs more than one project. A parallel
@@ -162,9 +162,14 @@ def test_a_fair_bill_is_paid_and_the_chain_holds_the_reasoning(business, tmp_pat
     assert b["spent_usdc"] == pytest.approx(2.0)
 
     # THE claim: what we wrote down hashes to what the chain stored.
-    logged = json.loads((tmp_path / "decisions.jsonl").read_text().splitlines()[0])
-    logged.pop("tx", None)
-    logged.pop("paid_usdc", None)
+    # Stripped through the product's own `hashable_record`, never a hand-kept
+    # list: this test used to pop `tx` and `paid_usdc` itself, and when
+    # `warns_signature` joined `operator.UNHASHED` the copy here did not, so
+    # the record it re-hashed carried a field the commitment never saw — red on
+    # every run with a node, and hidden for a day behind a lint failure.
+    logged = hashable_record(
+        json.loads((tmp_path / "decisions.jsonl").read_text().splitlines()[0])
+    )
     events = wallet.events.Spent().process_receipt(
         w3.eth.get_transaction_receipt(d.tx), errors=DISCARD
     )

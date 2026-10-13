@@ -34,7 +34,12 @@ def pytest_configure(config) -> None:  # noqa: ARG001 - pytest hook signature
     from acr_core.config import ACRSettings
 
     ACRSettings.model_config["env_file"] = None
-    for key in [k for k in os.environ if k.startswith("ACR_")]:
+    # ACR_TEST_RPC survives the scrub: it names WHICH anvil the on-chain tests
+    # use, not a product setting. Four test files document it as the override
+    # for a machine where another project holds 127.0.0.1:8545 — and this loop
+    # deleted it before any of them read it, so the override had never worked
+    # (found 2026-10-13: "no anvil at http://127.0.0.1:8545" with it set).
+    for key in [k for k in os.environ if k.startswith("ACR_") and k != "ACR_TEST_RPC"]:
         del os.environ[key]
 
     # THE SUITE USED TO WRITE PAYMENTS INTO THE PRODUCTION LEDGER.

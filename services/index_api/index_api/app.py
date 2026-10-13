@@ -1530,7 +1530,6 @@ def price_check(
     has onboarded nothing, and `decide` leaves a note for each.
     """
     from .operator import Obligation, decide
-    from .par import assess as par_assess
     from .par import (
         AGE_WARN_FRACTION,
         ANCHOR_MAX_AGE_S,
@@ -1539,6 +1538,7 @@ def price_check(
         par_from_quotes,
         quotes_by_unit,
     )
+    from .par import assess as par_assess
 
     _meter_agent(request, agent)
     if unit not in _PRICEABLE_UNITS:

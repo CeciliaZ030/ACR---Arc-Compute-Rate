@@ -78,6 +78,48 @@ export const DEFAULT_API = "https://acr-probe-free.onrender.com";
 export const UNITS = ["$/1k tokens", "$/GPU-sec", "$/MB"] as const;
 export type Unit = (typeof UNITS)[number];
 
+/** What a caller must know when a bill was judged against ACR's FLEET, not the market.
+ *
+ *  WHY THIS EXISTS — measured 2026-10-13, through this tool, as an agent sees it.
+ *  The press prices a seller ACR operates only against ACR's own fleet quotes
+ *  (`app.py` `price_check`), because those sit on the index scale that
+ *  `anchors/GAP.md` puts 20x–1250x off real prices: like-for-like or not at all.
+ *  That rule is right. What was wrong is that nothing told the CALLER. One bill —
+ *  0.47 USDC for 23k tokens, the example `/developers` advertised — came back:
+ *
+ *    vendor = an ACR seller, mainnet   fleet, no quotes      → "pay", unbenchmarked
+ *    vendor = an ACR seller, testnet   fleet, index scale    → "pay", "−9,609 bp"
+ *    no vendor                         the open market       → "escalate", +500,870 bp
+ *
+ *  An agent reading the first two has no way to know the third exists, and the
+ *  second reads like a 96% discount on a bill that is ~78x what GPT-4o mini
+ *  charges. So the basis gets a sentence, and the sentence names the call that
+ *  prices the same bill against the market.
+ *
+ *  `null` for a market-priced bill: that answer needs no footnote. */
+export function fleetHint(
+  benchmarkedAgainst: unknown,
+  vendorSupplied: boolean,
+  benchmarked: unknown,
+): string | null {
+  if (benchmarkedAgainst !== "fleet") return null;
+  if (vendorSupplied) {
+    return (
+      "This vendor is a seller ACR operates, so the bill was judged only against ACR's own " +
+      "fleet prices, which sit on ACR's index scale rather than the open market" +
+      (benchmarked === false ? " — and the fleet had no independent quote to compare it with" : "") +
+      ". To price the same bill against what the market actually charges, call check_spend " +
+      "again without `vendor`."
+    );
+  }
+  // No vendor reaches the fleet only when the market basket is unusable.
+  return (
+    "The market basket could not be used, so this bill fell back to ACR's fleet prices, which " +
+    "sit on ACR's index scale and are not market prices. Treat the verdict as unbenchmarked " +
+    "until `reference` shows a usable basket."
+  );
+}
+
 /** The lookback a window-taking tool uses when the caller names none.
  *
  *  Was 7, which returned nothing for everything. Measured 2026-10-08: at 7 days
@@ -852,7 +894,13 @@ export async function callTool(
         body?: { detail?: unknown };
         would?: { intent?: unknown; rule?: unknown };
         over_rate_bp?: number | null;
-        verdict?: { verdict?: unknown; saving_usdc?: unknown; best_seller?: unknown };
+        benchmarked_against?: unknown;
+        verdict?: {
+          verdict?: unknown;
+          saving_usdc?: unknown;
+          best_seller?: unknown;
+          benchmarked?: unknown;
+        };
         par?: { par_usdc?: number | null; best_usdc?: number | null; best_seller?: string | null };
         basket?: { status?: unknown; fetched_at?: number; age_s?: number | null };
       };
@@ -891,9 +939,11 @@ export async function callTool(
            unread. Nested under `reference` rather than spread at the top level
            so it cannot be confused with the age of the bill, which is the
            caller's own. */
+        const hint = fleetHint(par.benchmarked_against, Boolean(vendor), par.verdict?.benchmarked);
         return {
           ...par,
           recorded_to,
+          ...(hint ? { hint } : {}),
           reference: basketStaleness(
             par.basket?.fetched_at,
             par.basket?.status,

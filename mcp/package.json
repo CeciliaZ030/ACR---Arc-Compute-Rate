@@ -40,6 +40,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test --test-force-exit src/*.test.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
+    "demo": "node --import tsx scripts/demo.ts",
     "prepublishOnly": "npm run build && npm test",
     "release": "npm run smoke && npm publish"
   },
