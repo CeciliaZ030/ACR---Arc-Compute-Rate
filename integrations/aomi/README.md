@@ -104,8 +104,11 @@ an App in a subdirectory.
    select it. Aomi reads the default branch, so this App has to be on `main` first. With
    it there, the wizard builds the release from the branch's latest commit and activates
    it.
-3. The App then appears under Projects, Deployments and Observability, and **Chat**
-   opens chat.aomi.dev with it selected.
+3. To ship a new commit, use **Deployments → Deploy** on `main`. Aomi's workflow then
+   activates the release and waits until the runtime reports the artifact ready.
+4. Talk to it from the project's **Chat** tab. That tab opens chat.aomi.dev pinned to this
+   App by its numeric `application_id`. A plain chat.aomi.dev session routes on its own
+   (Auto mode) and answers without ACR's tools.
 
 `aomi.toml` declares `server_tags = ["prod"]`, because `api.aomi.dev` advertises only
 `prod`, and an App left on the default `["staging"]` would never load there.
@@ -116,16 +119,18 @@ without one. So that file declares the pin and nothing else. This folder's `Carg
 declares its own `[workspace]`. Aomi's platform build looks for `Cargo.lock` beside the
 first workspace it finds walking up from the App, and the lock lives here.
 
-**From a terminal instead.** A human deploy signs in with GitHub, so no activation token
-is needed. The Aomi Build GitHub App must be installed on the repo (step 2 above), and
-the commit being shipped must be pushed.
+**Deploy production from the dashboard, not the terminal.** `aomi-build deploy` builds and
+publishes the release, but Aomi then starts its deploy workflow without a branch and with
+activation switched off. It leaves activation to the CLI, and that route left this App at
+`artifact_ready=false`, so chat answered "App not found". In Aomi's Deploy Project runs,
+the production deploys started from the dashboard (projects 1686, 1688 and 1689) carry
+`main` and ran Activate and Verify runtime. This App's CLI deploy (1687, 2026-10-13)
+carried no branch and skipped both. The CLI is still useful for read-only checks:
 
 ```bash
 cargo install aomi-sdk --version 5.1.1 --locked --features cli   # installs aomi-build
-export AOMI_BACKEND_URL=https://api.aomi.dev
-aomi-build sdk check --path .                                     # from the repo root
-aomi-build login --build-url https://build.aomi.dev               # opens GitHub in a browser
-aomi-build deploy --repo kaustubh76/ACR---Arc-Compute-Rate        # preflight, PR, build, activate
+aomi-build sdk check --path . --backend https://api.aomi.dev      # from the repo root
+aomi-build deploy preflight --backend https://api.aomi.dev        # validates; opens no PR
 ```
 
 **Optional setting:** `ACR_API`, set in the App's Environment tab, points the tools at
