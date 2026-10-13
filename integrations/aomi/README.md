@@ -74,17 +74,24 @@ acr  › 0.49773 (CI 0.49449–0.49780) · costs 0.0156 USDC to move by 1 bp · 
 - **It loads the way the backend loads it.** Through `DynFnHandle`, and read back by
   `aomi-build manifest`: `acr-compute-rate 0.1.0 · sdk 5.1.1 · namespaces []`, five tools,
   one optional secret slot (`ACR_API`).
-- **It builds the way Aomi's builder builds it.** The builder stages this folder on its
-  own, so it was copied out of the repo by itself and passed `cargo test --locked` and
-  `cargo build --release --locked` there.
+- **It passes the checks Aomi's platform build makes.** That build
+  (`aomi-labs/community-apps`, `deploy_project.py`) extracts the whole repository
+  snapshot, walks up from this folder to the first `Cargo.toml` with a `[workspace]`
+  table, requires `Cargo.lock` there, and builds with `--locked`. Those steps were
+  replayed on a `git archive` of the commit. The archive has 858 entries and 11.3 MiB,
+  with no links, under every limit. The walk stops at this folder, and `cargo check`,
+  `cargo build --release` and `cargo test`, all `--locked`, pass in the extracted copy
+  with the lockfile unchanged. The same replay on the commit before this fix reproduces
+  Aomi's refusal.
 - **Every tool answers from a plain thread AND from inside a Tokio runtime.** HTTP uses
   `reqwest`'s blocking client, as Aomi's template prescribes, because a tool runs inside a
   synchronous FFI boundary.
-- **Tests.** `cargo test`: 22 deterministic tests. 21 run the tools on recorded live
-  responses, each watched failing on a deliberately broken tool. The 22nd fails if the
-  SDK pin Aomi's deploy gate reads (the repo-root `Cargo.toml`) and the pin this App
-  builds with ever differ. `cargo test -- --ignored` runs all five tools against the real
-  press. ACR's CI runs the suite on every push.
+- **Tests.** `cargo test`: 23 deterministic tests. 21 run the tools on recorded live
+  responses, each watched failing on a deliberately broken tool. Two more fail if the
+  deploy layout drifts: when the SDK pin Aomi's deploy gate reads (the repo-root
+  `Cargo.toml`) differs from this App's, or when this folder stops being its own
+  workspace root with `Cargo.lock` beside it. `cargo test -- --ignored` runs all five
+  tools against the real press. ACR's CI runs the suite on every push.
 
 ## Deploy it from the dashboard
 
@@ -94,7 +101,9 @@ an App in a subdirectory.
 
 1. Sign in at **[build.aomi.dev](https://build.aomi.dev)** with **Continue with GitHub**.
 2. **Import from GitHub**, install the Aomi Build GitHub App on the ACR repository, and
-   select it. The wizard builds the release from the pushed commit and activates it.
+   select it. Aomi reads the default branch, so this App has to be on `main` first. With
+   it there, the wizard builds the release from the branch's latest commit and activates
+   it.
 3. The App then appears under Projects, Deployments and Observability, and **Chat**
    opens chat.aomi.dev with it selected.
 
@@ -103,8 +112,9 @@ an App in a subdirectory.
 
 The repo root also holds a small `Cargo.toml` that builds nothing. Aomi's deploy gate reads
 the SDK pin only from the root of a repository, and stops with "no Cargo.toml found"
-without one. So that file declares the pin and excludes this folder, which Aomi's builder
-compiles on its own.
+without one. So that file declares the pin and nothing else. This folder's `Cargo.toml`
+declares its own `[workspace]`. Aomi's platform build looks for `Cargo.lock` beside the
+first workspace it finds walking up from the App, and the lock lives here.
 
 **From a terminal instead.** A human deploy signs in with GitHub, so no activation token
 is needed. The Aomi Build GitHub App must be installed on the repo (step 2 above), and
@@ -125,7 +135,7 @@ unset, the App reads the default Arc mainnet press.
 ## Develop
 
 ```bash
-cargo test                       # 22 deterministic tests
+cargo test                       # 23 deterministic tests
 cargo test -- --ignored          # every tool against the live ACR press
 cargo build --release            # target/release/libacr_compute_rate.{dylib,so}
 ```

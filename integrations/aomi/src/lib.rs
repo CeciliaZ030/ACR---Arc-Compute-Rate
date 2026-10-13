@@ -93,4 +93,19 @@ mod tests {
         assert_eq!(sdk_pin(&root).as_deref(), Some(here.as_str()), "root pin ≠ App pin");
         assert!(here.starts_with('='), "Aomi loads only an exact SDK pin, got {here}");
     }
+
+    /// Aomi's platform build walks up from this folder to the first Cargo.toml
+    /// holding a [workspace] table and requires Cargo.lock beside it. The repo
+    /// root's Cargo.toml has one and no lock, so without a [workspace] of its
+    /// own this App is refused: "commit Cargo.lock at the Cargo workspace root".
+    #[test]
+    fn this_app_is_the_workspace_root_aomi_finds_with_its_lock_beside_it() {
+        let manifest = include_str!("../Cargo.toml");
+        assert!(
+            manifest.lines().any(|l| l.trim() == "[workspace]"),
+            "integrations/aomi/Cargo.toml must declare [workspace]"
+        );
+        let lock = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.lock");
+        assert!(lock.is_file(), "Cargo.lock must sit beside this App's Cargo.toml");
+    }
 }
