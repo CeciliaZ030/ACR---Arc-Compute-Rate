@@ -127,6 +127,13 @@ per 30 days, 0.845590 remaining. `isAgent(owner())` is **false** — the contrac
 refuses one key being both authorities, which is what makes the escalation mean
 anything.
 
+There is a second PolicyWallet, `0xA755f87B…`, holding the history behind the 19
+logged decisions. We had recorded its owner key as lost; on 13 October we found
+its `owner()` is the **arc-canteen CLI wallet**, so it is reachable after all.
+We stay on the newer wallet by choice — a clean budget and an owner key held
+directly — and the correction is in the repo rather than quietly dropped,
+because a judge reading two wallets deserves to know which claim moved.
+
 ---
 
 ## 2. What moved during the window — the delta
