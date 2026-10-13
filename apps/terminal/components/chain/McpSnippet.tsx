@@ -23,6 +23,15 @@ import { Ed } from "@/components/Ed";
  * the old 7-day default, so the page shipped a demo that demonstrated nothing.
  * `mcp/scripts/smoke.ts` probes the same two addresses, so a press that stops
  * answering for them fails there rather than quietly here.
+ *
+ * THE BILL EXAMPLE NAMES NO VENDOR, deliberately. It used to name 0xefe0…, which
+ * is ACR's OWN seller, and the press prices a first-party seller only against
+ * ACR's fleet, never the market. Measured 2026-10-13 through the published
+ * plugin, the same bill came back "pay, unbenchmarked" on mainnet and "pay,
+ * -9,609 bp" on testnet, while with no vendor it was "escalate, +500,870 bp"
+ * against five cited market prices. The example that taught the tool was the
+ * one case it is designed to refuse. `npm run demo` in mcp/ asks this exact
+ * question and fails if it stops being priced against the market.
  */
 
 type Tab = "config" | "pay" | "ask";
@@ -96,9 +105,10 @@ ${apiLine}        "ACR_PAYER_PRIVATE_KEY": "0x<a wallet YOU control, deposited i
 # "deposit" rather than "ready" when the wallet is funded and the Gateway is not.`,
     ask: `# Five things to ask, once the server is in your host's config:
 
-"I was billed 0.47 USDC for 23 thousand tokens by 0xefe0E4625AFf072c3FCff230b47f8150A17aDF19. Should I pay it?"
-#   -> check_spend: the spend agent\u2019s own ten-rung ladder over YOUR invoice, with the published
-#      prices it was judged against. No account, no key, no history with ACR needed.
+"My agent was billed 0.47 USDC for 23 thousand tokens by its inference provider. Should it pay?"
+#   -> check_spend: the spend agent\u2019s own ten-rung ladder over YOUR invoice, priced against the
+#      open market with every quote cited. This one is ~50x the going rate: it says escalate, names
+#      the cheapest model, and how much was avoidable. No account, no key, no history with ACR.
 
 "Can you pay for a metered ACR query right now? If not, what is in the way?"
 #   -> can_i_pay: seven rungs — host, chain, card, paywall, challenge, payer key, Gateway funds.

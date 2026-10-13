@@ -65,6 +65,11 @@ interface Probe {
    *  global rule flagged that negative control as "measured nothing", which
    *  would have taught the opposite of what it is for. */
   subjectMatters?: boolean;
+  /** A sentence when the answer is real but MEASURED NOTHING (◌), else null.
+   *  Unlike `subjectMatters`, this reads the ANSWER rather than the subject: a
+   *  price check that compared the bill with nothing has measured nothing,
+   *  whoever the bill was from. */
+  measuredNothing?: (out: Record<string, unknown>) => string | null;
 }
 
 /* The two addresses `/developers` prints as its worked examples. If these come
@@ -144,6 +149,23 @@ function probesFor(PAYER: string, SELLER: string): Probe[] {
     // point of it. Priced in a unit the press actually accepts.
     tool: "check_spend",
     args: { billed_usdc: 0.02, quantity: 10, unit: "$/1k tokens" },
+    /* AN UNPRICED BILL IS NOT A PRICED ONE. This probe printed "answered" for
+       any reply, so a verdict of `unbenchmarked` — the press saying it had
+       nothing to compare the bill with — counted as a pass. That is exactly
+       the answer the advertised `/developers` example returned on mainnet
+       (2026-10-13), and nothing here could have noticed. A no-vendor bill
+       reaching the fleet means the market basket was unusable, which is the
+       same failure one step earlier. */
+    measuredNothing: (o) => {
+      const v = o.verdict as { benchmarked?: unknown; reason?: unknown } | undefined;
+      if (v?.benchmarked === false) {
+        return `answered, but UNPRICED (${String(v.reason || "no reason")}) — no market rate was compared`;
+      }
+      if (o.benchmarked_against === "fleet") {
+        return "answered against ACR's fleet, not the market — the basket was unusable";
+      }
+      return null;
+    },
     tolerate: (o) =>
       typeof o.reason === "string" && /predates the benchmark/.test(o.reason)
         ? "this press has no /par yet"
@@ -336,6 +358,7 @@ function verdict(
   tolerate?: Probe["tolerate"],
   note?: Probe["note"],
   subjectMatters?: Probe["subjectMatters"],
+  measuredNothing?: Probe["measuredNothing"],
 ): { ok: boolean; note: string; hollow?: boolean } {
   if (!out || typeof out !== "object") return { ok: false, note: "no object came back" };
   const o = out as Record<string, unknown>;
@@ -369,6 +392,8 @@ function verdict(
     return { ok: false, note: `available:false — ${String(o.reason ?? "no reason given")}` };
   }
   const excuse = tolerate?.(o);
+  const empty = measuredNothing?.(o) ?? null;
+  if (empty) return { ok: true, note: empty, hollow: true };
   return { ok: true, note: excuse ?? note?.(o) ?? "answered", hollow };
 }
 
@@ -422,7 +447,7 @@ async function main(): Promise<void> {
     } catch (err) {
       out = { error: `threw: ${String(err).slice(0, 160)}` };
     }
-    const v = verdict(p.tool, out, p.tolerate, p.note, p.subjectMatters);
+    const v = verdict(p.tool, out, p.tolerate, p.note, p.subjectMatters, p.measuredNothing);
     if (!v.ok) failed += 1;
     if (v.ok && v.hollow) hollow += 1;
     console.log(`  ${v.ok ? (v.hollow ? "◌" : "✔") : "✖"} ${p.tool.padEnd(20)} ${v.note}`);
@@ -472,8 +497,9 @@ async function main(): Promise<void> {
   // the line somebody quotes, so it has to be the line that is true.
   console.log(
     hollow > 0
-      ? `  ${PROBES.length} probes answered · ${hollow} measured nothing (◌): this press has no ` +
-        `history for the subject\n`
+      ? // The reason is on each ◌ line: an unknown subject and an unpriced bill
+        // are different causes, and a summary that names one misdiagnoses the other.
+        `  ${PROBES.length} probes answered · ${hollow} measured nothing (◌) — each ◌ line above says why\n`
       : `  all ${PROBES.length} probes answered\n`,
   );
 }
