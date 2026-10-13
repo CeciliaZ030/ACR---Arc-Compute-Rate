@@ -71,6 +71,10 @@ READER_FACING = [
     "docs/ARCHITECTURE-DIAGRAM.md",
     "docs/GLOSSARY.md",
     "docs/TAMEION.md",
+    # The submission update: it hands judges a runnable curl, so the host in it
+    # has to be one that serves the route. Added when it was written rather
+    # than after somebody followed it into a 404.
+    "docs/CANTEEN-UPDATE.md",
     "mcp/README.md",
 ]
 
@@ -119,6 +123,55 @@ def test_the_host_table_admits_which_host_is_incomplete():
                 f"{bare} is listed as a place to send requests with no mention that it "
                 f"serves {len(INCOMPLETE[bare])} fewer routes: {what!r}"
             )
+
+
+@pytest.mark.parametrize("rel", READER_FACING)
+def test_no_runnable_example_points_at_an_incomplete_host(rel: str):
+    """A command inside a code fence is held to a stricter rule than prose.
+
+    THE HOLE THIS CLOSES, found by trying to make the check below fail and
+    watching it pass. That one asks per FILE: name the incomplete host and the
+    gap must be mentioned somewhere in the document. Reasonable for prose, and
+    far too loose for a `curl` — `docs/CANTEEN-UPDATE.md` legitimately explains
+    the 44-route host in its delta section, so a runnable example aimed at that
+    host inherited the explanation and passed.
+
+    A reader does not read the qualifier before pasting the command. So inside a
+    fenced block the rule is absolute: no incomplete host, no exceptions.
+    """
+    p = ROOT / rel
+    if not p.exists():
+        pytest.skip(f"{rel} does not exist")
+
+    offenders = []
+    in_fence = False
+    for n, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            continue
+        for bare, missing in INCOMPLETE.items():
+            if bare not in line:
+                continue
+            # THE PATH IS WHAT MATTERS, NOT THE HOST. The first version banned
+            # the host outright and flagged `curl …/health` in README.md — a
+            # command that works perfectly, because this host serves /health
+            # and 44 other routes. Banning a host for the routes it lacks would
+            # make the gate wrong about a working example, which is the same
+            # mistake as the false failures the page gate produced.
+            after = line.split(bare, 1)[1]
+            path = "/" + after.split("/", 1)[1].split()[0].split("?")[0] if "/" in after else ""
+            if any(path == m or path.startswith(m + "/") for m in missing):
+                offenders.append((n, bare, path, line.strip()[:70]))
+
+    assert offenders == [], "\n".join(
+        f"{rel}:{n} runs {path} against {bare}, which 404s it — {text}"
+        for n, bare, path, text in offenders
+    ) + (
+        "\n\nA command in a code fence is pasted, not read around. Point it at "
+        f"a complete host ({', '.join(sorted(COMPLETE))})."
+    )
 
 
 @pytest.mark.parametrize("rel", READER_FACING)

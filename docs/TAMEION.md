@@ -1,8 +1,18 @@
 # Tameion — the spend operator
 
-*Canteen × Circle × Arc, 27 September – 10 October 2026. This file is maintained
-during the event; the frozen material from earlier events lives in
-[`hackathon/`](../hackathon/).*
+*Canteen × Circle × Arc, 27 September – **17 October** 2026. Submissions close
+17 October, 11:59 PM ET. This file is maintained during the event; the frozen
+material from earlier events lives in [`hackathon/`](../hackathon/).*
+
+<!-- THE DATE WAS WRONG HERE UNTIL 2026-10-13, and it said 10 October — a week
+     short. Judges read this repo directly, so a window that closes before the
+     real deadline is a claim anybody can disprove with one click on the event
+     page. Corrected against the organiser's own page, which is the authority;
+     nothing in the repo is. -->
+
+*Judging is **asynchronous** — there is no live demo day. The artifacts are a
+public repo, a video under three minutes, and the submission form's own traction
+questions, answered in [`CANTEEN-UPDATE.md`](CANTEEN-UPDATE.md).*
 
 ACR is a reference rate for machine compute. The Tameion build puts a **spend
 operator** on top of it: an agent that holds a business's USDC inside an
