@@ -1060,6 +1060,7 @@ def verify_funding(w3, settings) -> None:
         FAUCET_USDC,
         PRESS_BURN_USDC_PER_DAY,
         PRESS_CRITICAL_FLOOR_USDC,
+        post_reservation_usdc,
     )
 
     print("\nfunding — the runway under all of it")
@@ -1103,10 +1104,23 @@ def verify_funding(w3, settings) -> None:
         )
         # The floor FAILS. This is the one funding check that is about our code
         # continuing to run at all rather than about somebody's budget.
+        # "Below the floor every write stops" was false, and the false version
+        # cost a diagnosis: writes stop at a post's gas RESERVATION, ~0.0073 USDC
+        # (see desk.post_reservation_usdc). Below the floor the runway is short;
+        # below the reservation nothing can be sent at all, and that is said.
+        try:
+            base_fee = int(_rpc_retry(w3.eth.get_block, "latest")["baseFeePerGas"])
+        except Exception:
+            base_fee = None
+        reserve = post_reservation_usdc(base_fee)
         check(
             bal >= PRESS_CRITICAL_FLOOR_USDC,
-            f"{label} above the {PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor "
-            f"({bal:.3f}) — below it every on-chain write stops, prints included",
+            f"{label} above the {PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor ({bal:.3f})"
+            + (
+                f" — posts are REFUSED NOW: each must reserve ~{reserve:.4f} up front"
+                if bal < reserve
+                else f" — {int(bal / reserve)} post reservations left; writes stop at ~{reserve:.4f}, not zero"
+            ),
         )
         # The faucet and the press share this wallet, so say plainly how many
         # readers can still be onboarded before the floor bites.

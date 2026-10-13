@@ -24,12 +24,16 @@ default `make test` stays hermetic and credential-free.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 from acr_oracle_client import FuturesClient, OracleClient
 
-RPC = "http://127.0.0.1:8545"
+#: Honours ACR_TEST_RPC like the other on-chain suites: this machine runs
+#: more than one project, and a hardcoded 8545 SKIPPED these nine tests
+#: against a private anvil while the rest of the suite ran (2026-10-13).
+RPC = os.environ.get("ACR_TEST_RPC", "http://127.0.0.1:8545")
 # anvil's well-known dev accounts — local-only, never hold real value.
 OWNER_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 MAKER_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
@@ -96,7 +100,7 @@ def venue():
 
         w3 = Web3(Web3.HTTPProvider(RPC, request_kwargs={"timeout": 3}))
         if not w3.is_connected():
-            pytest.skip("anvil not reachable at 127.0.0.1:8545")
+            pytest.skip(f"anvil not reachable at {RPC}")
     except Exception:
         pytest.skip("web3/eth-account unavailable")
 

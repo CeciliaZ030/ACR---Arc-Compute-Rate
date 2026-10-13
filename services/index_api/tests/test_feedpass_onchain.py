@@ -20,11 +20,15 @@ Skipped (not failed) without a node, so the default `make test` stays hermetic.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
-RPC = "http://127.0.0.1:8545"
+#: Honours ACR_TEST_RPC like the other on-chain suites: this machine runs
+#: more than one project, and a hardcoded 8545 SKIPPED these nine tests
+#: against a private anvil while the rest of the suite ran (2026-10-13).
+RPC = os.environ.get("ACR_TEST_RPC", "http://127.0.0.1:8545")
 ANVIL_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 # A second funded anvil account stands in for the reader's wallet, so "the payer
 # is not the press" is part of what is proven rather than an accident.
@@ -108,7 +112,7 @@ def _send(w3, acct, fn):
 def test_a_real_transfer_becomes_a_real_pass(monkeypatch):
     conn = _anvil()
     if conn is None:
-        pytest.skip("anvil not reachable at 127.0.0.1:8545")
+        pytest.skip(f"anvil not reachable at {RPC}")
     w3, press, reader = conn
 
     from acr_core import reset_settings
@@ -189,7 +193,7 @@ def test_a_short_payment_never_becomes_a_pass(monkeypatch):
     reader is told by how much they are short rather than just refused."""
     conn = _anvil()
     if conn is None:
-        pytest.skip("anvil not reachable at 127.0.0.1:8545")
+        pytest.skip(f"anvil not reachable at {RPC}")
     w3, press, reader = conn
 
     from acr_core import reset_settings
