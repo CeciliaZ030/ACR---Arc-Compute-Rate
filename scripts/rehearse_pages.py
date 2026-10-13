@@ -102,9 +102,15 @@ PAGES = [
 #: is money" is that block's whole argument, so unknown there undercuts it.
 SCREEN_NOTES = [
     ("the chain could not be reached",
-     "/spend's Cash block cannot read the wallet balance, so HELD shows the "
-     "missing marker. Fixed by 54df1cc (the usdc() getter) in image "
-     "2026-10-12-1118 -- swap the press image."),
+     "/spend's Cash block shows the missing marker for HELD. Measured "
+     "2026-10-13, and it needs the TESTNET press swapped -- which is a "
+     "different Render account this key cannot see. Three-sided: the testnet "
+     "press has the PolicyWallets but an image without the usdc() getter "
+     "(54df1cc), so liquidity.held_usdc is None; the mainnet probe now HAS "
+     "that getter but the wallets are testnet-only, so there is nothing for "
+     "it to read; and acr-operator does not exist on the testnet press at all, "
+     "so its liquidity block is empty. Swapping the mainnet probe did not fix "
+     "this and could not have."),
 ]
 
 #: What `WhyEmpty` writes when the route is absent or the press is unreachable.
@@ -243,6 +249,19 @@ def main() -> int:
         for page in PAGES:
             print(f"\n{page['name']}")
             text = b.text_when(f"{TERMINAL}{page['path']}", page["anchor"])
+
+            # ONE RETRY, and only for the unread case. Measured 2026-10-13:
+            # /traction came back with 680 chars once, right after a deploy,
+            # while its API was `ok` and the page itself was 200 at 120KB --
+            # a navigation raced the poll, not a broken page. A gate that cries
+            # wolf the day before a demo gets ignored, and "I did not manage to
+            # read it" is a different claim from "it did not render". A page
+            # showing the EMPTY STATE is NOT retried: that answer is stable and
+            # retrying it would just hide it.
+            if page["anchor"] not in text and not any(m in text for m in EMPTY_MARKERS):
+                note(f"{page['name']}: first read returned {len(text)} chars "
+                     "without the anchor; re-reading once before calling it broken")
+                text = b.text_when(f"{TERMINAL}{page['path']}", page["anchor"])
 
             empty = next((m for m in EMPTY_MARKERS if m in text), None)
 

@@ -604,7 +604,16 @@ services:
       # 0 live receipts). THAT ORDER IS NOT OPTIONAL on a plan with no disk:
       # the decision log and the receipt log are erased by the deploy and
       # rehydrate only from what ships inside the image.
-      url: docker.io/kaushtubh02/acr-api:2026-10-09-1755
+      # 2026-10-13: DEPLOYED, and the pin is now evidence rather than a
+      # declaration. `2026-10-12-1118` went on first and gave the third
+      # registry row, but `age_s` stayed null — that image was built at 11:18
+      # and the basket clock (99228fa) landed LATER the same day, so the note
+      # telling an operator to "swap the image" for the clock was wrong about
+      # its own remedy. Rebuilt from main (ec18988) and verified by running
+      # the container before pushing: age_s 607867, max_age_s 2592000, three
+      # registry rows, usdc() in POLICY_ABI. Then live on the host:
+      # `make anchors-live` green for the first time (7.0d of 30d).
+      url: docker.io/kaushtubh02/acr-api:2026-10-13-0541
     healthCheckPath: /health
     envVars:
       # --- the chain, and the addresses the block above leaves empty ---------
