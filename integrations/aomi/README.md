@@ -22,6 +22,33 @@ answers inside Aomi's agent as five read-only tools. It asks for no wallet power
 | `acr_rate` | "Where is the ACR index, and is it fresh?" | the on-chain print, its confidence interval, the USDC it costs to move it 1 bp, its age |
 | `acr_receipts` | "Did my payment to ACR land?" | recent USDC settlements with their references |
 
+## Live in Aomi chat
+
+**Open it:** [chat.aomi.dev, pinned to ACR](https://chat.aomi.dev/?app=acr-compute-rate&application_id=2938642&lock_app=1)
+(application 2938642, project 1687).
+
+Captured 2026-10-13 19:10 UTC on Aomi production through Aomi's own client
+(`@aomi-labs/client` 0.9.14, Direct mode). Aomi's agent called the tools and relayed their answers.
+ACR's `/par` and `/onchain/ACR-INF` returned the same numbers in the same minute.
+
+```
+you   › "My agent was billed 0.47 USDC for 23,000 tokens of inference. Should it pay?"
+tool  › acr_check_bill → +500,870 bp over 0.0004 per 1k · cheapest GPT-4o mini 0.0002625 · 0.4639625 avoidable
+aomi  › Escalate rather than pay automatically. The 0.47 USDC bill for 23,000 tokens is about
+        51 times the published market benchmark used in this check. … The cheapest listed
+        reference was GPT-4o mini, at about 0.0060 USDC for 23,000 tokens … roughly 0.464 USDC
+        less than the bill. … Nothing was paid.
+
+you   › "Where is the ACR inference index, and is it fresh?"
+tool  › acr_rate → 0.4953 · CI 0.49426–0.49874 · 0.010151 USDC per bp · posted 3.3 hr ago · current: false
+aomi  › The last known ACR inference index level is 0.4953. It was posted about 3.3 hours ago,
+        beyond ACR's two-hour freshness window, so it is not fresh. This is an index level, not
+        the market price of inference.
+```
+
+A plain chat.aomi.dev session routes on its own (Auto mode) and did not pick ACR for these
+questions. Use the link above or the project's Chat tab, which pin the App.
+
 ## Live, through Aomi's own plugin loader
 
 Captured 2026-10-13. The App was loaded with `aomi_sdk::DynFnHandle`, the host-side
