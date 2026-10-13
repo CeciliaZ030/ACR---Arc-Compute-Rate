@@ -183,7 +183,7 @@ def test_poster_records_last_posts_markers(small_store):
 
     poster = OraclePoster(small_store, client=_FlakyClient())
     poster.post_latest()
-    assert poster.last_posts["ACR-GPU"]["note"] == "error"
+    assert poster.last_posts["ACR-GPU"]["note"] == "error: boom", "the reason rides on the record"
     assert poster.last_posts["ACR-INF"]["note"] == "offline"
     assert all(e["tx"] is None for e in poster.last_posts.values())
 
