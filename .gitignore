@@ -59,3 +59,6 @@ ACR_MachineTCA_Architecture_FULL.excalidraw
 # is honest internal engineering and not a thing to hand a reviewer out of
 # context.
 ACR_REGISTER.md
+
+# aomi-build writes local deploy state here; .aomi/config.json is committed.
+.aomi/deployment.json
