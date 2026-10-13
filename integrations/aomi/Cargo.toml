@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
+# THIS FOLDER IS ITS OWN WORKSPACE ROOT. Aomi's platform build
+# (aomi-labs/community-apps, deploy_project.py `cargo_context`) walks up from
+# here to the first Cargo.toml with a [workspace] table and demands Cargo.lock
+# beside it, ignoring `exclude`. Without this table it stops at the repo root's
+# Cargo.toml (which exists only for the deploy gate) and refuses the deploy.
+[workspace]
+
 [lib]
 crate-type = ["cdylib"]
 

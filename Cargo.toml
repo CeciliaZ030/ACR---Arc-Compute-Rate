@@ -7,10 +7,13 @@
 # reaches Aomi at all. The gate accepts a [workspace.dependencies] pin and a
 # missing root Cargo.lock, so that is all this declares.
 #
-# The App itself stays OUTSIDE this workspace (`exclude`): Aomi's builder stages
-# integrations/aomi/ on its own, so that folder must build from its own
-# Cargo.toml and Cargo.lock. Its pin and this one must agree; a test in
-# integrations/aomi/src/lib.rs fails if they do not.
+# The App is NOT in this workspace. integrations/aomi/Cargo.toml declares its
+# own [workspace] and builds from its own Cargo.lock. `exclude` tells cargo the
+# same thing, but Aomi's platform build ignores `exclude`: it walks up from the
+# App to the first [workspace] it finds and requires Cargo.lock there. Without
+# the App's own table it stopped HERE, where there is no lock, and refused the
+# deploy. Its pin and this one must agree; tests in integrations/aomi/src/lib.rs
+# fail if they do not, or if the App loses its own [workspace].
 
 [workspace]
 resolver = "3"
