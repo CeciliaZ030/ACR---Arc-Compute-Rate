@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CARD_HEADER, DEMO_HUMAN_LABEL, MAX_CARD, demoKey, mintCard } from "@/lib/agentcard";
 import { baseState, postLiveMeta, sellerFetch } from "@/lib/api";
 import { requestChain } from "@/lib/envelope";
-import type { ChainKey } from "@/lib/chainChoice";
-import { chainFacts } from "@/lib/chain";
+import { CHAINS, type ChainKey } from "@/lib/chainChoice";
 import { RUNNABLE } from "@/lib/endpoints";
 
 /* POST /api/probe — call one free endpoint and report what came back.
@@ -174,7 +173,8 @@ async function demoHumanCard(chain: ChainKey): Promise<string | null> {
 
   const minted = await mintCard({
     privateKey: key,
-    chainId: Number(challenge.chain_id ?? chainFacts().chainId),
+    // The asked chain when the challenge did not answer, never mainnet by default.
+    chainId: Number(challenge.chain_id ?? CHAINS[chain].chainId),
     audience: String(challenge.audience ?? "acr-index-api"),
     name: `acr-demo-human:${DEMO_HUMAN_LABEL}`,
     role: "reader",

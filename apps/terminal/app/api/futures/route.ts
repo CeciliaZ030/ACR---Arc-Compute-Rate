@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { bundleSection, fetchLiveMeta } from "@/lib/api";
 import { envelopeHeaders, requestChain } from "@/lib/envelope";
 import { readFuturesDirect } from "@/lib/futuresOnchain";
+import { LastGood, pressTimeoutMs } from "@/lib/pressTier";
 import type { Envelope, FuturesRoster } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +17,20 @@ export const maxDuration = 30;
      press  — FastAPI /futures (its FuturesReader caches keep RPC off the path)
      chain  — direct viem reads of ACRFutures when the press is unreachable
      bundle — the archived snapshot's desks + captured tape as the floor. */
+/* The last roster each chain's press answered, on this instance. See lib/pressTier.ts. */
+const lastGood = new LastGood<FuturesRoster>();
+
 export async function GET(req: Request) {
   const chain = requestChain(req);
   /* 12s, not the 5s default: this endpoint's press tier can pay for an
      eth_getLogs on a throttled RPC, and giving up early falls through to the
      *slower* direct-chain crawl — or to the bundle, which reads as "the venue
      is archived" and hides the trading desk on a perfectly healthy site. */
-  const { data, upstream } = await fetchLiveMeta<FuturesRoster>(chain, "/futures", 12_000);
+  /* …and longer where the press is the chain's ONLY tier (testnet): there is
+     nothing slower to fall through to, only an empty venue. */
+  const { data, upstream } = await fetchLiveMeta<FuturesRoster>(chain, "/futures", pressTimeoutMs(chain));
   if (data) {
+    lastGood.remember(chain, data);
     const env: Envelope<FuturesRoster> = {
       live: true,
       data: { ...data, source: "press" },
@@ -51,6 +58,24 @@ export async function GET(req: Request) {
     };
     return NextResponse.json(env, {
       headers: envelopeHeaders("public, s-maxage=30, stale-while-revalidate=120", chain, env),
+    });
+  }
+
+  /* THE PRESS'S LAST ANSWER, BEFORE THE ARCHIVE. A roster read minutes ago is
+     a better floor than the archived bundle, and on testnet there is no
+     bundle at all — this was the empty venue /curve flickered to. Stamped
+     with the time it was READ and `live: false`, which also makes it no-store
+     (envelopeHeaders) and keeps the desk from trading on it (PublicDesk). */
+  const kept = lastGood.recall(chain);
+  if (kept) {
+    const env: Envelope<FuturesRoster> = {
+      live: false,
+      data: { ...kept.value, source: "press" },
+      fetchedAt: kept.at, chain,
+      upstream,
+    };
+    return NextResponse.json(env, {
+      headers: envelopeHeaders("public, s-maxage=3, stale-while-revalidate=15", chain, env),
     });
   }
 
