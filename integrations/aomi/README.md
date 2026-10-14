@@ -170,7 +170,13 @@ unset, the App reads the default Arc mainnet press.
 cargo test                       # 23 deterministic tests
 cargo test -- --ignored          # every tool against the live ACR press
 cargo build --release            # target/release/libacr_compute_rate.{dylib,so}
+make aomi-live                   # from the repo root: ask ACR through Aomi's production chat
 ```
+
+`make aomi-live` is the live witness. It sends two Direct-mode turns to application 2938642 on
+chat.aomi.dev and fails unless `acr_check_bill` and `acr_rate` actually ran inside Aomi and their
+numbers equal the press's in the same minute. The unit tests run on recorded responses, so only
+this can catch the App becoming unreachable on Aomi.
 
 The layout follows Aomi's guidance. `src/lib.rs` holds registration and the preamble,
 `src/client.rs` is the one HTTP client, and `src/tool.rs` holds the tools.
