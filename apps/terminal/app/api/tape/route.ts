@@ -1,4 +1,5 @@
 import { currentWindow } from "@/lib/humans";
+import { PAYER_WINDOW_DAYS } from "@/lib/deskSource";
 import { NextResponse } from "next/server";
 import { fetchLiveMeta, postLiveMeta } from "@/lib/api";
 import { envelopeHeaders, requestChain } from "@/lib/envelope";
@@ -130,7 +131,8 @@ export async function GET(request: Request) {
     : null;
 
   const tcaRes = payer
-    ? await fetchLiveMeta<TcaResult>(chain, `/tca/${payer}?days=7`, OP_TIMEOUT_MS)
+    // The MCP plugin's window, so a wallet seen there is not 'unseen' here (lib/deskSource.ts).
+    ? await fetchLiveMeta<TcaResult>(chain, `/tca/${payer}?days=${PAYER_WINDOW_DAYS}`, OP_TIMEOUT_MS)
     : { data: null, upstream: "error" as const };
 
   /* Grades are an ENHANCEMENT, not a dependency. /rating reaches for a window
