@@ -399,6 +399,9 @@ export function toolsFor(hasPayerKey: boolean): ToolDef[] {
   return hasPayerKey ? TOOLS : TOOLS.filter((t) => t.name !== "pay_and_read");
 }
 
+/** How long `get_rate` waits before its one re-ask after a 404. */
+const RATE_RETRY_MS = 1500;
+
 async function readJson(
   fetchImpl: Fetchish,
   url: string,
@@ -637,6 +640,8 @@ export async function callTool(
     /** Mints the agent card for the settlement request itself. */
     extraHeaders?: () => Promise<Record<string, string>>;
     env?: NodeJS.ProcessEnv;
+    /** Pause before `get_rate` re-asks after a 404. Tests pass 0. */
+    retryDelayMs?: number;
   } = {},
 ): Promise<unknown> {
   const api = (opts.api ?? DEFAULT_API).replace(/\/$/, "");
@@ -678,12 +683,17 @@ export async function callTool(
     }
 
     case "get_rate": {
-      const body = (await readJson(f, `${api}/onchain/${String(args.index_id)}`)) as {
-        error?: string;
-        body?: { detail?: string };
-        posted_at?: number;
-        value?: number;
-      };
+      type OnchainBody = { error?: string; body?: { detail?: string }; posted_at?: number; value?: number };
+      const url = `${api}/onchain/${String(args.index_id)}`;
+      let body = (await readJson(f, url)) as OnchainBody;
+      /* ONE RE-ASK BEFORE ANY CLAIM. Measured 2026-10-14 on the testnet press:
+         one 404 for ACR-INF, then 36 of 36 reads answered 200 with the value.
+         Arc throttles the `eth_getLogs` behind this route and the press reports
+         a throttled read as 404, so a single 404 is not evidence of anything. */
+      if (body?.error === "HTTP 404") {
+        await new Promise((r) => setTimeout(r, opts.retryDelayMs ?? RATE_RETRY_MS));
+        body = (await readJson(f, url)) as OnchainBody;
+      }
       /* A press with no print is a state, not a transport failure. Say which it
          is, and that the value is still buyable from the paid endpoint.
 
@@ -705,8 +715,10 @@ export async function callTool(
           available: false,
           index_id: args.index_id,
           reason:
-            `${api} has no on-chain print for ${String(args.index_id)} ` +
-            `(${body.body?.detail ?? "404"}). Its oracle has not been posted to.`,
+            `${api} answered 404 for ${String(args.index_id)} twice ` +
+            `(${body.body?.detail ?? "404"}). Either its oracle has never been posted to for ` +
+            `this index, or the press could not read the chain just now (Arc throttles the log ` +
+            `reads behind this route). Retry in a minute before concluding there is no print.`,
           try_instead: `pay_and_read("/prints/${String(args.index_id)}") reads the same value from the metered endpoint.`,
         };
       }
