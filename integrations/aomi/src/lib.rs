@@ -46,7 +46,7 @@ a market verdict: relay the hint and, if it says so, call acr_check_bill again w
 dyn_aomi_app!(
     app = AcrApp,
     name = "acr-compute-rate",
-    version = "0.1.0",
+    version = "0.1.1",
     preamble = PREAMBLE,
     tools = [
         tool::RateTool,

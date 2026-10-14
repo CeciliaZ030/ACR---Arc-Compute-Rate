@@ -76,30 +76,59 @@ pub fn host_of(base: &str) -> &str {
 
 /// GET a JSON route on the press, turning every failure into a sentence that
 /// tells the model what to do next (retry, fix an argument, or stop).
+///
+/// TWO KINDS OF 404, AND ONLY ONE MEANS STOP. FastAPI answers an unknown route
+/// with exactly `{"detail":"Not Found"}`: that deployment predates the tool.
+/// Any other 404 carries the press's own sentence ("no on-chain print for
+/// ACR-INF") and may be momentary: the press reads prints through Arc's
+/// `eth_getLogs`, Arc throttles it, and a throttled read surfaces as 404.
+/// Measured 2026-10-14 on the testnet press: one 404, then 36 of 36 reads
+/// answered 200. So that kind is re-asked once before anything is concluded.
 pub fn get_json(base: &str, path: &str, query: &[(&str, String)]) -> Result<Value, String> {
     let host = host_of(base);
-    let resp = http()
-        .get(format!("{base}{path}"))
-        .query(query)
-        .send()
-        .map_err(|e| {
-            if e.is_timeout() {
-                format!("ACR ({host}) did not answer within {TIMEOUT_S}s; it may be waking up, so retry once")
-            } else {
-                format!("could not reach ACR ({host}); retry once, and stop if it fails again")
+    for attempt in 0..2 {
+        let resp = http()
+            .get(format!("{base}{path}"))
+            .query(query)
+            .send()
+            .map_err(|e| {
+                if e.is_timeout() {
+                    format!("ACR ({host}) did not answer within {TIMEOUT_S}s; it may be waking up, so retry once")
+                } else {
+                    format!("could not reach ACR ({host}); retry once, and stop if it fails again")
+                }
+            })?;
+        let status = resp.status().as_u16();
+        let body = resp.text().unwrap_or_default();
+        return match status {
+            200..=299 => serde_json::from_str(&body)
+                .map_err(|_| format!("ACR ({host}) answered {path} with something that is not JSON")),
+            404 if is_missing_route(&body) => Err(format!(
+                "ACR ({host}) has no {path} route; that deployment predates this tool, so stop rather than retry"
+            )),
+            404 if attempt == 0 => {
+                std::thread::sleep(Duration::from_millis(RETRY_404_MS));
+                continue;
             }
-        })?;
-    let status = resp.status().as_u16();
-    let body = resp.text().unwrap_or_default();
-    match status {
-        200..=299 => serde_json::from_str(&body)
-            .map_err(|_| format!("ACR ({host}) answered {path} with something that is not JSON")),
-        404 => Err(format!(
-            "ACR ({host}) has no {path} route; that deployment predates this tool, so stop rather than retry"
-        )),
-        422 => Err(format!("ACR refused the arguments: {}", detail(&body))),
-        _ => Err(format!("ACR ({host}) answered HTTP {status}; retry once, and stop if it repeats")),
+            404 => Err(format!(
+                "ACR ({host}) answered 404 for {path} twice ({}). Either there is no such record, or the \
+                 press could not read the chain just now; retry in a minute before concluding it is absent",
+                detail(&body)
+            )),
+            422 => Err(format!("ACR refused the arguments: {}", detail(&body))),
+            _ => Err(format!("ACR ({host}) answered HTTP {status}; retry once, and stop if it repeats")),
+        };
     }
+    unreachable!("the loop returns on every path of its second pass")
+}
+
+/// The pause before re-asking after a data 404.
+const RETRY_404_MS: u64 = 1500;
+
+/// FastAPI's own body for a route that does not exist (or no body at all).
+fn is_missing_route(body: &str) -> bool {
+    let d = detail(body);
+    d.is_empty() || d == "Not Found"
 }
 
 /// The press's own refusal sentence from a 422 body, trimmed.
@@ -149,6 +178,70 @@ mod tests {
     fn errors_name_the_host_not_the_whole_value() {
         assert_eq!(host_of("https://acr-probe-free.onrender.com"), "acr-probe-free.onrender.com");
         assert_eq!(host_of("https://h.example/some/path?token=x"), "h.example");
+    }
+
+    /// A scripted press on 127.0.0.1: answers each connection with the next
+    /// (status, body) and counts the requests it saw.
+    fn press(script: Vec<(u16, &'static str)>) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::io::{Read, Write};
+        use std::sync::atomic::Ordering;
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port());
+        let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let seen = hits.clone();
+        std::thread::spawn(move || {
+            for (status, body) in script {
+                let Ok((mut sock, _)) = listener.accept() else { return };
+                let mut buf = [0u8; 4096];
+                let _ = sock.read(&mut buf);
+                seen.fetch_add(1, Ordering::SeqCst);
+                let reason = if status == 200 { "OK" } else { "Not Found" };
+                let _ = sock.write_all(
+                    format!(
+                        "HTTP/1.1 {status} {reason}\r\ncontent-type: application/json\r\n\
+                         content-length: {}\r\nconnection: close\r\n\r\n{body}",
+                        body.len()
+                    )
+                    .as_bytes(),
+                );
+            }
+        });
+        (base, hits)
+    }
+
+    const NO_PRINT: &str = r#"{"detail":"no on-chain print for ACR-INF"}"#;
+
+    #[test]
+    fn only_fastapis_own_not_found_means_the_route_is_missing() {
+        assert!(is_missing_route(r#"{"detail":"Not Found"}"#));
+        assert!(is_missing_route(""));
+        assert!(!is_missing_route(NO_PRINT));
+    }
+
+    #[test]
+    fn a_throttled_read_is_re_asked_and_the_value_comes_back() {
+        let (base, hits) = press(vec![(404, NO_PRINT), (200, r#"{"value":0.49236}"#)]);
+        let v = get_json(&base, "/onchain/ACR-INF", &[]).expect("the second answer is the value");
+        assert_eq!(v["value"], 0.49236);
+        assert_eq!(hits.load(std::sync::atomic::Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn two_data_404s_name_both_causes_and_say_retry() {
+        let (base, hits) = press(vec![(404, NO_PRINT), (404, NO_PRINT)]);
+        let err = get_json(&base, "/onchain/ACR-INF", &[]).unwrap_err();
+        assert!(err.contains("twice") && err.contains("could not read the chain just now"), "{err}");
+        assert!(err.contains("retry in a minute"), "{err}");
+        assert!(!err.contains("predates"), "a data 404 is not a missing route: {err}");
+        assert_eq!(hits.load(std::sync::atomic::Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn a_missing_route_says_stop_and_is_not_re_asked() {
+        let (base, hits) = press(vec![(404, r#"{"detail":"Not Found"}"#)]);
+        let err = get_json(&base, "/par", &[]).unwrap_err();
+        assert!(err.contains("predates this tool"), "{err}");
+        assert_eq!(hits.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
     #[test]
