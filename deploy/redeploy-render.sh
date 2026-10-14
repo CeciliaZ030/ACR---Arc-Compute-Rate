@@ -2,12 +2,14 @@
 # Ship the current code to the live seller.
 #
 # Render is NOT wired to this repo — the `acr-api` service pulls a prebuilt
-# image from Docker Hub. `deploy-render.sh` beside this only CREATES the
+# image from Docker Hub, and it is PINNED to a dated tag (render.yaml records
+# which). Pushing `:latest` alone deploys nothing; see scripts/render_pin.py. `deploy-render.sh` beside this only CREATES the
 # service, so until this script existed there was no path from a commit to
 # production at all: it was a manual `docker build` someone had to remember.
 #
-#   ./deploy/redeploy-render.sh                 # build, push, redeploy, verify
-#   SKIP_BUILD=1 ./deploy/redeploy-render.sh    # just redeploy the current tag
+#   ./deploy/redeploy-render.sh                 # build, push, PIN, redeploy, verify
+#   SKIP_BUILD=1 ./deploy/redeploy-render.sh    # redeploy the image it is pinned to
+#   SKIP_BUILD=1 PIN_TAG=2026-10-14-1339 ./deploy/redeploy-render.sh   # pin an existing tag
 #
 # Needs: docker login (Docker Hub) and RENDER_API_KEY.
 set -euo pipefail
@@ -15,7 +17,7 @@ set -euo pipefail
 IMAGE="${IMAGE:-docker.io/kaushtubh02/acr-api}"
 SERVICE_ID="${SERVICE_ID:-srv-d9ifidfaqgkc73a19eug}"   # acr-api
 URL="${URL:-https://acr-api-1fto.onrender.com}"
-TAG="$(date -u +%Y-%m-%d-%H%M)"
+TAG="${PIN_TAG:-$(date -u +%Y-%m-%d-%H%M)}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # WHICH KEY. `.env` carries two Render keys for two workspaces, and the one
@@ -73,11 +75,24 @@ if [[ "${SKIP_BUILD:-}" != "1" ]]; then
   echo "▸ building ${IMAGE}:${TAG} (linux/amd64)"
   docker build --platform linux/amd64 -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" "${ROOT}"
 
-  # Push the dated tag as well as :latest so a bad deploy has a rollback target
-  # — the service tracks :latest, which is mutable and otherwise unrecoverable.
+  # Push the dated tag as well as :latest. The dated tag is what the service is
+  # pinned to below; :latest is only a convenience pointer.
   echo "▸ pushing ${TAG} and latest"
   docker push "${IMAGE}:${TAG}"
   docker push "${IMAGE}:latest"
+fi
+
+# PIN THE SERVICE TO WHAT WAS JUST PUSHED. The service runs whatever its own
+# imagePath names, and that was a dated tag while this script pushed `:latest`:
+# on 2026-10-14 two deploys re-pulled `2026-10-09-1755` and the route check
+# below passed on it, because both images serve the same 50 routes.
+if [[ "${SKIP_BUILD:-}" != "1" || -n "${PIN_TAG:-}" ]]; then
+  WANT="${IMAGE}:${TAG}"
+  echo "▸ pinning ${SERVICE_ID} to ${WANT}"
+  uv run python "${ROOT}/scripts/render_pin.py" pin "${SERVICE_ID}" "${WANT}" || exit 1
+else
+  WANT="$(uv run python "${ROOT}/scripts/render_pin.py" show "${SERVICE_ID}")" || exit 1
+  echo "▸ SKIP_BUILD: redeploying the image ${SERVICE_ID} is pinned to, ${WANT}"
 fi
 
 echo "▸ triggering a Render deploy"
@@ -123,6 +138,10 @@ if [[ "${STATUS}" != "live" ]]; then
   echo "✗ deploy ${DEPLOY_ID} never reached 'live' (last status: ${STATUS:-unknown})" >&2
   exit 1
 fi
+
+# The deploy's status says Render finished; only the service's imagePath says
+# finished WITH WHAT.
+uv run python "${ROOT}/scripts/render_pin.py" assert "${SERVICE_ID}" "${WANT}" || exit 1
 
 echo "▸ verifying the service answers"
 for i in $(seq 1 30); do
