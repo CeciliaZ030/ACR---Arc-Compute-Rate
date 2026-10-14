@@ -818,14 +818,35 @@ mod tests {
             .value;
         assert_eq!(bill["priced_against"], "market", "{bill}");
         println!("acr_check_bill: {} {} bp, would {}", bill["verdict"], bill["over_going_rate_bp"], bill["spend_agent_would"]);
-        let wallet = run_tool::<WalletCostTool>(&app, json!({"wallet": "0xc2903b52a3ad365fd237b78389a2fde99e886999"}), ctx())
+        // SUBJECTS FROM THE PRESS UNDER TEST, not from one chain. This used to
+        // name the mainnet deployer, so `ACR_API=<testnet> cargo test -- --ignored`
+        // failed on a wallet testnet never saw — a fixture, not the tool. A press
+        // that holds receipts names a real payer and seller; one that holds none
+        // falls back to the mainnet examples the /developers page uses.
+        let base = crate::client::base_url(&ctx()).unwrap();
+        let held = crate::client::get_json(&base, "/marketplace/receipts", &[]).unwrap_or_default();
+        let first = |k: &str| {
+            held["receipts"].as_array().and_then(|rows| rows.iter().find_map(|r| r[k].as_str().map(str::to_string)))
+        };
+        let payer = first("payer").unwrap_or_else(|| "0xc2903b52a3ad365fd237b78389a2fde99e886999".into());
+        let seller = first("seller").unwrap_or_else(|| "0xefe0E4625AFf072c3FCff230b47f8150A17aDF19".into());
+        let wallet = run_tool::<WalletCostTool>(&app, json!({"wallet": payer, "days": 90}), ctx())
             .unwrap()
             .value;
-        assert_eq!(wallet["seen"], true, "{wallet}");
-        let rating = run_tool::<SellerRatingTool>(&app, json!({"seller": "0xefe0E4625AFf072c3FCff230b47f8150A17aDF19"}), ctx())
+        match wallet["seen"].as_bool() {
+            Some(true) => assert!(wallet["spent_usdc"].as_f64().is_some(), "{wallet}"),
+            Some(false) => assert!(
+                wallet["note"].as_str().unwrap_or("").contains("has not seen"),
+                "an unseen wallet must say so, never read as zero spend: {wallet}"
+            ),
+            None => panic!("no seen flag: {wallet}"),
+        }
+        println!("acr_wallet_cost {payer} (90 d): seen={} purchases={}", wallet["seen"], wallet["purchases"]);
+        let rating = run_tool::<SellerRatingTool>(&app, json!({"seller": seller, "days": 90}), ctx())
             .unwrap()
             .value;
         assert!(rating["grade"].is_string(), "{rating}");
+        println!("acr_seller_rating {seller}: {}", rating["grade"]);
         let receipts = run_tool::<ReceiptsTool>(&app, json!({"limit": 3}), ctx()).unwrap().value;
         assert!(receipts["receipts"].is_array(), "{receipts}");
     }
