@@ -492,8 +492,14 @@ services:
         value: /etc/secrets/acr_armor_sa.json
 
       # --- paths + self -------------------------------------------------------
+      # The anti-sleep loop. This was `""` ("once Render assigns it") and never
+      # filled in, so the one service that signs mainnet prints slept on the
+      # free plan and posted only when something woke it: ACR-INF went 3.3 h
+      # stale on 2026-10-13. tests/test_render_self_ping.py pins it to the host
+      # keepalive.yml audits. It takes effect when it is also set on the live
+      # service (this file is applied by a deploy, not read at runtime).
       - key: ACR_SELF_URL
-        value: "" # this service's own public URL, once Render assigns it
+        value: https://acr-api-mainnet.onrender.com
       - key: ACR_RECEIPT_LOG_PATH
         value: data/x402_receipts.jsonl
       - key: ACR_RECEIPT_ARCHIVE_PATH
