@@ -9,11 +9,14 @@ returns ``None``/``{}`` and the API keeps serving in-process prints.
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 
 from acr_core import ALL_INDEX_IDS, get_settings
 from acr_oracle_client import FuturesClient, OracleClient
+
+log = logging.getLogger(__name__)
 
 #: On-chain prints only change when the poster posts (~every refresh, 30s), but
 #: each read is a slow remote-RPC call. Cache read_all() so /terminal/data stays
@@ -91,7 +94,25 @@ FUTURES_TTL_S = 90.0
 class FuturesReader:
     """Reads the on-chain ``ACRFutures`` desk (one series per index) for the
     Terminal. Mirrors :class:`OracleReader`: cached, and a graceful no-op
-    (``configured is False`` → empty) when ``ACR_FUTURES_ADDRESS`` is unset."""
+    (``configured is False`` → empty) when ``ACR_FUTURES_ADDRESS`` is unset.
+
+    A FAILED READ NEVER REPLACES A GOOD ONE. The client swallows every RPC error
+    into ``[]``/``None``, so one throttled scan used to cache an EMPTY desk and
+    an EMPTY tape, and ``/futures`` then answered live with no desks: the testnet
+    terminal showed an empty venue between two full ones (desks per poll
+    ``[3, 0]``, 2026-10-14). The reader now reads in the client's ``strict`` mode
+    and keeps the last good value when a read raises. Series are append-only on
+    chain, so an index that had a desk always has one, and a missing desk after
+    a good read can only be a failed read.
+
+    A STALE CACHE IS SERVED, NOT WAITED ON. The warm loop refreshes these every
+    ``ACR_CHAIN_WARM_SECONDS`` plus however long its chores take over a
+    throttled RPC, which can outlast the TTL; the next visitor then paid the full
+    scan on the request path (``/futures`` measured 2-26 s while ``/health``
+    answered in 0.4 s), and concurrent visitors each paid it again. Past the TTL
+    a request now gets the last read at once and starts ONE background refresh.
+    Only a reader with nothing cached at all waits for the chain.
+    """
 
     def __init__(self, rpc_url: str | None = None, futures_address: str | None = None) -> None:
         settings = get_settings()
@@ -101,6 +122,9 @@ class FuturesReader:
         self._lock = threading.Lock()
         self._cache: dict[str, dict] = {}
         self._cache_at = 0.0
+        #: True once a desk reading exists to serve, even a partly kept one.
+        #: Distinct from ``_cache_at``, which only a clean read advances.
+        self._cache_held = False
         #: The venue's whole series list, shared by the desk's exit path.
         self._series: list[dict] = []
         self._series_at = 0.0
@@ -109,10 +133,30 @@ class FuturesReader:
         self._trades: list[dict] = []
         self._trades_at = 0.0
         self._seen: dict[str, float] = {}
+        #: Background refreshes in flight, by cache name: one at a time each.
+        self._inflight: set[str] = set()
 
     @property
     def configured(self) -> bool:
         return bool(self.futures_address)
+
+    def _refresh_behind(self, name: str, fn) -> None:
+        """Run ``fn`` on a daemon thread unless a refresh of ``name`` is running."""
+        with self._lock:
+            if name in self._inflight:
+                return
+            self._inflight.add(name)
+
+        def run() -> None:
+            try:
+                fn()
+            except Exception:  # pragma: no cover - fn keeps the last good value
+                log.warning("futures: background %s refresh failed", name, exc_info=True)
+            finally:
+                with self._lock:
+                    self._inflight.discard(name)
+
+        threading.Thread(target=run, name=f"futures-{name}", daemon=True).start()
 
     def all_series(self, *, use_cache: bool = True) -> list[dict]:
         """Every series on the venue, settled ones included — memoized.
@@ -127,16 +171,24 @@ class FuturesReader:
             return []
         if use_cache:
             with self._lock:
-                if self._series and time.monotonic() - self._series_at < FUTURES_TTL_S:
-                    return [dict(s) for s in self._series]
+                known = self._series_at > 0
+                cached, age = list(self._series), time.monotonic() - self._series_at
+            if known:
+                if age >= FUTURES_TTL_S:
+                    # The desk refresh re-reads the series first: one scan, not two.
+                    self._refresh_behind("desks", lambda: self.read_all(use_cache=False))
+                return [dict(s) for s in cached]
         try:
-            out = self._client.read_all_series()
+            out = self._client.read_all_series(strict=True)
         except Exception:
-            return []
+            with self._lock:
+                return [dict(s) for s in self._series]
         with self._lock:
-            self._series = out
-            self._series_at = time.monotonic()
-        return [dict(s) for s in out]
+            # Append-only on chain: a shorter list than the last one is a short read.
+            if len(out) >= len(self._series):
+                self._series = out
+                self._series_at = time.monotonic()
+            return [dict(s) for s in self._series]
 
     def read_desk(self, index_id: str, *, all_series: list[dict] | None = None) -> dict | None:
         if not self.configured:
@@ -159,18 +211,36 @@ class FuturesReader:
             return {}
         if use_cache:
             with self._lock:
-                if self._cache and time.monotonic() - self._cache_at < FUTURES_TTL_S:
-                    return dict(self._cache)
+                held = self._cache_held
+                cached, age = dict(self._cache), time.monotonic() - self._cache_at
+            if held:
+                if age >= FUTURES_TTL_S:
+                    self._refresh_behind("desks", lambda: self.read_all(use_cache=False))
+                return cached
         series = self.all_series(use_cache=use_cache)
+        with self._lock:
+            series_known = self._series_at > 0
+            before = dict(self._cache)
+        if not series_known:
+            return before  # the venue has never been read: nothing to build a desk from
         out: dict[str, dict] = {}
+        failed = 0
         for iid in ALL_INDEX_IDS:
-            d = self.read_desk(iid, all_series=series)
+            try:
+                d = self._client.read_desk(iid, all_series=series, strict=True)
+            except Exception:
+                failed += 1
+                d = before.get(iid)  # append-only series: a vanished desk is a failed read
             if d is not None:
                 out[iid] = d
         with self._lock:
             self._cache = out
-            self._cache_at = time.monotonic()
-        return out
+            self._cache_held = True
+            # Only a read with no failures is FRESH; a merged one is served, and
+            # its old age makes the next request refresh it behind.
+            if failed == 0:
+                self._cache_at = time.monotonic()
+            return dict(out)
 
     def maker_inventory(self, *, use_cache: bool = True) -> dict[str, float]:
         """Per-index maker inventory (signed contracts) — what ``store.curve()``
@@ -202,12 +272,17 @@ class FuturesReader:
             return []
         if use_cache:
             with self._lock:
-                if self._trades and time.monotonic() - self._trades_at < self._TRADES_TTL_S:
-                    return [dict(t) for t in self._trades]
+                known = self._trades_at > 0
+                cached, age = list(self._trades), time.monotonic() - self._trades_at
+            if known:
+                if age >= self._TRADES_TTL_S:
+                    self._refresh_behind("trades", lambda: self.recent_trades(use_cache=False))
+                return [dict(t) for t in cached]
         try:
-            raw = self._client.recent_trades()
+            raw = self._client.recent_trades(strict=True)
         except Exception:
-            raw = []
+            with self._lock:
+                return [dict(t) for t in self._trades]
         now = time.time()
         stamped: list[dict] = []
         for t in raw:

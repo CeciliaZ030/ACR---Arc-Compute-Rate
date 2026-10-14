@@ -50,3 +50,13 @@ test("the hedger, buyer and attack runs keep their cadences", () => {
   assert.deepEqual([buyerRunPollMs({ data: { state: "running" } } as never), buyerRunPollMs(undefined)], [700, 0]);
   assert.deepEqual([attackRunPollMs({ data: { state: "running" } } as never), attackRunPollMs(undefined)], [700, 20_000]);
 });
+
+test("the public desk's effects key on the series id, not the polled desk object", () => {
+  // `desk` is parsed afresh from every desk reply (~4 s), so an effect listing it
+  // re-ran on every poll: the 10 s position timer never fired on its own and the
+  // fills loaded "once" were re-read every 4 s (components/chain/PublicDesk.tsx).
+  const src = readFileSync(join(ROOT, "components/chain/PublicDesk.tsx"), "utf8");
+  const deps = [...src.matchAll(/\}, \[([^\]]*)\]\);/g)].map((m) => m[1]);
+  assert.ok(deps.some((d) => /\bseriesId\b/.test(d)), "no effect keys on seriesId");
+  assert.deepEqual(deps.filter((d) => /\bdesk\b/.test(d)), []);
+});

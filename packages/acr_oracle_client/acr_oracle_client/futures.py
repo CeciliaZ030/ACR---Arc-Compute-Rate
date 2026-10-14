@@ -370,14 +370,22 @@ class FuturesClient:
             address=w3.to_checksum_address(self.futures_address), abi=FUTURES_ABI
         )
 
-    def read_all_series(self) -> list[dict]:  # pragma: no cover - live chain
+    def read_all_series(self, *, strict: bool = False) -> list[dict]:  # pragma: no cover - live chain
         """All series as dicts (small N — one per index in the demo).
 
         The per-series ``getSeries`` calls are independent, so they go out
         together: N grows by one on every roll, and a serial scan meant the
         venue got permanently slower to read the longer it stayed open.
+
+        ``strict`` raises instead of answering ``[]`` when the read FAILED, so a
+        caching caller can tell a throttled RPC from an empty venue. The default
+        keeps every existing caller's meaning.
         """
-        if self._connect() is None or not self.configured:
+        if not self.configured:
+            return []
+        if self._connect() is None:
+            if strict:
+                raise ConnectionError("futures RPC unreachable")
             return []
         try:
             c = self._contract()
@@ -387,10 +395,12 @@ class FuturesClient:
             )
             return [descale_series(i, tuple(r)) for i, r in enumerate(raw)]
         except Exception:
+            if strict:
+                raise
             return []
 
     def read_desk(
-        self, index_id: str, *, all_series: list[dict] | None = None
+        self, index_id: str, *, all_series: list[dict] | None = None, strict: bool = False
     ) -> dict | None:  # pragma: no cover - live chain
         """The live desk for one index: series + maker inventory + PnL, or None
         when nothing is configured / no series exists for the index yet.
@@ -399,12 +409,19 @@ class FuturesClient:
         instead of once per index. That scan is the dominant cost, and two of
         the three demo indices have no series at all — so without it the reader
         paid for a full scan twice over to be told "nothing here".
+
+        ``strict``: None then means only "no series for this index"; a failed
+        read raises (see :meth:`read_all_series`).
         """
-        if self._connect() is None or not self.configured:
+        if not self.configured:
+            return None
+        if self._connect() is None:
+            if strict:
+                raise ConnectionError("futures RPC unreachable")
             return None
         try:
             series = select_series_for_index(
-                self.read_all_series() if all_series is None else all_series, index_id
+                self.read_all_series(strict=strict) if all_series is None else all_series, index_id
             )
             if series is None:
                 return None
@@ -430,6 +447,8 @@ class FuturesClient:
                 "trader_count": traders,
             }
         except Exception:
+            if strict:
+                raise
             return None
 
     def position_of(self, series_id: int, trader: str) -> dict | None:  # pragma: no cover - live chain
@@ -469,7 +488,12 @@ class FuturesClient:
             return None
 
     def recent_trades(  # pragma: no cover - live chain
-        self, lookback_blocks: int = TAPE_PAGE_BLOCKS, limit: int = 25, pages: int = TAPE_PAGES
+        self,
+        lookback_blocks: int = TAPE_PAGE_BLOCKS,
+        limit: int = 25,
+        pages: int = TAPE_PAGES,
+        *,
+        strict: bool = False,
     ) -> list[dict]:
         """Recent on-chain fills from the ``Traded`` event, newest-first — the
         live trade tape.
@@ -478,8 +502,16 @@ class FuturesClient:
         because Arc refuses a wide one outright (see ``TAPE_PAGE_BLOCKS``).
         Stops as soon as it has ``limit`` fills, so a busy book still costs a
         single request; only a quiet one pays for the full reach.
+
+        ``strict`` raises when the FIRST page could not be read (that is no tape
+        at all, not a quiet one); a later page failing still returns the fills
+        already in hand.
         """
-        if self._connect() is None or not self.configured:
+        if not self.configured:
+            return []
+        if self._connect() is None:
+            if strict:
+                raise ConnectionError("futures RPC unreachable")
             return []
         try:
             w3 = self._connect()
@@ -514,6 +546,8 @@ class FuturesClient:
                             break  # throttled or down — a narrower range is no cure
                         page = None
                 if page is None:
+                    if strict and page_no == 0:
+                        raise ConnectionError("the tape's first page could not be read")
                     break  # keep what we have rather than spend the budget going nowhere
                 logs = list(page) + logs  # older page goes in front
                 if len(logs) >= limit or start <= 0:
@@ -534,6 +568,8 @@ class FuturesClient:
                 })
             return out
         except Exception:
+            if strict:
+                raise
             return []
 
     # --- writes (demo maker/taker loop; operator-gated on a funded key) ---
