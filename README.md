@@ -302,9 +302,9 @@ The estimator's headline result, gated in CI so it cannot drift: under the paire
 
 Measured, not aspirational — run `make verify-live` for the current set. These are the **testnet**
 deployment's, which is where the history is; mainnet's own first numbers are in the launch section above.
-At time of writing: hourly on-chain prints for 3 indices with attack-cost-per-bp on every one; **4** seller attestations on-chain; **three** live futures books (ACR-INF, ACR-GPU, ACR-DATA) whose maker is a Circle custody wallet, traded hourly by a keeper; **112** real Gateway x402 settlements from **3 distinct payers** (**30** from the CLI buyer agent, **7** from the autonomous hedger's backing EOA, **75** from a demo human's wallet — the first rows stamped with the tier the agent's card earned); 100% Foundry invariants passing.
+At time of writing: hourly on-chain prints for 3 indices with attack-cost-per-bp on every one; **4** seller attestations on-chain; **three** live futures books (ACR-INF, ACR-GPU, ACR-DATA) whose maker is a Circle custody wallet, traded hourly by a keeper; **120** real Gateway x402 settlements from **4 distinct payers** (**37** from the CLI buyer agent, **7** from the autonomous hedger's backing EOA, **75** from a demo human's wallet, **1** from a fourth wallet — the first rows stamped with the tier the agent's card earned); 100% Foundry invariants passing.
 
-Suites, all green and re-measured on every push: **1373 py** · **217 forge** · **361 terminal** · **58 matchstick** · glossary **563/563** — see `scripts/verify_claims.py`.
+Suites, all green and re-measured on every push: **1382 py** · **217 forge** · **361 terminal** · **58 matchstick** · glossary **563/563** — see `scripts/verify_claims.py`.
 
 ---
 

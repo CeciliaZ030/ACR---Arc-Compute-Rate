@@ -28,6 +28,10 @@ log = logging.getLogger(__name__)
 READ_ALL_TTL_S = 90.0
 
 
+class OracleUnreachable(RuntimeError):
+    """The chain did not answer and no print for this index was ever read."""
+
+
 class OracleReader:
     def __init__(self, rpc_url: str | None = None, oracle_address: str | None = None) -> None:
         settings = get_settings()
@@ -43,23 +47,66 @@ class OracleReader:
         return bool(self.oracle_address)
 
     def read(self, index_id: str) -> dict | None:
+        """The latest print, read from chain now; on a failed read, the last good
+        one. None means the oracle has no print for this index, or the chain is
+        down and nothing was ever read (callers here use ``or {}``)."""
         if not self.configured:
             return None
         try:
-            return self._client.read_latest(index_id)
+            return self._client.read_latest(index_id, strict=True)
         except Exception:
+            with self._lock:
+                kept = self._cache.get(index_id)
+            return dict(kept) if kept else None
+
+    def latest(self, index_id: str) -> dict | None:
+        """What ``/onchain/{index_id}`` serves: the warm cache when it is inside
+        its TTL (the warm loop re-reads it every tick, and prints are hourly),
+        else a read from chain, else the last good print.
+
+        That route is what the MCP plugin's ``get_rate``/``check_spend`` and the
+        Aomi App call for every agent question, and it used to go to the chain
+        uncached, where a 429 came back as ``404 no on-chain print``: both
+        integrations grew a re-ask to survive it. Raises
+        :class:`OracleUnreachable` only when the chain did not answer AND no
+        print was ever read, so a caller can say "ask again" (503), not "none".
+        """
+        if not self.configured:
             return None
+        with self._lock:
+            kept = self._cache.get(index_id)
+            fresh = kept is not None and time.monotonic() - self._cache_at < READ_ALL_TTL_S
+        if fresh:
+            return dict(kept)
+        try:
+            r = self._client.read_latest(index_id, strict=True)
+        except Exception as exc:
+            if kept is not None:
+                return dict(kept)
+            raise OracleUnreachable(index_id) from exc
+        if r is not None:
+            with self._lock:
+                self._cache[index_id] = r
+        return r
 
     def read_all(self, *, use_cache: bool = True) -> dict[str, dict]:
+        """Every index's latest print, cached for ``READ_ALL_TTL_S``. A throttled
+        read keeps that index's last good print rather than dropping it: a print
+        carries its own ``posted_at``, so a kept one still states its age."""
         if not self.configured:
             return {}
         if use_cache:
             with self._lock:
                 if self._cache and time.monotonic() - self._cache_at < READ_ALL_TTL_S:
                     return dict(self._cache)
+        with self._lock:
+            before = dict(self._cache)
         out: dict[str, dict] = {}
         for iid in ALL_INDEX_IDS:
-            r = self.read(iid)
+            try:
+                r = self._client.read_latest(iid, strict=True)
+            except Exception:
+                r = before.get(iid)
             if r is not None:
                 out[iid] = r
         with self._lock:

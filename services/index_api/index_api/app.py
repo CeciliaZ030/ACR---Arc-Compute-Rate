@@ -58,7 +58,7 @@ from .humanid import (
     require_human,
     stray_world_credentials,
 )
-from .onchain import get_futures, get_reader
+from .onchain import OracleUnreachable, get_futures, get_reader
 from .poster import OraclePoster
 from .statement import build_statement
 from .store import PrintStore
@@ -2011,13 +2011,20 @@ def onchain_print(
 ) -> dict:
     """The settlement-grade print read straight from ``ACROracle`` on-chain.
 
-    Ungated (a public read of chain state). 503 if no oracle is configured;
-    404 if the oracle has no print for this index yet.
+    Ungated (a public read of chain state). 503 if no oracle is configured or
+    the chain did not answer (ask again); 404 only if the oracle has no print
+    for this index yet. Served from the warm cache inside its TTL
+    (``OracleReader.latest``).
     """
     reader = get_reader()
     if not reader.configured:
         raise HTTPException(status_code=503, detail="no oracle configured (set ACR_ORACLE_ADDRESS)")
-    r = reader.read(index_id)
+    try:
+        r = reader.latest(index_id)
+    except OracleUnreachable:
+        raise HTTPException(
+            status_code=503, detail=f"the chain did not answer for {index_id}; ask again shortly"
+        ) from None
     if r is None:
         raise HTTPException(status_code=404, detail=f"no on-chain print for {index_id}")
     _meter_agent(request, agent)
