@@ -3,12 +3,15 @@
 import { useState } from "react";
 
 import { Ed } from "@/components/Ed";
+import { CHAIN, CHAIN_TESTNET } from "@/lib/chain";
+import type { ChainKey } from "@/lib/chainChoice";
 
 /* Ask the Tape from an MCP host — the config a developer pastes, and what to say.
  *
  * Sibling of AgentCardSnippet. That one writes the code an agent needs to present
  * a card; this one writes the config a Claude (or any MCP host) needs to call the
- * tape as eleven tools, and five questions worth asking it.
+ * tape as eleven tools, the questions worth asking it, and the same reads as an
+ * Aomi App.
  *
  * WHAT CHANGED, AND WHY IT MATTERS HERE. The first version of this section said
  * "nothing spends", which was true and was also the problem: a developer who came
@@ -34,7 +37,47 @@ import { Ed } from "@/components/Ed";
  * question and fails if it stops being priced against the market.
  */
 
-type Tab = "config" | "pay" | "ask";
+type Tab = "config" | "pay" | "ask" | "aomi";
+
+/** The worked examples' subjects, per chain, each MEASURED on that chain's press.
+ *
+ *  The ask tab used to name the mainnet pair on both chains, so a tester who
+ *  switched the page to testnet was handed questions whose honest answer is
+ *  "never seen". Testnet's own pair: 0x784e… bought 144 times and 0x8366… is
+ *  the seller it paid (measured 2026-10-14, 90-day window). That activity is
+ *  older than the plugin's 30-day default, so the testnet questions name their
+ *  window rather than inheriting one that would show nothing. */
+export const EXAMPLES: Record<ChainKey, { payer: string; seller: string; window: string }> = {
+  mainnet: {
+    payer: "0xc2903b52a3ad365fd237b78389a2fde99e886999",
+    seller: "0xefe0E4625AFf072c3FCff230b47f8150A17aDF19",
+    window: "last month",
+  },
+  testnet: {
+    payer: "0x784e6D2d4870174aD1aEa3d7446F2377D0c6A05d",
+    seller: "0x8366968f84a343CF70941EBe858428643d825cb0",
+    window: "in the last 90 days",
+  },
+};
+
+/** The Aomi App's chat, pinned. Aomi routes a plain chat on its own (Auto) and
+ *  did not pick ACR for these questions; the dashboard's own Chat tab builds
+ *  exactly this link (aomi-labs/aomi apps/build/src/lib/chat-url.ts). */
+export const AOMI_CHAT =
+  "https://chat.aomi.dev/?app=acr-compute-rate&application_id=2938642&lock_app=1";
+
+/** Which press the config pins, or null to let the package choose.
+ *
+ *  Mainnet: only a press that serves /par (see the note above `McpSnippet` in
+ *  developers/view.tsx), else null and the package's own default. TESTNET
+ *  ALWAYS PINS: null means the package default, and that default is a MAINNET
+ *  press, so a tester on the testnet page would silently get the other chain. */
+export function snippetApi(chain: ChainKey, active: string, servesPar: boolean | null): string | null {
+  if (chain === "testnet") return active;
+  return servesPar === false ? null : active;
+}
+
+const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 
 export const TOOLS = [
   "check_spend",
@@ -66,12 +109,47 @@ export const TOOLS = [
  *  asking the host itself — `servesPath(served, "/par")` — rather than from a
  *  list of hostnames here that would go stale the moment an image is rebuilt.
  */
-export function snippets(api: string | null): Record<Tab, string> {
+export function snippets(api: string | null, chain: ChainKey = "mainnet"): Record<Tab, string> {
+  const ex = EXAMPLES[chain];
+  const chainName = chain === "testnet" ? CHAIN_TESTNET.name : CHAIN.name;
   /* One line, or none. Kept as a string rather than a ternary inside the
      template so the trailing comma stays correct in both shapes — a config
      block a developer pastes has to be valid JSON, and "nearly valid" is a
      support question. */
   const apiLine = api ? `        "ACR_API": "${api}",\n` : "";
+  /* Free test money is the testnet-only first step to paying; mainnet has no faucet. */
+  const faucet =
+    chain === "testnet"
+      ? `# On ${chainName} the USDC is free: take some from https://faucet.circle.com, deposit it into
+# Circle Gateway (the wallet panel on this page does it), then ask can_i_pay.
+
+`
+      : "";
+  const askBody = `"My agent was billed 0.47 USDC for 23 thousand tokens by its inference provider. Should it pay?"
+#   -> check_spend: the spend agent\u2019s own ten-rung ladder over YOUR invoice, priced against the
+#      open market with every quote cited. This one is ~50x the going rate: it says escalate, names
+#      the cheapest model, and how much was avoidable. No account, no key, no history with ACR.
+
+"Can you pay for a metered ACR query right now? If not, what is in the way?"
+#   -> can_i_pay: seven rungs — host, chain, card, paywall, challenge, payer key, Gateway funds.
+#      Needs no key, and spends nothing: it asks for the 402 and does not answer it.
+
+"Has my agent been overpaying its vendors this month?"
+#   -> spend_report: every bill check_spend has priced on this machine, totalled. Over the going
+#      rate in bp, and what was actually recoverable in USDC. Reads a local file; uploads nothing.
+
+"What did ${ex.payer} overpay ${ex.window}, and where should it buy instead?"
+#   -> wallet_tca + reroute_suggestion: slippage vs the benchmark, the seller to leave, the saving
+#      in bp. Only for a wallet that bought from ACR: one it has never seen answers seen:false
+
+"Rate seller ${ex.seller} ${ex.window}, and tell me how much of that grade is actually measured."
+#   -> seller_rating: it answers Unrated on a thin tape and says so, rather than scoring the
+#      missing components zero — which is the part worth seeing
+
+"How many settlements landed on the tape in the last hour, and how many were human-backed?"
+#   -> query_tape("settlements"): the subgraph's own rows, benchmarked in the mapping`;
+  /* Counted, not typed: the heading said "Five" over six questions. */
+  const asked = askBody.split("\n").filter((l) => l.startsWith('"')).length;
   return {
     config: `{
   "mcpServers": {
@@ -79,13 +157,13 @@ export function snippets(api: string | null): Record<Tab, string> {
       "command": "npx",
       "args": ["-y", "acr-mcp"],
       "env": {
-${apiLine}        "ACR_AGENT_PRIVATE_KEY": "0x<any 32-byte key: the card, not a wallet>",
+${apiLine}        "ACR_AGENT_PRIVATE_KEY": "0x<optional: any 32-byte key, the card, not a wallet>",
         "ACR_HUMAN_AGENT_KEY": "0x<optional: a wallet in AgentBook, for wallet_tca(\\"me\\")>"
       }
     }
   }
 }`,
-    pay: `# Add these two and pay_and_read appears. Without them it is not registered at all.
+    pay: `${faucet}# Add these two and pay_and_read appears. Without them it is not registered at all.
 # A metered query is $0.0001, so the cap is what stops a loop, not your attention.
 
 {
@@ -103,38 +181,34 @@ ${apiLine}        "ACR_PAYER_PRIVATE_KEY": "0x<a wallet YOU control, deposited i
 
 # A settlement spends the GATEWAY balance, not the wallet's USDC. can_i_pay says
 # "deposit" rather than "ready" when the wallet is funded and the Gateway is not.`,
-    ask: `# Five things to ask, once the server is in your host's config:
+    ask: `# ${NUMBER_WORDS[asked] ?? asked} things to ask, once the server is in your host's config (${chainName}):
 
-"My agent was billed 0.47 USDC for 23 thousand tokens by its inference provider. Should it pay?"
-#   -> check_spend: the spend agent\u2019s own ten-rung ladder over YOUR invoice, priced against the
-#      open market with every quote cited. This one is ~50x the going rate: it says escalate, names
-#      the cheapest model, and how much was avoidable. No account, no key, no history with ACR.
+${askBody}`,
+    aomi: `# ACR is also an Aomi App: the same reads, answered inside Aomi's own agent.
+# Open the chat PINNED to it. Aomi routes a plain chat on its own and did not pick ACR:
 
-"Can you pay for a metered ACR query right now? If not, what is in the way?"
-#   -> can_i_pay: seven rungs — host, chain, card, paywall, challenge, payer key, Gateway funds.
-#      Needs no key, and spends nothing: it asks for the 402 and does not answer it.
+${AOMI_CHAT}
 
-"Has my agent been overpaying its vendors this month?"
-#   -> spend_report: every bill check_spend has priced on this machine, totalled. Over the going
-#      rate in bp, and what was actually recoverable in USDC. Reads a local file; uploads nothing.
+# Then ask, for example:
 
-"What did 0xc2903b52a3ad365fd237b78389a2fde99e886999 overpay last month, and where should it buy instead?"
-#   -> wallet_tca + reroute_suggestion: slippage vs the benchmark, the seller to leave, the saving
-#      in bp. Only for a wallet that bought from ACR: one it has never seen answers seen:false
+"I was billed 0.47 USDC for 23,000 tokens of inference. Should I pay?"
+#   -> acr_check_bill: the verdict, the cheapest cited seller, and what was avoidable.
 
-"Rate seller 0xefe0E4625AFf072c3FCff230b47f8150A17aDF19, and tell me how much of that grade is actually measured."
-#   -> seller_rating: it answers Unrated on a thin tape and says so, rather than scoring the
-#      missing components zero — which is the part worth seeing
+"Has wallet ${EXAMPLES.mainnet.payer} been overpaying for compute?"
+#   -> acr_wallet_cost: purchases, slippage against the benchmark, a cheaper seller.
 
-"How many settlements landed on the tape in the last hour, and how many were human-backed?"
-#   -> query_tape("settlements"): the subgraph's own rows, benchmarked in the mapping`,
+"Where is the ACR inference index, and is it fresh?"
+#   -> acr_rate: the on-chain print with its age, and the note that it is an index, not a price.
+
+# The App reads Arc mainnet. Nothing in it signs or spends.`,
   };
 }
 
-export function McpSnippet({ api }: { api: string | null }) {
+export function McpSnippet({ api, chain = "mainnet" }: { api: string | null; chain?: ChainKey }) {
   const [tab, setTab] = useState<Tab>("config");
   const [copied, setCopied] = useState(false);
-  const code = snippets(api)[tab];
+  const code = snippets(api, chain)[tab];
+  const chainName = chain === "testnet" ? CHAIN_TESTNET.name : CHAIN.name;
 
   async function copy() {
     try {
@@ -155,7 +229,7 @@ export function McpSnippet({ api }: { api: string | null }) {
         as="p"
         className="muted"
         style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
-        x="Eleven tools any MCP host can call. Ten are reads: check_spend runs the spend agent\u2019s own ladder over any vendor\u2019s invoice, and spend_report totals every bill it has priced. One spends, and only when you set a payer key."
+        x="Eleven tools any MCP host can call. Ten are reads: check_spend runs the spend agent’s own ladder over any vendor’s invoice, and spend_report totals every bill it has priced. One spends, and only when you set a payer key."
         p="Eleven questions an AI assistant can ask, including whether a bill is fair and whether your agent has been overpaying."
       />
       {api === null ? (
@@ -170,6 +244,17 @@ export function McpSnippet({ api }: { api: string | null }) {
           p="The config has no address in it on purpose. The tool already knows where to look."
         />
       ) : null}
+      {/* WHICH CHAIN THE CONFIG TARGETS, said out loud. On testnet the config
+          used to be able to drop ACR_API and fall back to the package's MAINNET
+          default without a word; a tester could not tell which network answered. */}
+      <div className="register-row" style={{ fontSize: 13 }}>
+        <span className="muted" style={{ minWidth: 132 }}>
+          <Ed x="chain" p="network" />
+        </span>
+        <span className="mono">
+          {chainName} · {api ?? "the package's default press"}
+        </span>
+      </div>
       <div className="register-row" style={{ fontSize: 13 }}>
         <span className="muted" style={{ minWidth: 132 }}>
           <Ed x="tools" p="questions" />
@@ -201,7 +286,7 @@ export function McpSnippet({ api }: { api: string | null }) {
 
       <div style={{ marginTop: 14, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         <Ed x="Paste, then ask" p="Set it up, then ask" className="label" />
-        {(["config", "pay", "ask"] as Tab[]).map((t) => (
+        {(["config", "pay", "ask", "aomi"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -213,8 +298,10 @@ export function McpSnippet({ api }: { api: string | null }) {
               <Ed x="host config" p="setup" />
             ) : t === "pay" ? (
               <Ed x="let it pay" p="let it pay" />
-            ) : (
+            ) : t === "ask" ? (
               <Ed x="what to ask" p="questions" />
+            ) : (
+              <Ed x="from Aomi" p="in Aomi" />
             )}
           </button>
         ))}
