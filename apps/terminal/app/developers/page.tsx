@@ -29,5 +29,5 @@ export default async function DevelopersPage() {
      into the browser. (No literals here — lib/mainnetOnly.test.ts gates the
      shipping UI on exactly that, and it is right to.) */
   const activeApi = baseState(chain).active;
-  return <DevelopersView initial={initial} activeApi={activeApi} />;
+  return <DevelopersView initial={initial} activeApi={activeApi} chainKey={chain} />;
 }

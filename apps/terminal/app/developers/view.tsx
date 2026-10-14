@@ -4,7 +4,8 @@ import { Fragment, useCallback, useState } from "react";
 import { TickerNumber } from "@/components/TickerNumber";
 import { ApiConsole } from "@/components/ApiConsole";
 import { AgentCardSnippet } from "@/components/chain/AgentCardSnippet";
-import { McpSnippet } from "@/components/chain/McpSnippet";
+import { McpSnippet, snippetApi } from "@/components/chain/McpSnippet";
+import type { ChainKey } from "@/lib/chainChoice";
 import { HumanProof } from "@/components/chain/HumanProof";
 import { WebhookActivity } from "@/components/WebhookActivity";
 import { WalletPanel } from "@/components/chain/WalletPanel";
@@ -147,10 +148,13 @@ const FAMILY_HEAD: Record<Family, React.ReactNode> = {
 export function DevelopersView({
   initial,
   activeApi,
+  chainKey = "mainnet",
 }: {
   initial: Envelope<TerminalData>;
   /** The seller this page is actually reading from — see the note in page.tsx. */
   activeApi: string;
+  /** The chain the visitor chose (the `acr-chain` cookie), read on the server. */
+  chainKey?: ChainKey;
 }) {
   const env = useTerminal(initial);
   const { revenue, refresh } = useRevenue();
@@ -309,7 +313,11 @@ export function DevelopersView({
         sample={env.data.x402_exchange_sample ?? null}
         prints={env.data.prints}
         chain={env.data.chain}
-        sellerBase={sellerBase()}
+        /* ON TESTNET, THE PRESS THIS PAGE READS. `sellerBase()` is env-only and
+           names mainnet in production, so a testnet visitor's "Settle for real"
+           signed testnet terms and sent them to the mainnet press. Mainnet keeps
+           the proven path unchanged. */
+        sellerBase={chainKey === "testnet" ? activeApi : sellerBase()}
       />
 
       <Ed
@@ -356,7 +364,10 @@ export function DevelopersView({
           package's own correct default to do it. Null omits the line and lets
           the package choose. `served` is the host's own /openapi.json, which is
           the same evidence the endpoint table below uses. */}
-      <McpSnippet api={served && !servesPath(served, "/par") ? null : activeApi} />
+      <McpSnippet
+        api={snippetApi(chainKey, activeApi, served ? servesPath(served, "/par") : null)}
+        chain={chainKey}
+      />
 
       {/* The contracts, named where a developer looks for them. This page knew
           the chain well enough to build explorer links and never once said
