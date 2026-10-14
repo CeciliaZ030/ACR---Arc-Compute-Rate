@@ -54,6 +54,25 @@ API = os.environ.get("ACR_API_URL", "https://acr-api-mainnet.onrender.com").rstr
 TERMINAL = os.environ.get(
     "ACR_TERMINAL_URL", "https://arc-compute-rate.vercel.app"
 ).rstrip("/")
+#: Arc testnet. The terminal serves BOTH chains from one host and its route
+#: handlers pick by the `chain` query key (`apps/terminal/lib/chainChoice.ts`,
+#: CHAIN_PARAM), defaulting to mainnet. So a testnet run that called bare
+#: `/api/futures` audited MAINNET's venue and reported its empty tape as a
+#: testnet failure (measured 2026-10-14: "0 desk(s)" vs `?chain=testnet`'s own).
+TESTNET_CHAIN_ID = 5042002
+
+
+def terminal_url(path: str, chain_id: int) -> str:
+    """The terminal `path` on the chain this run audits."""
+    if int(chain_id) != TESTNET_CHAIN_ID:
+        return f"{TERMINAL}{path}"
+    return f"{TERMINAL}{path}{'&' if '?' in path else '?'}chain=testnet"
+
+
+def _audited_chain() -> int:
+    from acr_core import get_settings
+
+    return int(get_settings().arc_chain_id)
 #: Free-tier hosts sleep; a cold start is slow but not a fault.
 TIMEOUT_S = float(os.environ.get("VERIFY_TIMEOUT_S", "90"))
 #: HARD failure: ACRFutures.MAX_SETTLE_AGE is 7200s, so a print older than this
@@ -769,7 +788,7 @@ def verify_humans() -> None:
 
     # The Terminal's own reading of the same fact, so the chip a judge sees and the
     # line a cron prints cannot quietly disagree.
-    status, env = get(f"{TERMINAL}/api/humanid")
+    status, env = get(terminal_url("/api/humanid", _audited_chain()))
     humans = ((env or {}).get("data") or {}).get("humans") or {}
     if humans:
         check(int(humans.get("traded") or 0) > 0,
@@ -871,7 +890,7 @@ def verify_revenue(settings) -> None:
           f"/desk/pass/status refuses a stranger with {st}, not a 500")
     # 3. The terminal's server-side balance read, with a known address: numbers
     #    back, and the one-next-step the storefront keys on.
-    st, body = get(f"{TERMINAL}/api/wallet/balances?address=0x95DE70736E21e70DF921Fb3ab91dD56750965b59&price=0.001")
+    st, body = get(terminal_url("/api/wallet/balances?address=0x95DE70736E21e70DF921Fb3ab91dD56750965b59&price=0.001", settings.arc_chain_id))
     good = st == 200 and isinstance(body, dict) and "usdc_wallet" in body and "usdc_gateway" in body
     check(good,
           f"terminal /api/wallet/balances -> {st}"
@@ -1024,9 +1043,9 @@ def verify_hedger(settings) -> None:
 def verify_terminal(live_series: dict | None) -> None:
     print("\nterminal — the public surface")
     for path in ROUTES:
-        status, _ = get(f"{TERMINAL}{path}")
+        status, _ = get(terminal_url(path, _audited_chain()))
         check(status == 200, f"{path} -> {status}")
-    status, body = get(f"{TERMINAL}/api/futures")
+    status, body = get(terminal_url("/api/futures", _audited_chain()))
     payload = (body or {}).get("data") or body or {}
     desks = payload.get("desks") or {}
     check(
