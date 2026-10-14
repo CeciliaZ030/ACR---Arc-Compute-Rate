@@ -13,6 +13,7 @@ import { chainFacts } from "@/lib/chain";
 import { useConnection } from "@/lib/useConnection";
 import { useEdition } from "@/lib/useEdition";
 import { useFutures } from "@/lib/useLive";
+import { desksFor } from "@/lib/deskSource";
 import { useNow } from "@/lib/useNow";
 import { useDeskAddress } from "@/lib/useDeskAddress";
 import { contractNotional } from "@/lib/futuresBook";
@@ -64,6 +65,8 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
   const fut = useFutures();
   const roster = fut.roster?.data ?? null;
   const futLive = Boolean(fut.roster?.live);
+  /* An unread empty roster defers to the feed's desks (lib/deskSource.ts). */
+  const deskRows = desksFor(roster, futLive, env.data.futures);
   const explorer = chainFacts(env.data.chain).explorer;
   const nowS = useNow();
   const you = useDeskAddress();
@@ -74,7 +77,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
   // written down. Leads with the on-chain print (heroFigure) because that is
   // the number the contract settles against.
   const primaryDesk = (() => {
-    const desks = roster?.desks ?? env.data.futures;
+    const desks = deskRows;
     return desks?.["ACR-INF"] ?? Object.values(desks ?? {})[0];
   })();
   // Every index's own mark, so the desk prices each row against its own
@@ -129,7 +132,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
       </section>
 
       <FuturesDesk
-        desks={roster?.desks ?? env.data.futures}
+        desks={deskRows}
         trades={roster?.trades}
         settled={roster?.settled}
         chain={env.data.chain}
@@ -208,7 +211,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
           whatever section happens to sit at the top of the page. */}
       <div id="desk" className="anchor-target">
         <PublicDesk
-          desks={roster?.desks ?? env.data.futures}
+          desks={deskRows}
           live={futLive && roster?.source !== "bundle"}
           explorer={explorer}
           chain={env.data.chain}

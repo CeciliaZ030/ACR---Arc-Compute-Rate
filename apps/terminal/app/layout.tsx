@@ -5,6 +5,7 @@ import { ChainStrip } from "@/components/ChainStrip";
 import { Colophon } from "@/components/Colophon";
 import { peekTerminal } from "@/lib/api";
 import { serverChain } from "@/lib/serverChain";
+import { ChainProvider } from "@/lib/useChain";
 import { editionBootScript } from "@/lib/edition";
 import { OG_BASE, OG_SIZE } from "@/lib/og";
 import "./globals.css";
@@ -142,10 +143,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         {/* Pre-paint: restore the reader's edition before any copy renders. */}
         <script dangerouslySetInnerHTML={{ __html: editionBootScript() }} />
-        <Masthead initial={initial} />
-        <ChainStrip initial={initial} />
-        <main className="container page">{children}</main>
-        <Colophon initial={initial} />
+        {/* The request's chain, as the first render's answer (lib/useChain.ts). */}
+        <ChainProvider chain={chain}>
+          <Masthead initial={initial} />
+          <ChainStrip initial={initial} />
+          <main className="container page">{children}</main>
+          <Colophon initial={initial} />
+        </ChainProvider>
       </body>
     </html>
   );
