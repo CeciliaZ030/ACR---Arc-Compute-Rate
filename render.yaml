@@ -23,7 +23,12 @@ services:
     plan: free # NB: no persistent disk. See the faucet ledger note below.
     region: oregon
     image:
-      url: docker.io/kaushtubh02/acr-api:latest
+      # PINNED, like the two services below, and the dashboard is the truth:
+      # this line said `:latest` while the live service ran the 10-09 pin, so
+      # pushing `:latest` deployed nothing (2026-10-14). The deploy script now
+      # pins the service to the tag it pushes (scripts/render_pin.py); keep
+      # this line in step with it. Rollback: 2026-10-09-1755.
+      url: docker.io/kaushtubh02/acr-api:2026-10-14-1339
     healthCheckPath: /health
     envVars:
       # --- Arc + the deployed contracts -----------------------------------
