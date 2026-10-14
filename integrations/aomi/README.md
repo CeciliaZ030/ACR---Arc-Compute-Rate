@@ -172,6 +172,7 @@ unset, the App reads the default Arc mainnet press.
 ```bash
 cargo test                       # 27 deterministic tests
 cargo test -- --ignored          # every tool against the live ACR press
+ACR_API=https://acr-api-1fto.onrender.com cargo test -- --ignored   # the same, against Arc testnet
 cargo build --release            # target/release/libacr_compute_rate.{dylib,so}
 make aomi-live                   # from the repo root: ask ACR through Aomi's production chat
 ```
