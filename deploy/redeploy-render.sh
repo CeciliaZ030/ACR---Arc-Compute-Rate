@@ -18,8 +18,14 @@ URL="${URL:-https://acr-api-1fto.onrender.com}"
 TAG="$(date -u +%Y-%m-%d-%H%M)"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
+# WHICH KEY. `.env` carries two Render keys for two workspaces, and the one
+# named RENDER_API_KEY cannot see this service: it owns only acr-probe-free.
+# The testnet `acr-api` lives in the workspace whose key is
+# RENDER_API_KEY_PYPI_WORKSPACE. Measured 2026-10-14, when the first key built
+# and pushed an image and then got `not found: service` from the deploy call.
 if [[ -z "${RENDER_API_KEY:-}" ]]; then
-  echo "RENDER_API_KEY not set (it is in .env)" >&2
+  echo "RENDER_API_KEY not set. For ${SERVICE_ID} (acr-api) export the .env value of" >&2
+  echo "RENDER_API_KEY_PYPI_WORKSPACE as RENDER_API_KEY; plain RENDER_API_KEY is another workspace." >&2
   exit 1
 fi
 
@@ -75,13 +81,21 @@ if [[ "${SKIP_BUILD:-}" != "1" ]]; then
 fi
 
 echo "▸ triggering a Render deploy"
-DEPLOY_ID="$(curl -sS -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
+DEPLOY_RESP="$(curl -sS -X POST "https://api.render.com/v1/services/${SERVICE_ID}/deploys" \
   -H "Authorization: Bearer ${RENDER_API_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{"clearCache":"do_not_clear"}' \
+  -d '{"clearCache":"do_not_clear"}' || true)"
+DEPLOY_ID="$(printf '%s' "${DEPLOY_RESP}" \
   | sed -n 's/.*"id"[[:space:]]*:[[:space:]]*"\(dep-[^"]*\)".*/\1/p' | head -1)"
 if [[ -z "${DEPLOY_ID}" ]]; then
+  # Say what Render said. This line used to end here, which hid the one fact
+  # that mattered: `not found: service`, i.e. a key from another workspace.
   echo "✗ Render did not return a deploy id — nothing was triggered" >&2
+  echo "  Render answered: $(printf '%s' "${DEPLOY_RESP}" | head -c 300)" >&2
+  if printf '%s' "${DEPLOY_RESP}" | grep -q "not found"; then
+    echo "  That key cannot see ${SERVICE_ID}. See the key note at the top of this script." >&2
+  fi
+  echo "  The image IS pushed: rerun with SKIP_BUILD=1 once the key is right." >&2
   exit 1
 fi
 echo "  deploy ${DEPLOY_ID}"

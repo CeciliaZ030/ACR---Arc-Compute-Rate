@@ -1066,9 +1066,23 @@ def verify_terminal(live_series: dict | None) -> None:
     check(
         n_fills > 0 or NO_VENUE,
         f"{n_fills} fill(s) on the public tape"
-        + (" — nothing to fill against yet, declared" if NO_VENUE and not n_fills else ""),
+        + (" — nothing to fill against yet, declared" if NO_VENUE and not n_fills else "")
+        + ("" if n_fills else tape_cause(payload.get("freshness"))),
         warn_only=NO_VENUE,
     )
+
+
+def tape_cause(freshness: dict | None) -> str:
+    """Why an empty tape is empty. The press states when it last READ the tape
+    (`FuturesReader.freshness`): never means the read is failing (a throttled
+    RPC), a recent read means there were simply no fills within its reach. The
+    two call for opposite fixes, and `0 fill(s)` alone named neither."""
+    if not isinstance(freshness, dict) or "tape_age_s" not in freshness:
+        return ""
+    age = freshness["tape_age_s"]
+    if age is None:
+        return " — the press has not managed to READ the tape since it booted (its RPC reads are failing)"
+    return f" — read {age:.0f}s ago and empty: no fills within reach (is the venue's taker funded?)"
 
 
 def verify_funding(w3, settings) -> None:
