@@ -1,4 +1,4 @@
-.PHONY: deploy-mainnet-dry deploy-mainnet verify-mainnet prove-human verify-loop help setup test test-py golden golden-check anchors-fetch anchors-report anchors-check evalset evalset-check rate rate-bless test-contracts test-agent test-terminal pipeline demo demo-agent demo-full eval eval-gate openapi-doc openapi-doc-check ci snapshot api terminal agent agent-live interop build-contracts anvil onchain deploy-testnet-dry deploy-testnet deploy-mirror-dry deploy-mirror deploy-humanid-dry deploy-humanid deploy-oracle-v2-dry deploy-oracle-v2 backfill-oracle-v2 verify-testnet post-once attest-once seed-sellers mirror-receipts resolve-humans recompute futures-roll futures-settle futures-withdraw futures-collateralize aomi-live verify-live verify-claims x402-capture wallet-settle-probe desk-preflight desk-e2e desk-evidence tape-audit lint glossary-check diagram diagram-preview clean graph-abis graph-install graph-codegen graph-build graph-test graph-deploy circle-check circle-login buyer-key circle-wallet circle-fund circle-deposit circle-balance gateway-deposit gateway-balance skills-install verify-operator sandbox-decisions sandbox-decisions-check archive-decisions archive-decisions-check ledger operator-run
+.PHONY: deploy-mainnet-dry deploy-mainnet verify-mainnet prove-human verify-loop help setup test test-py golden golden-check anchors-fetch anchors-report anchors-check evalset evalset-check rate rate-bless test-contracts test-agent test-terminal pipeline demo demo-agent demo-full eval eval-gate openapi-doc openapi-doc-check ci snapshot api terminal agent agent-live interop build-contracts anvil onchain deploy-testnet-dry deploy-testnet deploy-mirror-dry deploy-mirror deploy-humanid-dry deploy-humanid deploy-oracle-v2-dry deploy-oracle-v2 backfill-oracle-v2 verify-testnet post-once attest-once seed-sellers mirror-receipts resolve-humans recompute futures-roll futures-settle futures-withdraw futures-collateralize aomi-live verify-live verify-live-testnet verify-claims x402-capture wallet-settle-probe desk-preflight desk-e2e desk-evidence tape-audit lint glossary-check diagram diagram-preview clean graph-abis graph-install graph-codegen graph-build graph-test graph-deploy circle-check circle-login buyer-key circle-wallet circle-fund circle-deposit circle-balance gateway-deposit gateway-balance skills-install verify-operator sandbox-decisions sandbox-decisions-check archive-decisions archive-decisions-check ledger operator-run
 
 help:
 	@echo "ACR — The Arc Compute Rate"
@@ -365,6 +365,22 @@ aomi-live:
 # VERIFY_STRICT=1 also fails on cron age and funding runway (warnings by default,
 # because those depend on GitHub's scheduler rather than on our code).
 verify-live:
+	uv run python scripts/verify_live.py
+
+# The same audit against Arc TESTNET: its press, RPC and contracts, the terminal's
+# testnet routes (`?chain=testnet`, added by verify_live itself), and the wallet
+# that actually signs testnet prints. That is 0x8366…, a Circle-held signer on
+# both testnet oracles — NOT the mainnet poster keepalive watches. Measured
+# 2026-10-14: it held 0.0079 USDC and testnet prints were 29 days stale.
+verify-live-testnet:
+	ACR_API_URL=https://acr-api-1fto.onrender.com \
+	ACR_ARC_CHAIN_ID=5042002 \
+	ACR_ARC_RPC_URL=https://rpc.testnet.arc.network \
+	ACR_ORACLE_ADDRESS=0x4f00e3BDd224F4c4b4958D54cD774E84B9092609 \
+	ACR_ORACLE_V2_ADDRESS=0xFCa038CEad7b9e9aa8fDAfc9e80253835fB8FFEA \
+	ACR_FUTURES_ADDRESS=0x29d97c629a8278f7ec4218ab0bd8baa9182642fe \
+	ACR_REGISTRY_ADDRESS=0x23ae3E1A306824F0CBA0b6561cB7E5502f63dFb7 \
+	ACR_CUSTODY_ADDRESS=0x8366968f84a343CF70941EBe858428643d825cb0 \
 	uv run python scripts/verify_live.py
 
 # Prove the deployed /loop PAGE — the routes its four instruments press, with the
