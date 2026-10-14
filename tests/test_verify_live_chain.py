@@ -40,3 +40,11 @@ def test_no_terminal_call_bypasses_the_chain() -> None:
     source = (ROOT / "scripts" / "verify_live.py").read_text(encoding="utf-8")
     bare = [m.group(0) for m in re.finditer(r"(?:get|post)\(f\"\{TERMINAL\}[^\"]*\"", source)]
     assert not bare, f"terminal calls that ignore the audited chain: {bare}"
+
+
+def test_an_empty_tape_says_whether_it_was_read() -> None:
+    # `0 fill(s)` named neither cause; the press's freshness block tells an
+    # unread tape (failing RPC reads) from an empty one (nothing traded).
+    assert "not managed to READ" in verify_live.tape_cause({"tape_age_s": None})
+    assert "no fills within reach" in verify_live.tape_cause({"tape_age_s": 12.0})
+    assert verify_live.tape_cause(None) == ""  # an older press: say nothing rather than guess

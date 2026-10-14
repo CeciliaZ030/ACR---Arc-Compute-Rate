@@ -182,15 +182,29 @@ class FuturesReader:
         self._seen: dict[str, float] = {}
         #: Background refreshes in flight, by cache name: one at a time each.
         self._inflight: set[str] = set()
+        #: When each cache was last ATTEMPTED (monotonic), success or not. Past
+        #: its first attempt a cache never makes a request wait on the chain.
+        self._tried: dict[str, float] = {}
+        #: One cold read per cache at a time; concurrent cold readers wait for it
+        #: and then find it filled, instead of each paying for the same scan.
+        self._cold = {name: threading.Lock() for name in ("series", "desks", "trades")}
 
     @property
     def configured(self) -> bool:
         return bool(self.futures_address)
 
+    #: The floor between two attempts at a cache whose reads keep failing. Under
+    #: the TTL, so a healthy cache refreshes exactly as before; a throttled one
+    #: is retried every half minute rather than on every poll.
+    _RETRY_S = 30.0
+
     def _refresh_behind(self, name: str, fn) -> None:
-        """Run ``fn`` on a daemon thread unless a refresh of ``name`` is running."""
+        """Run ``fn`` on a daemon thread unless a refresh of ``name`` is running
+        or was attempted within ``_RETRY_S``."""
         with self._lock:
             if name in self._inflight:
+                return
+            if time.monotonic() - self._tried.get(name, -1e9) < self._RETRY_S:
                 return
             self._inflight.add(name)
 
@@ -225,12 +239,22 @@ class FuturesReader:
                     # The desk refresh re-reads the series first: one scan, not two.
                     self._refresh_behind("desks", lambda: self.read_all(use_cache=False))
                 return [dict(s) for s in cached]
+            with self._cold["series"]:
+                with self._lock:
+                    if self._series_at > 0:
+                        return [dict(s) for s in self._series]
+                return self._read_series()
+        return self._read_series()
+
+    def _read_series(self) -> list[dict]:
         try:
             out = self._client.read_all_series(strict=True)
         except Exception:
             with self._lock:
+                self._tried["series"] = time.monotonic()
                 return [dict(s) for s in self._series]
         with self._lock:
+            self._tried["series"] = time.monotonic()
             # Append-only on chain: a shorter list than the last one is a short read.
             if len(out) >= len(self._series):
                 self._series = out
@@ -264,6 +288,16 @@ class FuturesReader:
                 if age >= FUTURES_TTL_S:
                     self._refresh_behind("desks", lambda: self.read_all(use_cache=False))
                 return cached
+            with self._cold["desks"]:
+                with self._lock:
+                    if self._cache_held:
+                        return dict(self._cache)
+                return self._read_desks(use_cache=True)
+        return self._read_desks(use_cache=False)
+
+    def _read_desks(self, *, use_cache: bool) -> dict[str, dict]:
+        with self._lock:
+            self._tried["desks"] = time.monotonic()
         series = self.all_series(use_cache=use_cache)
         with self._lock:
             series_known = self._series_at > 0
@@ -319,16 +353,31 @@ class FuturesReader:
             return []
         if use_cache:
             with self._lock:
-                known = self._trades_at > 0
+                # TRIED, not succeeded: on the press, Arc's RPC can throttle the
+                # tape's first page on every attempt (Render's shared egress), and
+                # keying on success sent EVERY /futures request into the walk and
+                # its 429 backoff, 2-42 s each, while a local run of the same
+                # reader answered in 0.0 s. An unread tape is served as held and
+                # retried behind, no more than once per _RETRY_S.
+                tried = "trades" in self._tried
                 cached, age = list(self._trades), time.monotonic() - self._trades_at
-            if known:
+            if tried:
                 if age >= self._TRADES_TTL_S:
                     self._refresh_behind("trades", lambda: self.recent_trades(use_cache=False))
                 return [dict(t) for t in cached]
+            with self._cold["trades"]:
+                with self._lock:
+                    if "trades" in self._tried:
+                        return [dict(t) for t in self._trades]
+                return self._read_trades()
+        return self._read_trades()
+
+    def _read_trades(self) -> list[dict]:
         try:
             raw = self._client.recent_trades(strict=True)
         except Exception:
             with self._lock:
+                self._tried["trades"] = time.monotonic()
                 return [dict(t) for t in self._trades]
         now = time.time()
         stamped: list[dict] = []
@@ -337,7 +386,7 @@ class FuturesReader:
             stamped.append({**t, "seen_at": seen})
         with self._lock:
             self._trades = stamped
-            self._trades_at = time.monotonic()
+            self._trades_at = self._tried["trades"] = time.monotonic()
             # Bound the first-seen map to the txs still in the window.
             live_txs = {t["tx"] for t in stamped}
             self._seen = {tx: s for tx, s in self._seen.items() if tx in live_txs}
@@ -384,12 +433,28 @@ class FuturesReader:
         desks, the recent trade tape, and the settled-rounds ledger."""
         if not self.configured:
             return {"venue": None, "desks": {}, "trades": [], "settled": []}
-        return {
+        roster = {
             "venue": self.futures_address,
             "desks": self.read_all(use_cache=use_cache),
             "trades": self.recent_trades(use_cache=use_cache),
             "settled": self.settled_rounds(use_cache=use_cache),
         }
+        roster["freshness"] = self.freshness()
+        return roster
+
+    def freshness(self) -> dict:
+        """Seconds since each part of the roster was last READ from chain, None
+        if it never has been since boot. An empty tape and an unread one look
+        identical in ``trades``; this is what tells them apart
+        (scripts/verify_live.py reads it)."""
+        now = time.monotonic()
+        with self._lock:
+            ages = {
+                "desks_age_s": now - self._cache_at if self._cache_at > 0 else None,
+                "tape_age_s": now - self._trades_at if self._trades_at > 0 else None,
+                "series_age_s": now - self._series_at if self._series_at > 0 else None,
+            }
+        return {k: (round(v, 1) if v is not None else None) for k, v in ages.items()}
 
 
 _futures: FuturesReader | None = None

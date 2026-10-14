@@ -74,9 +74,18 @@ def _reader() -> tuple[FuturesReader, FakeClient]:
 
 
 def _age(reader: FuturesReader, by: float) -> None:
+    """Make every read, and every attempt at one, `by` seconds older."""
     reader._cache_at -= by
     reader._series_at -= by
     reader._trades_at -= by
+    reader._tried = {k: v - by for k, v in reader._tried.items()}
+
+
+def _settle(reader: FuturesReader) -> None:
+    deadline = time.monotonic() + 5
+    while reader._inflight and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert not reader._inflight
 
 
 def test_a_throttled_refresh_keeps_the_desk_and_the_tape():
@@ -132,11 +141,59 @@ def test_a_quiet_tape_is_read_once_not_on_every_request():
     assert client.calls["trades"] == 1
 
 
-def test_a_venue_never_read_caches_nothing_on_failure():
+def test_desks_never_read_are_read_again_rather_than_shown_empty():
+    # A failed first desk read caches nothing, so the next request reads again:
+    # an empty desk is what the terminal shows as "no venue", and it is not true.
     reader, client = _reader()
     client.fail = True
     assert reader.read_all() == {}
-    assert reader.recent_trades() == []
     client.fail = False
     assert list(reader.read_all()) == [IID]
-    assert len(reader.recent_trades()) == 1
+
+
+def test_an_unread_tape_never_makes_a_request_wait():
+    # Measured on the press 2026-10-14: the tape's first page throttled on every
+    # attempt, and every /futures request walked it again (2-42 s).
+    reader, client = _reader()
+    client.fail = True
+    assert reader.recent_trades() == []
+    assert client.calls["trades"] == 1
+    client.gate = threading.Event()  # a chain read would now hang
+    t0 = time.monotonic()
+    for _ in range(5):
+        assert reader.recent_trades() == []
+    assert time.monotonic() - t0 < 0.5, "a request waited on the chain for an unread tape"
+    assert client.calls["trades"] == 1, "the tape was re-walked inside the retry floor"
+
+    client.fail = False
+    client.gate.set()
+    _age(reader, FuturesReader._RETRY_S + 1)
+    assert reader.recent_trades() == []  # still served at once
+    _settle(reader)
+    assert client.calls["trades"] == 2
+    assert len(reader.recent_trades()) == 1, "the retry behind did not fill the tape"
+
+
+def test_concurrent_cold_readers_share_one_scan():
+    reader, client = _reader()
+    client.gate = threading.Event()
+    out: list[dict] = []
+    threads = [threading.Thread(target=lambda: out.append(reader.read_all())) for _ in range(5)]
+    for t in threads:
+        t.start()
+    time.sleep(0.2)
+    client.gate.set()
+    for t in threads:
+        t.join(5)
+    assert [list(o) for o in out] == [[IID]] * 5
+    assert client.calls["series"] == 1, "five cold readers paid for five scans"
+
+
+def test_the_roster_says_how_old_each_part_is():
+    reader, client = _reader()
+    client.fail = True
+    assert reader.roster()["freshness"]["tape_age_s"] is None  # unread, not empty
+    reader2, _ = _reader()
+    f = reader2.roster()["freshness"]
+    assert set(f) == {"desks_age_s", "tape_age_s", "series_age_s"}
+    assert all(v is not None and v < 5 for v in f.values())
