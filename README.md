@@ -320,6 +320,7 @@ Suites, all green and re-measured on every push: **1362 py** · **217 forge** ·
 | [`redteam/`](redteam) | The wash-flow adversary used to attack our own index |
 | [`graph/`](graph) | The `acr-tape` subgraph: settlements benchmarked in the mapping, humans per window (The Graph, Studio) |
 | [`mcp/`](mcp) | Eleven MCP tools — Machine TCA, a per-invoice price check, a running spend report and a payment self-check for any MCP host, carded. Packaged as `acr-mcp` (v0.3.2, `npm run release` publishes it) |
+| [`integrations/aomi/`](integrations/aomi/README.md) | ACR as an **Aomi App**: five read-only tools (bill check, wallet cost, seller rating, index print, receipts) as a Rust plugin for Aomi's hosted agent, pinned to `aomi-sdk =5.1.1`, which is what api.aomi.dev requires. Deployed from build.aomi.dev |
 | [`skills/`](skills) | Two Skills published *back*: `acr-hedge` (discover → pay → read → hedge) and `acr-analyst` (Ask the Tape) |
 | [`docs/`](docs) | Documentation — start at [`docs/README.md`](docs/README.md) |
 | [`hackathon/`](hackathon) | The two hackathon submissions this began as — preserved, not maintained |

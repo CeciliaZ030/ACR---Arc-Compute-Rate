@@ -321,3 +321,12 @@ jobs:
             }
             console.log(`built server offers ${names.length} tools: ${names.join(", ")}`);
           '
+      # THE AOMI APP (integrations/aomi): ACR's tools as a Rust plugin that Aomi's
+      # hosted agent loads. Built and tested HERE because Aomi builds it from this
+      # repo's pushed commit, so a broken crate would otherwise be found only when
+      # someone activates it from build.aomi.dev. `--locked` matches Aomi's own
+      # template CI, and the SDK pin is exact (=5.1.1, what api.aomi.dev requires).
+      # A step and not a job: verify_claims counts ci.yml's jobs against the README.
+      - name: Aomi App builds and its tests pass
+        working-directory: integrations/aomi
+        run: cargo test --locked
