@@ -573,13 +573,41 @@ test("get_rate reads the on-chain route, and reports an unposted oracle as a sta
      a value and a 404 within ten minutes under Arc's `eth_getLogs` throttling.
      Which is the reason this branch stays: an absence is not always permanent,
      so it is reported as a state and never as a verdict on the deployment. */
+  const asked: Array<{ url: string }> = [];
   const none = (await callTool("get_rate", { index_id: "ACR-GPU" }, {
     api: "https://acr.test",
-    fetchImpl: router({ "/onchain/ACR-GPU": { status: 404, body: { detail: "no on-chain print for ACR-GPU" } } }),
+    fetchImpl: router({ "/onchain/ACR-GPU": { status: 404, body: { detail: "no on-chain print for ACR-GPU" } } }, asked),
+    retryDelayMs: 0,
   })) as { available: boolean; reason: string; try_instead: string };
   assert.equal(none.available, false);
-  assert.match(none.reason, /has not been posted to/);
+  assert.equal(asked.length, 2, "one 404 is not evidence: it re-asks once before saying anything");
+  /* It used to say "Its oracle has not been posted to." as a fact. Both causes
+     are possible and the answer has to carry both. */
+  assert.doesNotMatch(none.reason, /Its oracle has not been posted to\./);
+  assert.match(none.reason, /never been posted to/);
+  assert.match(none.reason, /could not read the chain just now/);
+  assert.match(none.reason, /Retry/);
   assert.match(none.try_instead, /pay_and_read/, "the value is still buyable from the metered endpoint");
+});
+
+test("get_rate rides out a throttled read: a 404 then the value returns the value", async () => {
+  /* Measured 2026-10-14 against the testnet press: one 404 for ACR-INF, then 36
+     of 36 reads answered 200. The re-ask is what turns that 404 into an answer. */
+  let calls = 0;
+  const flaky = async () => {
+    calls += 1;
+    return calls === 1
+      ? { ok: false, status: 404, json: async () => ({ detail: "no on-chain print for ACR-INF" }) }
+      : { ok: true, status: 200, json: async () => ({ value: 0.49236, posted_at: Math.floor(Date.now() / 1000) - 60 }) };
+  };
+  const out = (await callTool("get_rate", { index_id: "ACR-INF" }, {
+    api: "https://acr.test",
+    fetchImpl: flaky,
+    retryDelayMs: 0,
+  })) as { value?: number; available?: boolean };
+  assert.equal(calls, 2);
+  assert.equal(out.value, 0.49236);
+  assert.notEqual(out.available, false);
 });
 
 test("get_rate says how old the print is, because the payload always knew", async () => {

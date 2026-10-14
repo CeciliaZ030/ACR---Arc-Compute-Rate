@@ -12,7 +12,7 @@ npx -y acr-mcp          # no clone, no path to edit
 
 **If that 404s, the package is not on npm yet** and the clone below is the way
 in — it is two commands and it is verified, not merely written down (a fresh
-checkout builds in about four seconds and its 113 tests pass). Nothing else
+checkout builds in about four seconds and its 114 tests pass). Nothing else
 differs: the same `dist/server.js`, the same env block, the same eleven tools.
 
 <details><summary>From a clone — the route that works today, and how you pin a fork</summary>
