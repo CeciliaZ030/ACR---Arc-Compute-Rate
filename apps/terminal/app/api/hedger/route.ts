@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { bundleSection, fetchLiveMeta } from "@/lib/api";
 import { envelopeHeaders, requestChain } from "@/lib/envelope";
+import { LastGood, SOLE_TIER_TIMEOUT_MS, pressIsSoleTier } from "@/lib/pressTier";
 import type { Envelope, HedgerState } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+/* Room for the sole-tier press budget (lib/pressTier.ts) on testnet. */
+export const maxDuration = 30;
+
+/* The last standing each chain's press answered, on this instance. */
+const lastGood = new LastGood<HedgerState>();
 
 /* The autonomous hedger's standing — mandate, position, fills, spend.
 
@@ -17,8 +23,13 @@ export const runtime = "nodejs";
    labelled stale, than to serve a half-true live-looking answer. */
 export async function GET(req: Request) {
   const chain = requestChain(req);
-  const { data, upstream } = await fetchLiveMeta<HedgerState>(chain, "/hedger", 8_000);
+  /* 8s where an archive stands behind the press; longer where nothing does
+     (testnet), because there a timeout fell to `configured: false` and the
+     panel said the hedger did not exist — absent read as empty. */
+  const budget = pressIsSoleTier(chain) ? SOLE_TIER_TIMEOUT_MS : 8_000;
+  const { data, upstream } = await fetchLiveMeta<HedgerState>(chain, "/hedger", budget);
   if (data) {
+    lastGood.remember(chain, data);
     const env: Envelope<HedgerState> = {
       live: true,
       data,
@@ -27,6 +38,16 @@ export async function GET(req: Request) {
     };
     return NextResponse.json(env, {
       headers: envelopeHeaders("public, s-maxage=5, stale-while-revalidate=20", chain, env),
+    });
+  }
+
+  /* The press's last answer, read minutes ago, before the archive or the
+     "not configured" placeholder. `live: false` keeps it no-store and honest. */
+  const kept = lastGood.recall(chain);
+  if (kept) {
+    const env: Envelope<HedgerState> = { live: false, data: kept.value, fetchedAt: kept.at, chain, upstream };
+    return NextResponse.json(env, {
+      headers: envelopeHeaders("public, s-maxage=30, stale-while-revalidate=120", chain, env),
     });
   }
 
