@@ -99,7 +99,7 @@ acr  › 0.49773 (CI 0.49449–0.49780) · costs 0.0156 USDC to move by 1 bp · 
   5.1.1. The backend's own answer, `GET /api/platforms/server-tags`, is
   `{"server_tags":["prod"],"sdk_version":"5.1.1"}`.
 - **It loads the way the backend loads it.** Through `DynFnHandle`, and read back by
-  `aomi-build manifest`: `acr-compute-rate 0.1.0 · sdk 5.1.1 · namespaces []`, five tools,
+  `aomi-build manifest`: `acr-compute-rate 0.1.1 · sdk 5.1.1 · namespaces []`, five tools,
   one optional secret slot (`ACR_API`).
 - **It passes the checks Aomi's platform build makes.** That build
   (`aomi-labs/community-apps`, `deploy_project.py`) extracts the whole repository
@@ -113,11 +113,14 @@ acr  › 0.49773 (CI 0.49449–0.49780) · costs 0.0156 USDC to move by 1 bp · 
 - **Every tool answers from a plain thread AND from inside a Tokio runtime.** HTTP uses
   `reqwest`'s blocking client, as Aomi's template prescribes, because a tool runs inside a
   synchronous FFI boundary.
-- **Tests.** `cargo test`: 23 deterministic tests. 21 run the tools on recorded live
-  responses, each watched failing on a deliberately broken tool. Two more fail if the
+- **Tests.** `cargo test`: 27 deterministic tests. 21 run the tools on recorded live
+  responses, each watched failing on a deliberately broken tool. Two fail if the
   deploy layout drifts: when the SDK pin Aomi's deploy gate reads (the repo-root
   `Cargo.toml`) differs from this App's, or when this folder stops being its own
-  workspace root with `Cargo.lock` beside it. `cargo test -- --ignored` runs all five
+  workspace root with `Cargo.lock` beside it. Four drive the HTTP client against a
+  scripted local press. They cover the two kinds of 404: FastAPI's "Not Found" means
+  the route is missing, so stop; the press's own "no on-chain print" sentence can be
+  a throttled chain read, so re-ask once. `cargo test -- --ignored` runs all five
   tools against the real press. ACR's CI runs the suite on every push.
 
 ## Deploy it from the dashboard
@@ -167,7 +170,7 @@ unset, the App reads the default Arc mainnet press.
 ## Develop
 
 ```bash
-cargo test                       # 23 deterministic tests
+cargo test                       # 27 deterministic tests
 cargo test -- --ignored          # every tool against the live ACR press
 cargo build --release            # target/release/libacr_compute_rate.{dylib,so}
 make aomi-live                   # from the repo root: ask ACR through Aomi's production chat
