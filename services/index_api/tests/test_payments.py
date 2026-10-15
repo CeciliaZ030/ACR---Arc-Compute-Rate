@@ -17,6 +17,29 @@ from web3 import Web3
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def mined(w3, tx_hash):
+    """Wait for a transaction to be mined, and return its hash as hex.
+
+    `.transact()` returns the hash as soon as anvil ACCEPTS the transaction. On a
+    fast machine it is mined before the next call; on CI's runners (anvil 1.5)
+    it can still be pending, so a dependent call raced it ("not pending owner")
+    and `anvil_mine` folded it into the first of the new blocks, one short of
+    finality, so verify answered pending_finality. Every send here waits."""
+    w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
+    return Web3.to_hex(tx_hash)
+
+
+def finalize(w3):
+    """Mine until the finalized block covers everything mined so far."""
+    target = w3.eth.block_number
+    w3.provider.make_request("anvil_mine", ["0x40"])
+    for _ in range(256):
+        if w3.eth.get_block("finalized")["number"] >= target:
+            return
+        w3.provider.make_request("anvil_mine", ["0x1"])
+    raise AssertionError(f"anvil never finalized block {target}")
+
+
 @pytest.fixture(scope="module")
 def chain():
     if not shutil.which("anvil"):
@@ -57,10 +80,13 @@ def setup(chain, tmp_path, monkeypatch):
 
     token = deploy("MockUSDC")
     wallet = deploy("PolicyWallet", [token.address])
-    token.functions.mint(wallet.address, 1_000_000_000).transact({"from": owner})
-    wallet.functions.setBudget(
-        payments.category_id("inference"), 100_000_000, 10_000_000, 86400
-    ).transact({"from": owner})
+    mined(w3, token.functions.mint(wallet.address, 1_000_000_000).transact({"from": owner}))
+    mined(
+        w3,
+        wallet.functions.setBudget(
+            payments.category_id("inference"), 100_000_000, 10_000_000, 86400
+        ).transact({"from": owner}),
+    )
     log = tmp_path / "decisions.jsonl"
     row = {
         "at": time.time() - 86400,
@@ -129,15 +155,16 @@ def prepare(s, **overrides):
 def send(s, prepared):
     tx = prepared["transaction"]
     # This is the local owner's explicit authorization boundary, not an API signer.
-    return Web3.to_hex(
+    return mined(
+        s["w3"],
         s["w3"].eth.send_transaction(
             {"from": s["owner"], "to": tx["to"], "data": tx["data"], "value": 0}
-        )
+        ),
     )
 
 
 def verify(s, tx):
-    s["w3"].provider.make_request("anvil_mine", ["0x40"])
+    finalize(s["w3"])
     return s["client"].post(
         "/operator/payments/verify", json={"obligation_id": "bill-1", "transaction_hash": tx}
     )
@@ -194,12 +221,18 @@ def test_preparation_refuses_unsafe_state(setup, change):
     elif change == "chain":
         override["chain_id"] = 1
     elif change == "paused":
-        s["wallet"].functions.setPaused(True).transact({"from": s["owner"]})
+        mined(s["w3"], s["wallet"].functions.setPaused(True).transact({"from": s["owner"]}))
     elif change == "balance":
-        s["wallet"].functions.withdraw(s["owner"], 1_000_000_000).transact({"from": s["owner"]})
+        mined(
+            s["w3"],
+            s["wallet"].functions.withdraw(s["owner"], 1_000_000_000).transact({"from": s["owner"]}),
+        )
     elif change == "budget":
-        s["wallet"].functions.setBudget(payments.category_id("inference"), 10, 10, 86400).transact(
-            {"from": s["owner"]}
+        mined(
+            s["w3"],
+            s["wallet"]
+            .functions.setBudget(payments.category_id("inference"), 10, 10, 86400)
+            .transact({"from": s["owner"]}),
         )
     elif change in ("category", "precision", "nan", "resolved"):
         s["row"].update(
@@ -272,23 +305,27 @@ def test_unrelated_receipt_never_resolves_bill(setup, mismatch):
         digest = bytes.fromhex("ab" * 32)
     if mismatch == "category":
         cat = payments.category_id("other")
-        s["wallet"].functions.setBudget(cat, 100_000_000, 10_000_000, 86400).transact(
-            {"from": s["owner"]}
+        mined(
+            s["w3"],
+            s["wallet"].functions.setBudget(cat, 100_000_000, 10_000_000, 86400).transact(
+                {"from": s["owner"]}
+            ),
         )
     if mismatch == "actor":
-        s["wallet"].functions.transferOwnership(s["stranger"]).transact({"from": s["owner"]})
-        s["wallet"].functions.acceptOwnership().transact({"from": s["stranger"]})
+        mined(s["w3"], s["wallet"].functions.transferOwnership(s["stranger"]).transact({"from": s["owner"]}))
+        mined(s["w3"], s["wallet"].functions.acceptOwnership().transact({"from": s["stranger"]}))
     if mismatch == "contract":
-        tx = s["token"].functions.transfer(s["vendor"], 0).transact({"from": s["owner"]})
+        tx = mined(s["w3"], s["token"].functions.transfer(s["vendor"], 0).transact({"from": s["owner"]}))
     else:
         if mismatch == "revert":
-            s["wallet"].functions.setPaused(True).transact({"from": s["owner"]})
-        tx = (
+            mined(s["w3"], s["wallet"].functions.setPaused(True).transact({"from": s["owner"]}))
+        tx = mined(
+            s["w3"],
             s["wallet"]
             .functions.spendAsOwner(cat, recipient, amount, digest)
-            .transact({"from": s["stranger"] if mismatch == "actor" else s["owner"], "gas": 300000})
+            .transact({"from": s["stranger"] if mismatch == "actor" else s["owner"], "gas": 300000}),
         )
-    r = verify(s, Web3.to_hex(tx))
+    r = verify(s, tx)
     assert r.status_code == 409, r.text
     assert len(s["log"].read_text().splitlines()) == 1
 
@@ -436,8 +473,8 @@ def test_local_plugin_to_api_to_contract_roundtrip(setup):
             tx_args = {"from": s["owner"], "to": stage["to"], "data": stage["data"], "value": 0}
             s["w3"].eth.call(tx_args)  # Simulate before the local owner's submission.
             assert s["token"].functions.balanceOf(s["vendor"]).call() == 0
-            tx = Web3.to_hex(s["w3"].eth.send_transaction(tx_args))
-            s["w3"].provider.make_request("anvil_mine", ["0x40"])
+            tx = mined(s["w3"], s["w3"].eth.send_transaction(tx_args))
+            finalize(s["w3"])
             paid = call("acr_verify_payment", {"obligation_id": "bill-1", "transaction_hash": tx})
             assert paid["status"] == "paid"
             assert call("acr_pending_payments", {})["payments"] == []
