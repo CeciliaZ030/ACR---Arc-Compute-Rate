@@ -143,6 +143,16 @@ impl DynAomiTool for PendingPayments {
     type Args = EmptyArgs;
     const NAME: &'static str = "acr_pending_payments";
     const DESCRIPTION: &'static str = "List this business's escalated compute bills, recorded evidence and current budget. Recorded comparisons may be stale; missing evidence is unknown. Does not pay.";
+    fn descriptor(_: &AcrApp) -> aomi_sdk::DynToolMetadata {
+        aomi_sdk::DynToolMetadata {
+            name: Self::NAME.into(),
+            app: "acr-treasury-cecilia".into(),
+            description: Self::DESCRIPTION.into(),
+            parameters_schema: json!({"type": "object", "properties": {}, "required": [], "additionalProperties": false}),
+            supports_async: false,
+            namespace: None,
+        }
+    }
     fn run(_: &AcrApp, _: EmptyArgs, ctx: DynToolCallCtx) -> Result<Value, String> {
         let d = deployment()?;
         let result = request(&ctx, &d, "/operator/payments", None)?;
@@ -378,6 +388,30 @@ mod tests {
         let manifest = AcrApp.manifest();
         aomi_sdk::validate_app_skills_with_tools(&manifest.name, &manifest.skills, &manifest.tools)
             .unwrap();
+        fn strict_objects(schema: &Value) {
+            match schema {
+                Value::Object(object) => {
+                    if object.get("type") == Some(&json!("object")) {
+                        assert!(
+                            object.get("properties").is_some_and(Value::is_object),
+                            "{schema}"
+                        );
+                    }
+                    for value in object.values() {
+                        strict_objects(value);
+                    }
+                }
+                Value::Array(values) => {
+                    for value in values {
+                        strict_objects(value);
+                    }
+                }
+                _ => {}
+            }
+        }
+        for tool in &manifest.tools {
+            strict_objects(&tool.parameters_schema);
+        }
         assert_eq!(manifest.tools.len(), 8);
         assert_eq!(manifest.skills[0].injected_tools.len(), 3);
         #[cfg(not(treasury_configured))]
