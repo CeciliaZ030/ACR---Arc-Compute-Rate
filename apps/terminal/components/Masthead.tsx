@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AskAgentButton } from "./AgentDrawer";
 import { ChainToggle } from "./ChainToggle";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -190,6 +191,7 @@ export function Masthead({ initial }: { initial: Envelope<TerminalData> }) {
             ))}
           </span>
           <span className="nav-right">
+            <AskAgentButton />
             {/* Renders only once a reader has priced their workload — quiet
                 chrome is the rule, and the invitation lives on the home page. */}
             <WorkloadChip initial={initial} />

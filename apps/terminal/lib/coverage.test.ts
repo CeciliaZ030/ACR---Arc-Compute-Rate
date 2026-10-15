@@ -165,6 +165,8 @@ const EXEMPT: Record<string, string> = {
   "app/og/check/route.tsx": "a preview image has one edition, the expert one; it is a picture, not a page",
   "app/index/[id]/page.tsx": "metadata only",
   "app/companion/page.tsx": "the reader's companion IS the plain voice — one register",
+  "components/AgentDrawer.tsx": "plain-language chat shell in both editions",
+  "components/AgentChat.tsx": "third-party Aomi widget, no host-authored copy",
   "components/Ed.tsx": "edition machinery",
   "components/Term.tsx": "edition machinery",
   "components/EditionToggle.tsx": "edition machinery",
