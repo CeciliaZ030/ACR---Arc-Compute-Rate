@@ -92,6 +92,9 @@ contract PolicyWallet {
     ///         this whole product exists to catch.
     uint256 public approvalNonce;
 
+    /// A committed decision may be paid only once, across all spending paths.
+    mapping(bytes32 => bool) public consumedDecisionHashes;
+
     struct Budget {
         uint256 cap;
         uint256 spent; // within the current period
@@ -394,6 +397,7 @@ contract PolicyWallet {
         require(to != address(0), "zero to");
         require(amount > 0, "zero amount");
         require(decisionHash != bytes32(0), "zero decision hash");
+        require(!consumedDecisionHashes[decisionHash], "decision already paid");
 
         Budget storage b = budgets[category];
 
@@ -407,6 +411,8 @@ contract PolicyWallet {
         b.spent = spent + amount;
         b.periodStart = periodStart;
 
+        // Effects precede the token call; a failed transfer rolls this back too.
+        consumedDecisionHashes[decisionHash] = true;
         require(usdc.transfer(to, amount), "transfer failed");
 
         emit Spent(

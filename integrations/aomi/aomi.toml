@@ -1,9 +1,9 @@
 [app]
 # Slug, kebab-case. MUST equal the `name` in `dyn_aomi_app!` (src/lib.rs); it
 # becomes the release tag.
-name         = "acr-compute-rate"
-display_name = "ACR · Arc Compute Rate"
-public       = true
+name         = "acr-treasury-cecilia"
+display_name = "ACR · Treasury Review"
+public       = false
 
 # PROD, AND MEASURED, NOT ASSUMED. The backend loads an App only when these tags
 # are a subset of its own (aomi-sdk sdk/bin/build/deploy/app.rs), and an App that

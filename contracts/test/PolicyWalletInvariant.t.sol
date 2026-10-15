@@ -39,6 +39,9 @@ contract PolicyWalletHandler is Test {
         return wallet.remaining(INFRA);
     }
 
+    // Each successful action models a new invoice. Replay rejection is tested
+    // separately; this handler promises to generate only valid spending calls.
+
     /// The agent's own authority.
     function spend(uint256 amount, uint256 dt, uint256 seed) external {
         vm.warp(block.timestamp + bound(dt, 1, 5 days));
@@ -51,7 +54,7 @@ contract PolicyWalletHandler is Test {
 
         amount = bound(amount, 1, ceiling);
         wallet.spend(INFRA, address(uint160(uint256(keccak256(abi.encode(seed))))), amount,
-            keccak256(abi.encode("decision", seed, amount)));
+            keccak256(abi.encode("decision", agentSpends, seed, amount)));
 
         totalPaid += amount;
         agentSpends++;
@@ -71,7 +74,7 @@ contract PolicyWalletHandler is Test {
         if (to == address(0)) return;
 
         vm.prank(vm.addr(ownerKey));
-        wallet.spendAsOwner(INFRA, to, amount, keccak256(abi.encode("owner", seed, amount)));
+        wallet.spendAsOwner(INFRA, to, amount, keccak256(abi.encode("owner", ownerSpends, seed, amount)));
 
         totalPaid += amount;
         ownerSpends++;
@@ -88,7 +91,7 @@ contract PolicyWalletHandler is Test {
 
         address to = address(uint160(uint256(keccak256(abi.encode("to", seed)))));
         if (to == address(0)) return;
-        bytes32 dh = keccak256(abi.encode("approved", seed, amount));
+        bytes32 dh = keccak256(abi.encode("approved", approvedSpends, seed, amount));
         uint64 deadline = uint64(block.timestamp + 1 hours);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(

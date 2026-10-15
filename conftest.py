@@ -39,7 +39,7 @@ def pytest_configure(config) -> None:  # noqa: ARG001 - pytest hook signature
     # for a machine where another project holds 127.0.0.1:8545 — and this loop
     # deleted it before any of them read it, so the override had never worked
     # (found 2026-10-13: "no anvil at http://127.0.0.1:8545" with it set).
-    for key in [k for k in os.environ if k.startswith("ACR_") and k != "ACR_TEST_RPC"]:
+    for key in [k for k in os.environ if k.startswith("ACR_") and k not in ("ACR_TEST_RPC", "ACR_TEST_PLUGIN")]:
         del os.environ[key]
 
     # THE SUITE USED TO WRITE PAYMENTS INTO THE PRODUCTION LEDGER.
