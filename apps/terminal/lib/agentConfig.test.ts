@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { agentApplicationId } from "./agentConfig";
 
-test("only an explicit positive safe integer can select a hosted app", () => {
+test("the author’s ACR app works without deployment configuration", () => {
+  assert.equal(agentApplicationId(), 2938642);
+  assert.equal(agentApplicationId(undefined), 2938642);
+});
+
+test("only a positive safe integer can override the hosted app", () => {
   assert.equal(agentApplicationId("2938642"), 2938642);
   for (const value of [
-    undefined,
     "",
     "<APPLICATION_ID>",
     "0",

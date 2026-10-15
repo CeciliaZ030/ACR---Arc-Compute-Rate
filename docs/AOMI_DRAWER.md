@@ -13,11 +13,15 @@ Page-specific question hints do not submit messages or send page data.
 
 ## Deployment
 
-Set `ACR_AOMI_APPLICATION_ID` in the terminal's server environment to the positive
-numeric ID of the intended hosted ACR app. This public identifier is passed to
-both the widget's application scope and its sole Direct routing target. There
-is no fallback app, Auto routing, or URL-selected target. Missing/invalid IDs
-show a friendly unavailable state without mounting the widget.
+Merge and deploy with the existing Vercel setup: no new environment variable,
+secret, backend, or contract deployment is required for this chat drawer. It
+uses the author's existing public ACR application (`2938642`) by default.
+
+`ACR_AOMI_APPLICATION_ID` is an optional server-side override for forks or a
+replacement hosted ACR app. The public identifier is passed to both the widget's
+application scope and its sole Direct routing target. Invalid explicit overrides
+(including an empty string) show an unavailable state rather than silently
+falling back. There is no Auto routing or URL-selected target.
 
 The widget uses its official `https://chat.aomi.dev` service and browser-wallet
 authentication. Private app permissions remain enforced by Aomi; embedding
@@ -39,12 +43,12 @@ Recheck this workaround when upgrading the widget.
 
 ## Verification
 
-- Production Next build, TypeScript, targeted ESLint, and 394 frontend tests.
+- Production Next build, TypeScript, targeted ESLint, and 395 frontend tests.
 - Browser: drawer open/close, desktop resizing, draft preservation across close
-  and navigation, mobile full-screen layout, focus handling, and no configured app.
-- Live read-only smoke used the original public ACR application (2938642), as a
-  test-server environment value only. It returned an ACR-specific explanation.
-  This ID is not a production default and does not prove private-fork access.
+  and navigation, mobile full-screen layout, focus handling, and invalid app configuration.
+- Live read-only smoke used the original public ACR application (2938642), with the
+  default configuration. It returned an ACR-specific explanation. This does not
+  prove private-fork access.
 - No wallet signatures or payments were made. Treasury payment acceptance and
   deployment of the private app remain separate from this frontend PR.
 
