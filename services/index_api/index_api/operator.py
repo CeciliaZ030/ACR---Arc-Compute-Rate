@@ -1501,6 +1501,19 @@ def run_obligation(
         quotes_from_catalog,
         quotes_from_receipts,
     )
+    from .payments import owner_inbox_business
+
+    owner_inbox = owner_inbox_business(ob.business)
+    if owner_inbox:
+        from .statement import pending_escalations, read_decisions
+
+        previous = read_decisions(path=log_path, business=ob.business, limit=0)
+        pending = next((r for r in pending_escalations(previous)
+                        if r.get("obligation_id") == ob.obligation_id), None)
+        if pending:
+            # Do not replace or resolve an obligation while its owner reviews it.
+            return ObligationDecision(**{k: v for k, v in pending.items()
+                                         if k in ObligationDecision.__dataclass_fields__})
 
     t = now if now is not None else time.time()
 
@@ -1635,6 +1648,11 @@ def run_obligation(
     )
 
     d.paid_via = paid_via
+    if owner_inbox and d.intent == PAY:
+        d.recommended_intent = PAY
+        d.intent = ESCALATE
+        d.escalated = True
+        d.rule = "Owner-wallet inbox: explicit owner authorization required"
     if d.intent == PAY and policy is not None:
         if dry_run:
             d.notes.append("dry run: cleared policy, no payment sent")

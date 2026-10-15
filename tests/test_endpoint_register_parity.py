@@ -50,6 +50,15 @@ NOT_IN_THE_REGISTER: dict[str, str] = {
         "/marketplace/catalog and never typed by a reader; it IS in GATED_ENDPOINTS, "
         "so /x402/info names it paid"
     ),
+    # The owner payment inbox (#66). Bearer-token routes (ACR_TREASURY_API_TOKEN,
+    # 401 until it is set) that the owner's own treasury App calls; they stage a
+    # payment the owner signs in their wallet. Owner tooling, not something a
+    # developer's machine buys, so they are off /developers like /ops/*.
+    "/operator/payments": "owner payment inbox, token-gated: lists bills awaiting the owner",
+    "/operator/payments/prepare": (
+        "owner payment inbox, token-gated: returns unsigned calldata the owner signs; the server never signs"
+    ),
+    "/operator/payments/verify": "owner payment inbox, token-gated: reconciles a payment the owner sent",
 }
 
 

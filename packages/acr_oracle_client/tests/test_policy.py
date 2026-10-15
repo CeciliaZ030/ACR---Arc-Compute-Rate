@@ -394,3 +394,15 @@ def test_every_contract_call_the_client_makes_is_declared_in_its_abi():
         "call raises at runtime and looks like an unreachable chain"
     )
     assert "usdc" in declared, "the getter balance_usdc() depends on"
+
+
+@pytest.mark.parametrize("amount", ["NaN", "Infinity", "-Infinity"])
+def test_nonfinite_amount_is_refused(amount):
+    with pytest.raises(ValueError, match="finite"):
+        usdc_units(amount)
+
+
+def test_large_exact_amount_never_uses_decimal_context_rounding():
+    assert usdc_units("123456789012345678901234567890.123456") == 123456789012345678901234567890123456
+    with pytest.raises(ValueError, match="6 decimals"):
+        usdc_units("123456789012345678901234567890.1234567")

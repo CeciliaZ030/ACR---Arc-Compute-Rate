@@ -59,6 +59,8 @@ from .humanid import (
     stray_world_credentials,
 )
 from .onchain import OracleUnreachable, get_futures, get_reader
+from .payments import require_business_credential
+from .payments import router as payments_router
 from .poster import OraclePoster
 from .statement import build_statement
 from .store import PrintStore
@@ -632,6 +634,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ACR — The Arc Compute Rate", version="0.1.0", lifespan=lifespan)
+
+app.include_router(payments_router)
 
 # CORS so the public API is queryable cross-origin from browsers (the Terminal
 # proxies server-side and doesn't need this, but direct API/`/docs` use does).
@@ -1724,6 +1728,7 @@ def operator_ledger(
     # lists every slug publicly — and would break `verify_operator.py`, whose
     # unknown-business check accepts 404/422/503 and not 401. Off by default; see
     # `require_business_read`.
+    require_business_credential(request, b.slug)
     require_business_read(agent, b)
     since = time.time() - max(1, min(365, int(days))) * 86_400
     rows = read_decisions(business=b.slug, since=since)
@@ -1828,6 +1833,7 @@ def operator_audit(
     # lists every slug publicly — and would break `verify_operator.py`, whose
     # unknown-business check accepts 404/422/503 and not 401. Off by default; see
     # `require_business_read`.
+    require_business_credential(request, b.slug)
     require_business_read(agent, b)
     window = max(1, min(365, int(days)))
     since = time.time() - window * 86_400
@@ -1887,6 +1893,7 @@ def operator_statement(
     # lists every slug publicly — and would break `verify_operator.py`, whose
     # unknown-business check accepts 404/422/503 and not 401. Off by default; see
     # `require_business_read`.
+    require_business_credential(request, b.slug)
     require_business_read(agent, b)
     st = build_statement(
         business, days=days, limit=limit, tca_fn=payer_tca, policy_for=_policy_for
