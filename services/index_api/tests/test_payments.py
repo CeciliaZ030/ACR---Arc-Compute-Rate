@@ -288,7 +288,8 @@ def test_unrelated_receipt_never_resolves_bill(setup, mismatch):
             .functions.spendAsOwner(cat, recipient, amount, digest)
             .transact({"from": s["stranger"] if mismatch == "actor" else s["owner"], "gas": 300000})
         )
-    assert verify(s, Web3.to_hex(tx)).status_code == 409
+    r = verify(s, Web3.to_hex(tx))
+    assert r.status_code == 409, r.text
     assert len(s["log"].read_text().splitlines()) == 1
 
 
@@ -308,7 +309,8 @@ def test_ledger_failure_can_recover_without_repaying(setup, monkeypatch):
     tx = send(s, prepare(s).json())
     original = operator.LOG_PATH
     monkeypatch.setattr(operator, "LOG_PATH", str(s["state"]))  # directory cannot be appended
-    assert verify(s, tx).status_code == 503
+    r = verify(s, tx)
+    assert r.status_code == 503, r.text
     monkeypatch.setattr(operator, "LOG_PATH", original)
     assert verify(s, tx).json()["status"] == "paid"
     assert s["token"].functions.balanceOf(s["vendor"]).call() == 25_000_001
