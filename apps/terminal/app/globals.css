@@ -3246,3 +3246,71 @@ table.sheet td.mono .label {
 .skel-gap {
   margin-top: var(--section-gap);
 }
+
+/* ACR Agent drawer */
+.agent-layout { min-width: 0; }
+.agent-page { min-width: 0; transition: margin-right .32s var(--ease-expo); }
+.agent-layout[data-agent-open="true"] .agent-page { margin-right: var(--agent-width); }
+.agent-launch { display: inline-flex; align-items: center; gap: 12px; padding: 9px 13px; border: 1px solid var(--gold); border-radius: 6px; background: var(--gold-wash); color: var(--sand); font: 11px var(--eyebrow); white-space: nowrap; cursor: pointer; }
+.agent-launch:hover, .agent-launch[aria-expanded="true"] { background: rgba(233,161,63,.24); box-shadow: var(--glow-gold); }
+.agent-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; width: var(--agent-width); height: 100dvh; display: flex; flex-direction: column; background: var(--genesis); border-left: 1px solid var(--hairline-strong); box-shadow: -12px 0 60px rgba(11,34,62,.35); transform: translateX(100%); visibility: hidden; transition: transform .32s var(--ease-expo); }
+.agent-layout[data-agent-open="true"] .agent-drawer { transform: translateX(0); visibility: visible; }
+.agent-heading { display: flex; justify-content: space-between; align-items: flex-start; padding: 24px 24px 18px; background: linear-gradient(140deg, var(--ledger), var(--genesis)); border-bottom: 1px solid var(--hairline); }
+.agent-eyebrow, .agent-context > span { font: 9px var(--eyebrow); letter-spacing: .14em; color: var(--sky); }
+.agent-heading h2 { font: 500 26px var(--display); margin: 8px 0 4px; }
+.agent-heading h2 span { color: var(--sand); font-size: 22px; }
+.agent-heading p { font-size: 11px; color: var(--ink-45); margin: 0; }
+.agent-close { border: 1px solid var(--hairline-strong); border-radius: 50%; width: 36px; height: 36px; background: var(--glass); color: var(--ether); font-size: 24px; cursor: pointer; }
+.agent-close:hover { background: var(--protocol); }
+.agent-context { padding: 14px 24px; border-bottom: 1px solid var(--hairline); }
+.agent-context p { margin: 5px 0 0; font-size: 13px; color: var(--sand); }
+.agent-chat { flex: 1; min-height: 0; overflow: hidden; }
+/* This app is a compute desk: suppress the widget's generic trade starters. */
+.agent-drawer .aui-thread-welcome-suggestions { display: none; }
+.agent-drawer .acr-agent-widget .aui-thread-welcome-title { font-family: var(--display); font-size: 24px; }
+.agent-notice { padding: 24px; font-size: 14px; color: var(--ink-70); }
+.agent-notice h3 { color: var(--ether); font: 500 20px var(--display); }
+.agent-resize { position: absolute; left: -4px; width: 8px; top: 0; height: 100%; cursor: col-resize; touch-action: none; z-index: 2; }
+.agent-resize:hover, .agent-resize:focus-visible { background: var(--gold-wash); }
+.agent-drawer .acr-agent-widget { border: 0; border-radius: 0; --aomi-bg: #000b24; --aomi-surface: #0b223e; --aomi-raised: #122b4b; --aomi-surface-2: #1b3158; --aomi-border: #2f4667; --aomi-fg: #d5e0e7; --aomi-muted: #acc6e9; --aomi-accent: #ffcc6f; --aomi-accent-strong: #e9a13f; --aomi-accent-subtle: #403521; --aomi-on-accent: #000b24; --aomi-hover: #1b3158; --aomi-success: #4fb3a9; --background: #000b24; --foreground: #d5e0e7; --font-geist-sans: var(--body); --font-geist-mono: var(--mono); font-family: var(--body); }
+@media (max-width: 760px) {
+  .agent-layout[data-agent-open="true"] .agent-page { margin-right: 0; }
+  .agent-drawer { width: 100%; border-left: 0; }
+  .agent-resize { display: none; }
+  .agent-heading { padding-top: max(20px, env(safe-area-inset-top)); }
+  .agent-chat { padding-bottom: env(safe-area-inset-bottom); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-page, .agent-drawer { transition: none; }
+}
+
+/* The agent launcher on a phone floats, bottom right, as the mark alone.
+   In the masthead it cost the second row its fit: even reduced to the mark,
+   EXPERT | PLAIN fell to a third row at 375 and 390px, against a header
+   budgeted at two (the `.nav-right` block above). Floating leaves the header
+   exactly as it was before the agent existed. The full label stays the
+   button's accessible name. After the base `.agent-launch` rule on purpose:
+   a media query adds no specificity. */
+.agent-launch-mark { display: none; }
+@media (max-width: 640px) {
+  .agent-launch {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--genesis);
+    box-shadow: var(--glow-gold);
+  }
+  .agent-launch-text,
+  .agent-launch-arrow { display: none; }
+  .agent-launch-mark { display: inline; font-size: 20px; line-height: 1; }
+  /* The launcher is still `.nav-right`'s first child, which is what took the
+     row's `margin-left: auto`; floating, it no longer pushes, so the next one does. */
+  .nav-right > .agent-launch + * { margin-left: auto; }
+}

@@ -8,6 +8,8 @@ import { serverChain } from "@/lib/serverChain";
 import { ChainProvider } from "@/lib/useChain";
 import { editionBootScript } from "@/lib/edition";
 import { OG_BASE, OG_SIZE } from "@/lib/og";
+import { AgentDrawer } from "@/components/AgentDrawer";
+import { agentApplicationId } from "@/lib/agentConfig";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -145,10 +147,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: editionBootScript() }} />
         {/* The request's chain, as the first render's answer (lib/useChain.ts). */}
         <ChainProvider chain={chain}>
-          <Masthead initial={initial} />
-          <ChainStrip initial={initial} />
-          <main className="container page">{children}</main>
-          <Colophon initial={initial} />
+          <AgentDrawer applicationId={agentApplicationId(process.env.ACR_AOMI_APPLICATION_ID)}>
+            <Masthead initial={initial} />
+            <ChainStrip initial={initial} />
+            <main className="container page">{children}</main>
+            <Colophon initial={initial} />
+          </AgentDrawer>
         </ChainProvider>
       </body>
     </html>
