@@ -100,7 +100,7 @@ contract PolicyWalletTest is Test {
         assertEq(wallet.remaining(INFRA), 1000 * USDC1, "new period, full cap");
 
         vm.prank(agent);
-        wallet.spend(INFRA, vendor, 10 * USDC1, dh);
+        wallet.spend(INFRA, vendor, 10 * USDC1, keccak256("new-period-decision"));
         (,, uint256 spent,,,) = wallet.budgetOf(INFRA);
         assertEq(spent, 10 * USDC1, "the new period starts from zero, not from last month");
     }
@@ -180,7 +180,7 @@ contract PolicyWalletTest is Test {
         // 10 is affordable only if the cap clamps. It must not.
         vm.prank(agent);
         vm.expectRevert("over category budget");
-        wallet.spend(INFRA, vendor, 10 * USDC1, dh);
+        wallet.spend(INFRA, vendor, 10 * USDC1, keccak256("next-decision"));
 
         assertEq(usdc.balanceOf(vendor), before, "the headroom was not quietly paid out");
         assertEq(wallet.remaining(INFRA), 5 * USDC1, "and the headroom is still there");
@@ -463,6 +463,64 @@ contract PolicyWalletTest is Test {
             }
         }
         assertTrue(found, "no Spent event");
+    }
+
+    // --- decision replay across all payment paths ---
+
+
+    function pay(uint8 path, bytes32 hash) internal {
+        if (path == 0) {
+            vm.prank(agent);
+            wallet.spend(INFRA, vendor, 40 * USDC1, hash);
+        } else if (path == 1) {
+            uint64 deadline = uint64(block.timestamp + 600);
+            (uint8 v, bytes32 r, bytes32 s) =
+                _signApproval(ownerKey, INFRA, vendor, 40 * USDC1, hash, wallet.approvalNonce(), deadline);
+            vm.prank(agent);
+            wallet.spendApproved(INFRA, vendor, 40 * USDC1, hash, deadline, v, r, s);
+        } else {
+            vm.prank(ownerAddr);
+            wallet.spendAsOwner(INFRA, vendor, 40 * USDC1, hash);
+        }
+    }
+
+    function test_replay_all_path_combinations() public {
+        for (uint8 first = 0; first < 3; first++) {
+            for (uint8 second = 0; second < 3; second++) {
+                bytes32 hash = keccak256(abi.encode(first, second));
+                pay(first, hash);
+                assertTrue(wallet.consumedDecisionHashes(hash));
+                // An external wrapper avoids expectRevert catching the digest view.
+                vm.expectRevert("decision already paid");
+                this.retry(second, hash);
+            }
+        }
+        assertEq(usdc.balanceOf(vendor), 360 * USDC1);
+    }
+
+    function retry(uint8 path, bytes32 hash) external {
+        pay(path, hash);
+    }
+
+    function test_failed_transfer_restores_hash_and_nonce() public {
+        vm.mockCall(
+            address(usdc), abi.encodeWithSignature("transfer(address,uint256)", vendor, 40 * USDC1), abi.encode(false)
+        );
+        vm.expectRevert("transfer failed");
+        this.retry(1, dh);
+        assertFalse(wallet.consumedDecisionHashes(dh));
+        assertEq(wallet.approvalNonce(), 0);
+        assertEq(wallet.remaining(INFRA), 1000 * USDC1);
+        vm.clearMockedCalls();
+        pay(1, dh);
+        assertTrue(wallet.consumedDecisionHashes(dh));
+    }
+
+    function test_period_rollover_does_not_allow_replay() public {
+        pay(2, dh);
+        vm.warp(block.timestamp + MONTH);
+        vm.expectRevert("decision already paid");
+        this.retry(0, dh);
     }
 }
 

@@ -1,16 +1,8 @@
-//! ACR — Arc Compute Rate — as an Aomi App.
-//!
-//! ACR publishes an on-chain reference rate for machine compute (AI inference,
-//! GPU time, data) and benchmarks what agents actually pay against it. This App
-//! hands those answers to Aomi's agent as five read-only tools. It asks for no
-//! wallet powers (`namespaces = []`): nothing here signs or spends.
-//!
-//! Layout follows Aomi's own guidance: this file is the public inventory
-//! (registration and the preamble), `client.rs` is the one HTTP door to ACR's
-//! press, and `tool.rs` holds the tools.
+//! ACR research and owner-authorized treasury payment inbox.
 
 mod client;
 mod tool;
+mod treasury;
 
 use aomi_sdk::{Secret, dyn_aomi_app};
 
@@ -41,27 +33,46 @@ a market verdict: relay the hint and, if it says so, call acr_check_bill again w
 - A wallet with seen: false has no purchases on ACR's tape. Never report that as zero spend.
 - Verdicts are suggestions, not promises, and compare against published list prices, not the user's contract.
 - Quote the cheapest seller by its label and cite its source when you recommend switching.
-- None of these tools pays, signs or moves funds.";
+- The five research tools do not move funds. For a business payment inbox, activate acr-compute-rate/treasury. Its tools prepare unsigned owner payments and verify receipts; follow its review and authorization workflow.";
 
-dyn_aomi_app!(
-    app = AcrApp,
-    name = "acr-compute-rate",
-    version = "0.1.1",
-    preamble = PREAMBLE,
-    tools = [
-        tool::RateTool,
-        tool::CheckBillTool,
-        tool::WalletCostTool,
-        tool::SellerRatingTool,
-        tool::ReceiptsTool
-    ],
-    secrets = [Secret::new(
-        "ACR_API",
-        "Optional. The ACR press to read, e.g. https://acr-api-1fto.onrender.com for Arc testnet. \
-         Leave unset for the default Arc mainnet press.",
-        false
-    )],
-    namespaces = []
+macro_rules! register_app {
+    ([$($namespace:expr),*] $(, $guard:expr)?) => {
+        dyn_aomi_app!(
+            app = AcrApp,
+            name = "acr-compute-rate",
+            version = "0.2.0",
+            preamble = PREAMBLE,
+            tools = [tool::RateTool, tool::CheckBillTool, tool::WalletCostTool,
+                     tool::SellerRatingTool, tool::ReceiptsTool],
+            secrets = [
+                Secret::new("ACR_API", "Optional research API override.", false),
+                Secret::new("ACR_TREASURY_API_TOKEN", "Business-scoped treasury API credential. Never an operations or signing key.", false)
+            ],
+            namespaces = [$($namespace),*],
+            skills = [{
+                id: "acr-compute-rate/treasury",
+                description: "Review escalated compute bills and pay through the business owner's PolicyWallet",
+                tags: ["treasury", "bills", "payment"],
+                tools: [treasury::PendingPayments, treasury::PreparePayment, treasury::VerifyPayment],
+                sections: {
+                    instructions: "skill/instructions.md",
+                    workflows: "skill/workflows.md",
+                    action_rules: "skill/action-rules.md",
+                    safety: "skill/safety.md"
+                }
+                $(, guard: $guard)?
+            }]
+        );
+    };
+}
+
+// Unconfigured artifacts have no EVM namespace and cannot prepare payments.
+#[cfg(not(treasury_configured))]
+register_app!([]);
+#[cfg(treasury_configured)]
+register_app!(
+    ["evm-core"],
+    concat!(env!("OUT_DIR"), "/treasury-guard.json")
 );
 
 #[cfg(test)]
@@ -90,8 +101,15 @@ mod tests {
         }
         let root = std::fs::read_to_string(repo.join("Cargo.toml"))
             .expect("the ACR repo root needs the Cargo.toml Aomi's deploy gate reads");
-        assert_eq!(sdk_pin(&root).as_deref(), Some(here.as_str()), "root pin ≠ App pin");
-        assert!(here.starts_with('='), "Aomi loads only an exact SDK pin, got {here}");
+        assert_eq!(
+            sdk_pin(&root).as_deref(),
+            Some(here.as_str()),
+            "root pin ≠ App pin"
+        );
+        assert!(
+            here.starts_with('='),
+            "Aomi loads only an exact SDK pin, got {here}"
+        );
     }
 
     /// Aomi's platform build walks up from this folder to the first Cargo.toml
@@ -106,6 +124,9 @@ mod tests {
             "integrations/aomi/Cargo.toml must declare [workspace]"
         );
         let lock = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.lock");
-        assert!(lock.is_file(), "Cargo.lock must sit beside this App's Cargo.toml");
+        assert!(
+            lock.is_file(),
+            "Cargo.lock must sit beside this App's Cargo.toml"
+        );
     }
 }

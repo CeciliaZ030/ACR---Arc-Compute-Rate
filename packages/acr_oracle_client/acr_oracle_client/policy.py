@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 
 from acr_core import get_settings
 
@@ -45,6 +45,12 @@ APPROVAL_TYPES = {
 }
 
 POLICY_ABI = [
+    {
+        "name": "consumedDecisionHashes", "type": "function",
+        "stateMutability": "view",
+        "inputs": [{"name": "decisionHash", "type": "bytes32"}],
+        "outputs": [{"name": "", "type": "bool"}],
+    },
     {
         "name": "spend",
         "type": "function",
@@ -161,9 +167,13 @@ def usdc_units(amount: str | int | float | Decimal) -> int:
         d = Decimal(str(amount))
     except (InvalidOperation, ValueError) as exc:
         raise ValueError(f"not an amount: {amount!r}") from exc
+    if not d.is_finite():
+        raise ValueError("USDC amount must be finite")
     if d < 0:
         raise ValueError(f"negative amount: {amount!r}")
-    scaled = d * USDC
+    with localcontext() as ctx:
+        ctx.prec = max(78, len(d.as_tuple().digits) + 6)
+        scaled = d * USDC
     if scaled != scaled.to_integral_value():
         raise ValueError(
             f"{amount} is finer than USDC's 6 decimals; round it before paying, "
