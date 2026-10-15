@@ -3283,3 +3283,34 @@ table.sheet td.mono .label {
 @media (prefers-reduced-motion: reduce) {
   .agent-page, .agent-drawer { transition: none; }
 }
+
+/* The agent launcher on a phone floats, bottom right, as the mark alone.
+   In the masthead it cost the second row its fit: even reduced to the mark,
+   EXPERT | PLAIN fell to a third row at 375 and 390px, against a header
+   budgeted at two (the `.nav-right` block above). Floating leaves the header
+   exactly as it was before the agent existed. The full label stays the
+   button's accessible name. After the base `.agent-launch` rule on purpose:
+   a media query adds no specificity. */
+.agent-launch-mark { display: none; }
+@media (max-width: 640px) {
+  .agent-launch {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--genesis);
+    box-shadow: var(--glow-gold);
+  }
+  .agent-launch-text,
+  .agent-launch-arrow { display: none; }
+  .agent-launch-mark { display: inline; font-size: 20px; line-height: 1; }
+  /* The launcher is still `.nav-right`'s first child, which is what took the
+     row's `margin-left: auto`; floating, it no longer pushes, so the next one does. */
+  .nav-right > .agent-launch + * { margin-left: auto; }
+}

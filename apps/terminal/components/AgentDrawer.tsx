@@ -6,12 +6,15 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
+
+import { agentAllowed, excludedPath, heldCredentialKeys, widgetWasLoaded, type AgentVerdict } from "@/lib/agentGuard";
 
 const AgentChat = dynamic(() => import("./AgentChat"), {
   ssr: false,
@@ -21,18 +24,25 @@ const AgentChat = dynamic(() => import("./AgentChat"), {
     </p>
   ),
 });
-const DrawerContext = createContext({ open: false, toggle: () => {} });
+const DrawerContext = createContext({ open: false, toggle: () => {}, available: false });
 
 export function AskAgentButton() {
-  const { open, toggle } = useContext(DrawerContext);
+  const { open, toggle, available } = useContext(DrawerContext);
+  // No launcher where the widget must not load (lib/agentGuard.ts).
+  if (!available) return null;
   return (
     <button
       className="agent-launch"
       onClick={toggle}
       aria-expanded={open}
       aria-controls="acr-agent-drawer"
+      aria-label="Ask ACR Agent"
     >
-      Ask ACR Agent <span aria-hidden="true">↗</span>
+      {/* On a phone only the mark shows: the full label pushed the two
+          toggles onto a third header row, past the masthead's two-row budget. */}
+      <span className="agent-launch-text">Ask ACR Agent</span>
+      <span className="agent-launch-arrow" aria-hidden="true">↗</span>
+      <span className="agent-launch-mark" aria-hidden="true">✦</span>
     </button>
   );
 }
@@ -64,14 +74,26 @@ export function AgentDrawer({
   children: ReactNode;
   applicationId: number | null;
 }) {
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [opened, setOpen] = useState(false);
+  const [loadWidget, setMounted] = useState(false);
+  const [verdict, setVerdict] = useState<AgentVerdict>("ok");
   const [width, setWidth] = useState(440);
   const [mobile, setMobile] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const drawer = useRef<HTMLElement>(null);
   const path = usePathname();
+  /* THE WIDGET NEVER SHARES A TAB WITH AN OPERATOR CREDENTIAL (lib/agentGuard.ts).
+     No drawer on the pages that collect or use one; and if the vendor's code
+     already loaded in this tab, entering such a page reloads it fully, so the
+     code is gone before a key can be typed. A layout effect, so it fires
+     before the page underneath paints and runs its own effects. */
+  const excluded = excludedPath(path);
+  useLayoutEffect(() => {
+    if (excluded && widgetWasLoaded()) window.location.reload();
+  }, [excluded]);
+  const open = opened && !excluded;
+  const mounted = loadWidget && !excluded && verdict === "ok";
   const suggestion = path.startsWith("/spend")
     ? "Show bills needing my approval"
     : path.startsWith("/check")
@@ -114,12 +136,15 @@ export function AgentDrawer({
       return;
     }
     opener.current = document.activeElement as HTMLElement;
-    setMounted(true);
+    // Asked at the moment of opening: a key could have been stored since load.
+    const v = agentAllowed(path, heldCredentialKeys());
+    setVerdict(v);
+    setMounted(v === "ok");
     setOpen(true);
   }
 
   return (
-    <DrawerContext.Provider value={{ open, toggle }}>
+    <DrawerContext.Provider value={{ open, toggle, available: !excluded }}>
       <div
         className="agent-layout"
         data-agent-open={open}
@@ -237,6 +262,15 @@ export function AgentDrawer({
             <p>“{suggestion}”</p>
           </div>
           <div className="agent-chat">
+            {open && verdict === "credential" ? (
+              <div className="agent-notice" role="status">
+                <h3>The agent is off in this tab</h3>
+                <p>
+                  This tab holds an operator key or an owner&rsquo;s agent card, and the chat runs
+                  third-party code. Open ACR in a new tab to ask the agent.
+                </p>
+              </div>
+            ) : null}
             {mounted &&
               (applicationId ? (
                 <ChatBoundary>
