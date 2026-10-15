@@ -307,7 +307,7 @@ Measured, not aspirational — run `make verify-live` for the current set. These
 deployment's, which is where the history is; mainnet's own first numbers are in the launch section above.
 At time of writing: hourly on-chain prints for 3 indices with attack-cost-per-bp on every one; **4** seller attestations on-chain; **three** live futures books (ACR-INF, ACR-GPU, ACR-DATA) whose maker is a Circle custody wallet, traded hourly by a keeper; **120** real Gateway x402 settlements from **4 distinct payers** (**37** from the CLI buyer agent, **7** from the autonomous hedger's backing EOA, **75** from a demo human's wallet, **1** from a fourth wallet — the first rows stamped with the tier the agent's card earned); 100% Foundry invariants passing.
 
-Suites, all green and re-measured on every push: **1390 py** · **217 forge** · **403 terminal** · **58 matchstick** · glossary **563/563** — see `scripts/verify_claims.py`.
+Suites, all green and re-measured on every push: **1426 py** · **220 forge** · **403 terminal** · **58 matchstick** · glossary **563/563** — see `scripts/verify_claims.py`.
 
 ---
 
@@ -323,7 +323,7 @@ Suites, all green and re-measured on every push: **1390 py** · **217 forge** ·
 | [`redteam/`](redteam) | The wash-flow adversary used to attack our own index |
 | [`graph/`](graph) | The `acr-tape` subgraph: settlements benchmarked in the mapping, humans per window (The Graph, Studio) |
 | [`mcp/`](mcp) | Eleven MCP tools — Machine TCA, a per-invoice price check, a running spend report and a payment self-check for any MCP host, carded. Packaged as `acr-mcp` (v0.3.3, `npm run release` publishes it) |
-| [`integrations/aomi/`](integrations/aomi/README.md) | ACR as an **Aomi App**: five read-only tools (bill check, wallet cost, seller rating, index print, receipts) as a Rust plugin for Aomi's hosted agent, pinned to `aomi-sdk =5.1.1`, which is what api.aomi.dev requires. Deployed from build.aomi.dev |
+| [`integrations/aomi/`](integrations/aomi/README.md) | ACR as an **Aomi App**: five read-only tools (bill check, wallet cost, seller rating, index print, receipts), plus a treasury skill whose three tools let a business owner review an escalated compute bill and sign its payment in their own wallet (off until configured; [`TREASURY.md`](integrations/aomi/TREASURY.md)), as a Rust plugin for Aomi's hosted agent, pinned to `aomi-sdk =5.1.1`, which is what api.aomi.dev requires. Deployed from build.aomi.dev |
 | [`skills/`](skills) | Two Skills published *back*: `acr-hedge` (discover → pay → read → hedge) and `acr-analyst` (Ask the Tape) |
 | [`docs/`](docs) | Documentation — start at [`docs/README.md`](docs/README.md) |
 | [`hackathon/`](hackathon) | The two hackathon submissions this began as — preserved, not maintained |

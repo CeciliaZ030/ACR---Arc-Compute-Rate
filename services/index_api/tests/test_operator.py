@@ -863,3 +863,24 @@ def test_a_bill_at_the_going_market_rate_is_not_escalated(tmp_path, monkeypatch)
     assert d.intent == PAY, f"a bill at the going rate was not paid: {d.intent} — {d.rule}"
     assert d.reroute_to == "", f"a market reference became a payee: {d.reroute_to!r}"
     assert any("going market rate" in n for n in d.notes), d.notes
+
+
+def test_owner_inbox_escalates_even_an_affordable_payable_bill(tmp_path, monkeypatch):
+    from index_api import payments
+
+    monkeypatch.setattr(payments, "owner_inbox_business", lambda business: True)
+    policy = _FakePolicy()
+    decision = run_obligation(
+        _ob(vendor_quantity=1_000.0),
+        receipts=RECEIPTS,
+        catalog=CATALOG,
+        policy=policy,
+        now=NOW,
+        dry_run=False,
+        log_path=str(tmp_path / "owner-inbox.jsonl"),
+    )
+    assert decision.intent == ESCALATE
+    assert decision.recommended_intent == PAY
+    assert decision.escalated
+    assert policy.calls == []
+    assert decision.tx is None and decision.paid_usdc == 0

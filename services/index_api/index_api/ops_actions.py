@@ -585,8 +585,11 @@ def _pending(business: str, obligation_id: str) -> dict:
     to pay an arbitrary address an arbitrary amount and have it filed as an
     approval of something else.
     """
+    from .payments import owner_inbox_business
     from .statement import pending_escalations, read_decisions
 
+    if owner_inbox_business(business):
+        raise ActionError(409, "This business uses the owner-wallet inbox; legacy approval/rejection is disabled")
     rows = read_decisions(business=business)
     if not rows:
         raise ActionError(404, f"no decisions recorded for {business!r}")

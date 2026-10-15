@@ -9,8 +9,11 @@ Aomi turns intent into on-chain transactions. Before an agent pays for compute,
 something has to say whether the price is right. That is what ACR does: it
 publishes an on-chain reference index for machine compute from an oracle on Arc,
 and it benchmarks real bills against real published prices. This App puts both
-answers inside Aomi's agent as five read-only tools. It asks for no wallet powers
-(`namespaces = []`), so nothing here signs or spends.
+answers inside Aomi's agent as five research tools. Version 0.2 also adds an
+owner-wallet payment inbox: review escalated bills, prepare an exact PolicyWallet
+payment, and verify its settlement. Deployment addresses remain placeholders;
+the default build is research-only. See [Treasury setup and workflow](TREASURY.md)
+for the app-specific skill, guard, API, contract upgrade and acceptance checks.
 
 ## What an Aomi agent gets
 
@@ -49,7 +52,7 @@ aomi  › The last known ACR inference index level is 0.4953. It was posted abou
 A plain chat.aomi.dev session routes on its own (Auto mode) and did not pick ACR for these
 questions. Use the link above or the project's Chat tab, which pin the App.
 
-## Live, through Aomi's own plugin loader
+## Historical research-only plugin verification
 
 Captured 2026-10-13. The App was loaded with `aomi_sdk::DynFnHandle`, the host-side
 loader Aomi's backend uses, and each tool was called across the FFI boundary
@@ -92,7 +95,7 @@ acr  › 0.49773 (CI 0.49449–0.49780) · costs 0.0156 USDC to move by 1 bp · 
 - **An empty receipt list says why.** Receipts live in the memory of the press that
   sold them, so the tool says that rather than "nobody paid".
 
-## Verified
+## Historical v0.1.1 verification (not treasury deployment evidence)
 
 - **SDK pin = what Aomi's backend requires today.** `aomi-build sdk check` (the 5.1.1 CLI)
   asks `api.aomi.dev` and passes: required 5.1.1, `Cargo.toml` exact 5.1.1, `Cargo.lock`
@@ -123,7 +126,10 @@ acr  › 0.49773 (CI 0.49449–0.49780) · costs 0.0156 USDC to move by 1 bp · 
   a throttled chain read, so re-ask once. `cargo test -- --ignored` runs all five
   tools against the real press. ACR's CI runs the suite on every push.
 
-## Deploy it from the dashboard
+## Deploy the research-only app from the dashboard
+
+For a treasury-enabled release, first follow [TREASURY.md](TREASURY.md). A normal
+dashboard build without a supplied deployment JSON remains research-only.
 
 The App lives in this subdirectory of the ACR repo. Aomi finds it through the root
 `.aomi/config.json`, the layout Aomi's own `docs/community-deployment.md` documents for
@@ -170,7 +176,7 @@ unset, the App reads the default Arc mainnet press.
 ## Develop
 
 ```bash
-cargo test                       # 27 deterministic tests
+cargo test                       # research and treasury unit tests
 cargo test -- --ignored          # every tool against the live ACR press
 ACR_API=https://acr-api-1fto.onrender.com cargo test -- --ignored   # the same, against Arc testnet
 cargo build --release            # target/release/libacr_compute_rate.{dylib,so}
@@ -183,5 +189,7 @@ numbers equal the press's in the same minute. The unit tests run on recorded res
 this can catch the App becoming unreachable on Aomi.
 
 The layout follows Aomi's guidance. `src/lib.rs` holds registration and the preamble,
-`src/client.rs` is the one HTTP client, and `src/tool.rs` holds the tools.
+`src/client.rs` and `src/tool.rs` implement the research tools.
+`src/treasury.rs` implements the deployment-bound treasury tools; `src/skill/`
+contains their workflows and safety boundaries.
 `fixtures/` holds the recorded responses the tests run on.
