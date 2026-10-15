@@ -30,7 +30,10 @@ sequenceDiagram
 
 ## Default is research-only
 
-Deployment addresses are deliberately unknown. The committed
+The author-supplied deployments and read-only compatibility checks are recorded
+in [DEPLOYMENTS.md](DEPLOYMENTS.md). Both existing testnet PolicyWallets fail
+the replay-protection interface check; the compatible replacement address is
+still unknown. The committed
 `treasury-deployment.example.json` has `enabled=false` and explicit
 `<CHAIN_ID>`, `<POLICY_WALLET_ADDRESS>`, `<USDC_ADDRESS>` placeholders. An ordinary
 build has **no EVM namespace**, and treasury tool calls refuse before HTTP.
