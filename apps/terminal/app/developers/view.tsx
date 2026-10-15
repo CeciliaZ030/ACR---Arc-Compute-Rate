@@ -149,12 +149,18 @@ export function DevelopersView({
   initial,
   activeApi,
   chainKey = "mainnet",
+  mcpOrigin = null,
+  hostedTools = null,
 }: {
   initial: Envelope<TerminalData>;
   /** The seller this page is actually reading from — see the note in page.tsx. */
   activeApi: string;
   /** The chain the visitor chose (the `acr-chain` cookie), read on the server. */
   chainKey?: ChainKey;
+  /** This deployment's public origin, from the request: the MCP URL is built on it. */
+  mcpOrigin?: string | null;
+  /** What the hosted MCP server lists, from the same function it answers with. */
+  hostedTools?: { name: string; description: string }[] | null;
 }) {
   const env = useTerminal(initial);
   const { revenue, refresh } = useRevenue();
@@ -367,6 +373,10 @@ export function DevelopersView({
       <McpSnippet
         api={snippetApi(chainKey, activeApi, served ? servesPath(served, "/par") : null)}
         chain={chainKey}
+        origin={mcpOrigin}
+        price={price}
+        receipts={tape?.data?.receipts ?? null}
+        hostedTools={hostedTools}
       />
 
       {/* The contracts, named where a developer looks for them. This page knew

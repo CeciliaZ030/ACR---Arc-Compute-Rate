@@ -258,3 +258,42 @@ test("the Aomi tab opens the App pinned, the way Aomi's own dashboard does", () 
   assert.match(a, /Arc mainnet/, "the App reads mainnet, whichever chain this page shows");
   assert.ok(a.includes(EXAMPLES.mainnet.payer) && !a.includes(EXAMPLES.testnet.payer));
 });
+
+/* The playground: a visitor's own values change the text, and only valid ones do. */
+
+test("a visitor's wallet and bill replace the examples", () => {
+  const wallet = "0x1234567890abcdef1234567890abcdef12345678";
+  const s = snippets("https://acr.test", "mainnet", {
+    wallet,
+    bill: { unit: "$/GPU-sec", billed: 2, quantity: 100, vendor: "" },
+  });
+  assert.ok(s.ask.includes(wallet), "the visitor's wallet is the subject");
+  assert.ok(!s.ask.includes(EXAMPLES.mainnet.payer), "and the example payer is gone");
+  assert.match(s.ask, /billed 2 USDC for 100 GPU-seconds/);
+  assert.ok(!/~50x the going rate/.test(s.ask), "the example's verdict is not claimed for someone else's bill");
+  assert.ok(s.aomi.includes(wallet) && /billed 2 USDC for 100 GPU-seconds/.test(s.aomi));
+});
+
+test("with no values given, the text is the worked example byte for byte", () => {
+  assert.deepEqual(snippets("https://acr.test", "mainnet", {}), snippets("https://acr.test", "mainnet"));
+});
+
+test("a hosted client is never told to ask for the local ledger, and the count follows", () => {
+  const s = snippets("https://acr.test", "mainnet", { remote: true });
+  assert.ok(!s.ask.includes("spend_report"), "the hosted server keeps no ledger");
+  const questions = s.ask.split("\n").filter((l) => l.startsWith('"')).length;
+  assert.match(s.ask, new RegExp(`^# ${["Zero", "One", "Two", "Three", "Four", "Five", "Six"][questions]} things to ask`));
+});
+
+test("the pay tab states the live price", () => {
+  assert.match(snippets(null, "mainnet", { priceUsdc: 0.0025 }).pay, /A metered query is \$0\.0025/);
+  assert.match(snippets(null, "mainnet").pay, /A metered query is \$0\.0001/);
+});
+
+test("the Aomi tab stays on mainnet and never hands out the hosted URL", () => {
+  const testnetWallet = "0x784e6D2d4870174aD1aEa3d7446F2377D0c6A05d";
+  const s = snippets("https://acr.test", "testnet", { wallet: testnetWallet });
+  assert.ok(!s.aomi.includes(testnetWallet), "the App reads mainnet; a testnet wallet would read 'never seen'");
+  assert.ok(s.aomi.includes(EXAMPLES.mainnet.payer));
+  assert.ok(!s.aomi.includes("/api/mcp"), "the App is not an MCP URL");
+});

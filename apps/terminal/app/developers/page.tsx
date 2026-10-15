@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { baseState, loadTerminal } from "@/lib/api";
+import { hostedTools } from "@/lib/mcpHosted";
+import { originFrom } from "@/lib/mcpPlayground";
 import { serverChain } from "@/lib/serverChain";
 import { DevelopersView } from "./view";
 
@@ -29,5 +32,15 @@ export default async function DevelopersPage() {
      into the browser. (No literals here — lib/mainnetOnly.test.ts gates the
      shipping UI on exactly that, and it is right to.) */
   const activeApi = baseState(chain).active;
-  return <DevelopersView initial={initial} activeApi={activeApi} chainKey={chain} />;
+  /* The MCP section hands out THIS deployment's URL, derived from the request
+     rather than written down: a preview deploy then offers its own endpoint,
+     and no host is hardcoded again (tests/test_canonical_host.py counts them). */
+  const h = await headers();
+  const mcpOrigin = originFrom(h.get("x-forwarded-proto"), h.get("x-forwarded-host") ?? h.get("host"));
+  /* Names and descriptions only: the same list the hosted server answers
+     tools/list with, so the buttons cannot offer a tool it would refuse. */
+  const tools = hostedTools().map(({ name, description }) => ({ name, description }));
+  return (
+    <DevelopersView initial={initial} activeApi={activeApi} chainKey={chain} mcpOrigin={mcpOrigin} hostedTools={tools} />
+  );
 }
