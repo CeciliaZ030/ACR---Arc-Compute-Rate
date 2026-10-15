@@ -10,6 +10,32 @@ query at all**.
 npx -y acr-mcp          # no clone, no path to edit
 ```
 
+### Hosted, no install
+
+The same tools also run at a URL any remote-MCP client can add. It is this
+package (pinned to the version above) behind Streamable HTTP, stateless, one
+endpoint per chain:
+
+```
+https://arc-compute-rate.vercel.app/api/mcp?chain=mainnet
+https://arc-compute-rate.vercel.app/api/mcp?chain=testnet
+```
+
+```bash
+claude mcp add --transport http acr-tca "https://arc-compute-rate.vercel.app/api/mcp?chain=mainnet"
+```
+
+Cursor (`~/.cursor/mcp.json`): `{"mcpServers":{"acr-tca":{"url":"<url>"}}}`. VS Code
+(`.vscode/mcp.json`): `{"servers":{"acr-tca":{"type":"http","url":"<url>"}}}`. Claude.ai:
+Settings, Connectors, Add custom connector.
+
+The hosted server lists 9 tools, every read except `spend_report`, and holds no
+keys and stores nothing. Two tools stay local, refused by name if called:
+`pay_and_read` (it pays with your own key) and `spend_report` (it reads the
+ledger `check_spend` writes on your machine). `/developers#mcp` on the terminal
+runs every hosted tool live with your own wallet and bill, and tests the
+connection the way a client does.
+
 **If that 404s, the package is not on npm yet** and the clone below is the way
 in — it is two commands and it is verified, not merely written down (a fresh
 checkout builds in about four seconds and its 114 tests pass). Nothing else

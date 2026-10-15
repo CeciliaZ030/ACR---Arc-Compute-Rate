@@ -11,7 +11,12 @@ const nextConfig = {
   // 'serverComponentsExternalPackages' at experimental" and carried on, so the
   // comment above described a directive that was not being applied. A config key
   // that moved is the quietest kind of breakage — the build still succeeds.
-  serverExternalPackages: ["@circle-fin/x402-batching"],
+  //
+  // The hosted MCP endpoint (app/api/mcp) runs the PUBLISHED acr-mcp tool layer
+  // and the MCP SDK as plain Node packages for the same reason: the code that
+  // answers a remote client is then byte-for-byte what `npx -y acr-mcp` runs and
+  // what lib/mcpHosted.test.ts exercises, and the SDK's ajv 8 is not bundled.
+  serverExternalPackages: ["@circle-fin/x402-batching", "acr-mcp", "@modelcontextprotocol/sdk"],
 
   /* The two preview-image routes (/og/home, /og/check) set their text in the
    * vendored Plex Mono faces under assets/fonts, read from disk at request

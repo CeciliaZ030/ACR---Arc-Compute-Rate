@@ -120,7 +120,8 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   // dual-renders, and the "what would answer this" line has three backends.
   "components/chain/HumanProof.tsx": 32,
   "components/chain/AgentCardSnippet.tsx": 12,
-  "components/chain/McpSnippet.tsx": 7,
+  // The hosted-MCP playground: URL, inputs, live runs and per-client setup.
+  "components/chain/McpSnippet.tsx": 27,
   // The shop floor, folded in from the old /exchange route. Rendered only when
   // its disclosure is open, so a reader of /curve does not pay for its tickers.
   "components/chain/ShopFloor.tsx": 42,
