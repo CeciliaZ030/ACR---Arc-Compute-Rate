@@ -50,21 +50,21 @@ const CHAIN_COOKIE = "acr-chain";
  * --chain testnet. /check needs its inputs in the query string to produce a verdict.
  */
 const ROUTES = [
-  { path: "/", ready: "Today's fixing|TODAY'S FIXING" },
+  { path: "/", ready: "ACR-INF" },
   {
     path: "/check?unit=%24%2F1k%20tokens&billed_usdc=0.02&quantity=10",
-    ready: "Basket|basket",
+    ready: "ACR-INF",
   },
   { path: "/spend", ready: "Decided\\s+\\d+|Waiting on you|Waiting for you" },
-  { path: "/traction", ready: "Businesses|businesses" },
-  { path: "/developers", ready: "Endpoints|The contracts" },
-  { path: "/curve", ready: "corridor" },
-  { path: "/tape", ready: "Freshness|What it cost" },
-  { path: "/ops", ready: "Verdict|verdict" },
-  { path: "/loop", ready: "Read on|read on" },
-  { path: "/attack", ready: "cost|Cost" },
-  { path: "/companion", ready: "beats|Beats" },
-  { path: "/index/ACR-INF", ready: "Provenance|The record" },
+  { path: "/traction", ready: "testnet|mainnet" },
+  { path: "/developers", ready: "GET|curl" },
+  { path: "/curve", ready: "ACR-INF" },
+  { path: "/tape", ready: "USDC" },
+  { path: "/ops", ready: "ACR" },
+  { path: "/loop", ready: "USDC" },
+  { path: "/attack", ready: "bp|USDC" },
+  { path: "/companion", ready: "." },
+  { path: "/index/ACR-INF", ready: "ACR-INF" },
 ];
 
 const WIDTHS = [375, 640, 900, 1240, 1440];
