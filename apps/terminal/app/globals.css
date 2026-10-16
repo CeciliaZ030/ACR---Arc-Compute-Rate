@@ -85,6 +85,90 @@
   --eyebrow: var(--font-eyebrow), "Space Mono", ui-monospace, monospace;
   --mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
+  /* ---- the space scale. Nine steps on a 4px grid. ----
+     Before this the sheet had ONE length token and 121 distinct spacing
+     literals expressing what is really a 7-step scale: every even number from
+     2 to 28 was in use as a margin, and 44 padding values were used exactly
+     once. A component had nothing to be consistent WITH, so each one invented
+     its own rhythm.
+
+     Migration rule, written down so it never has to be argued twice: round to
+     the nearest step, and ON A TIE ROUND DOWN. Every tied value in this
+     codebase (6, 10, 14, 20, 28, 40) is a padding or a flex gap inside a
+     component, never a separation between sections. Tightening inside a
+     component while the section gaps stay wide is what reads as dense rather
+     than cramped.
+
+     Three classes of number are deliberately NOT on this scale, because they
+     are not spacing: border and hairline widths; clamp() bounds and SVG
+     geometry; and measured offsets, where the value is a copy of some other
+     value (`.anchor-target`'s scroll margin is the sticky masthead's height,
+     and the 120px on the section bar is a decorative length). */
+  --s-1: 2px;
+  --s-2: 4px;
+  --s-3: 8px;
+  --s-4: 12px;
+  --s-5: 16px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 48px;
+  --s-9: 96px;
+
+  /* roles, so a call site can say what it means instead of how big it is */
+  --panel-pad: var(--s-5);
+  --stack-gap: var(--s-4);
+  --row-gap: var(--s-3);
+  --label-gap: var(--s-2);
+
+  /* ---- the type scale. Eight steps. ----
+     Before this: 24 distinct font sizes across 90 declarations, SEVEN of them
+     half-pixel (9.5 / 10.5 / 11.5 / 12.5 / 13.5 / 14.5) and carrying a third
+     of all the type in the app, with 14 of the 24 crowded into the band from
+     9.5px to 16px at half-pixel steps. That is a continuum, not a scale, and
+     no renderer honours it cleanly. Each half-pixel resolves to its nearest
+     integer neighbour. */
+  --t-1: 10px; /* uppercase mono micro-eyebrow. Never prose. */
+  --t-2: 11px; /* label, nav, chip, caption */
+  --t-3: 12px; /* dense mono data, chart text */
+  --t-4: 13px; /* table body, and the densest readable prose */
+  --t-5: 15px; /* prose inside a panel */
+  --t-6: 18px; /* standfirst */
+  --t-7: 22px; /* h2, a section heading */
+  --t-8: 34px; /* h1, a page title */
+
+  /* figures. Mono tabular numerals read smaller than body text at the same
+     pixel size, so they get their own ramp. The largest is the home hero rate,
+     and this file's rule is that the full dawn appears ONCE per app. */
+  --f-1: 24px;
+  --f-2: 30px;
+  --f-3: clamp(36px, 4vw, 52px);
+  --f-4: clamp(64px, 13vw, 184px);
+
+  /* leading: 11 values to 4. The body value is unchanged, so prose does not
+     move; 1.4 through 1.7 all collapse onto it, a delta under 3%. */
+  --lh-1: 1;
+  --lh-2: 1.15;
+  --lh-3: 1.3;
+  --lh-4: 1.55;
+
+  /* tracking is a function of SIZE. That one idea retires five separate
+     uppercase trackings (0.08 / 0.1 / 0.12 / 0.14 / 0.16 / 0.18em) that were
+     all doing a single job. */
+  --tr-1: -0.03em; /* a figure at --f-3 or larger */
+  --tr-2: -0.015em; /* display type */
+  --tr-3: 0; /* body */
+  --tr-4: 0.06em; /* mono data, chart text */
+  --tr-5: 0.12em; /* uppercase eyebrow at --t-3 and up */
+  --tr-6: 0.16em; /* uppercase eyebrow at --t-1 / --t-2: small caps need more */
+
+  /* radius: 11 ad-hoc values to 6 named ones */
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
   /* ---- compat aliases: the legacy fleet reskins itself ---- */
   --paper: var(--genesis);
   --paper-2: var(--ledger);
