@@ -68,7 +68,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
         </Link>
       </div>
       <div
-        style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}
+        style={{ display: "flex", gap: "var(--s-5)", alignItems: "center", flexWrap: "wrap", marginBottom: "var(--s-3)" }}
       >
         <span className={`chip ${tier.chip}`}>
           {tier.chip === "chip-sim" ? null : <span className="dot breathe" aria-hidden />}
@@ -111,7 +111,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}
         x={
           unseeded
             ? "A cash-settled future settling against the same on-chain oracle as the spot rate. The venue is deployed here; no series has been listed on it yet, so there is nothing to trade against."
@@ -145,7 +145,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 6, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-2)", maxWidth: "var(--measure)" }}
           x={
             <>
               Take a side yourself: a Circle wallet behind your PIN,{" "}
@@ -163,7 +163,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 6, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-2)", maxWidth: "var(--measure)" }}
           x={
             <>
               The desk trades from your own PIN-secured Circle wallet. It opens as soon as the

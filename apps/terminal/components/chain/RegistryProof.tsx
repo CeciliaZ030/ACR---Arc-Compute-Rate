@@ -49,7 +49,7 @@ export function RegistryProof() {
 
   return (
     <>
-      <div className="btn-row" style={{ marginTop: 18 }}>
+      <div className="btn-row" style={{ marginTop: "var(--s-5)" }}>
         <button className="btn" onClick={readChain} disabled={reading}>
           <Ed
             x={reading ? "asking the chain…" : "read it from the chain"}
@@ -57,7 +57,7 @@ export function RegistryProof() {
           />
         </button>
       </div>
-      <p className="muted" style={{ fontSize: 12.5, margin: "8px 0 0", maxWidth: 68 * 9 }}>
+      <p className="muted" style={{ fontSize: "var(--t-3)", margin: "var(--s-3) 0 0", maxWidth: "var(--measure)" }}>
         <Ed
           x="Every address above reaches you through our press. This asks the registry contract itself and reports the block it answered at. Press twice: the block moves."
           p="The list above comes through our server. This asks the blockchain itself. Press twice and the block number moves."
@@ -68,14 +68,14 @@ export function RegistryProof() {
         <p
           className="mono vermilion"
           role="alert"
-          style={{ fontSize: 12.5, margin: "10px 0 0", maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-3)", margin: "var(--s-3) 0 0", maxWidth: "var(--measure)" }}
         >
           {err}
         </p>
       ) : null}
 
       {read ? (
-        <div className="panel panel-pad" style={{ marginTop: 12 }}>
+        <div className="panel panel-pad" style={{ marginTop: "var(--s-4)" }}>
           <div className="section-head" style={{ marginTop: 0 }}>
             <span className="label">
               <Ed x="what the chain returned" p="what the blockchain said" />
@@ -86,7 +86,7 @@ export function RegistryProof() {
           </div>
           {/* Block height and latency ARE the payload, not decoration: they are
               what distinguishes a reading from a re-render of the list above. */}
-          <div className="table-scroll" style={{ marginTop: 8 }}>
+          <div className="table-scroll" style={{ marginTop: "var(--s-3)" }}>
             <table className="sheet">
               <tbody>
                 <tr>

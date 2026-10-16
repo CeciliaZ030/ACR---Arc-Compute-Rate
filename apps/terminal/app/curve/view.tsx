@@ -95,7 +95,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: 40 }}>
+      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
         <Ed
           as="p"
           className="standfirst"
@@ -163,7 +163,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
           <Ed
             as="p"
             className="muted"
-            style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}
+            style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}
             x="The dashed line is the on-chain print these contracts cash-settle against; the gap is the basis, in basis points."
             p={
               <>
@@ -298,7 +298,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 16, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-5)", maxWidth: "var(--measure)" }}
           x={
             <>
               An Avellaneda–Stoikov maker quotes both sides of the latest print; the weekly future

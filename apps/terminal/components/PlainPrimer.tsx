@@ -21,7 +21,7 @@ export function PlainPrimer() {
           </div>
         ))}
       </div>
-      <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
+      <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)" }}>
         Every term this paper still uses is explained in{" "}
         <Link href="/companion" className="section-link">
           the reader’s companion →

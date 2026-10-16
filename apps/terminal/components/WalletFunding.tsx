@@ -117,7 +117,7 @@ export function WalletFunding({
 
   const next = bal?.next ?? null;
   return (
-    <div className="lab-note wallet-funding" style={{ marginTop: 4 }}>
+    <div className="lab-note wallet-funding" style={{ marginTop: "var(--s-2)" }}>
       <Ed
         x={
           <>
@@ -163,7 +163,7 @@ export function WalletFunding({
               )}
             </button>
           </span>
-          <span className="muted" style={{ fontSize: 12.5 }}>
+          <span className="muted" style={{ fontSize: "var(--t-3)" }}>
             <Ed
               x="No USDC on this chain yet. CCTP burns on the source chain and mints here; two signatures there, then a wait."
               p="You have no USDC on this chain yet. This moves some over: you sign twice on the other chain, then wait a few minutes."

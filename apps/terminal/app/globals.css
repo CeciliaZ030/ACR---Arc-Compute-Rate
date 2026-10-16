@@ -114,6 +114,10 @@
   --s-8: 48px;
   --s-9: 96px;
 
+  /* the readable measure. Written out as `68 * 9` inline in 46 places, which
+     is a hand-multiplication standing in for a token. */
+  --measure: 612px;
+
   /* roles, so a call site can say what it means instead of how big it is */
   --panel-pad: var(--s-5);
   --stack-gap: var(--s-4);

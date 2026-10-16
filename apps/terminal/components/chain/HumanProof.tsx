@@ -54,11 +54,11 @@ const short = (a: string) => (a.length > 14 ? `${a.slice(0, 10)}…${a.slice(-4)
 /** One row of the challenge. Labels dual-render; values never do. */
 function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="register-row" style={{ display: "flex", gap: 12, padding: "3px 0" }}>
-      <span className="muted" style={{ minWidth: 132, fontSize: 12.5 }}>
+    <div className="register-row" style={{ display: "flex", gap: "var(--s-4)", padding: "var(--s-2) 0" }}>
+      <span className="muted" style={{ minWidth: 132, fontSize: "var(--t-3)" }}>
         {label}
       </span>
-      <span className="mono" style={{ fontSize: 12.5, wordBreak: "break-all" }}>
+      <span className="mono" style={{ fontSize: "var(--t-3)", wordBreak: "break-all" }}>
         {children}
       </span>
     </div>
@@ -114,12 +114,12 @@ export function HumanProof() {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="Free, like every other tape read. What stands in front of it is proof that one person is asking, which is what makes it safe to union a whole fleet of wallets into a single bill."
         p="Free to use, but you have to prove you are one real person before it will answer."
       />
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap" }}>
         <button
           type="button"
           className="chip"
@@ -141,7 +141,7 @@ export function HumanProof() {
       </div>
 
       {proof && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "var(--s-4)" }}>
           {proof.status === 200 && proof.body ? (
             <>
               <Row label={<Ed x="signed by" p="wallet used" />}>{proof.address ? short(proof.address) : "…"}</Row>
@@ -177,13 +177,13 @@ export function HumanProof() {
               <Ed
                 as="p"
                 className="muted"
-                style={{ fontSize: 12.5, marginTop: 8 }}
+                style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}
                 x="A person, not a wallet, was the unit: one proof, every wallet they own on one bill, and the nonce spent on the way through."
                 p="The unit was a person, not a wallet: one proof covered all their wallets, and the one-time code cannot be reused."
               />
             </>
           ) : (
-            <p className="mono muted" role="status" style={{ fontSize: 12.5 }}>
+            <p className="mono muted" role="status" style={{ fontSize: "var(--t-3)" }}>
               {proof.status ? `${proof.status} · ` : ""}
               {proof.note ?? proof.body?.detail ?? "no answer"}
             </p>
@@ -192,7 +192,7 @@ export function HumanProof() {
       )}
 
       {ch && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "var(--s-4)" }}>
           <Row label={<Ed x="scheme" p="method" />}>{ch.scheme}</Row>
           {ch.app_id && <Row label={<Ed x="app id" p="which app" />}>{ch.app_id}</Row>}
           <Row label={<Ed x="nonce · single use" p="one-time code" />}>{ch.nonce}</Row>
@@ -215,7 +215,7 @@ export function HumanProof() {
           gate admitted an unauthenticated caller, which is worth stating rather
           than rendering as an empty panel. */}
       {result && !ch && result.note && (
-        <p className="mono muted" role="status" style={{ fontSize: 12.5, marginTop: 12 }}>
+        <p className="mono muted" role="status" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-4)" }}>
           {result.note}
         </p>
       )}
@@ -224,7 +224,7 @@ export function HumanProof() {
           asserted. Under agentkit with no wallet registered in AgentBook this
           admits nobody, and that is the gate working, not a bug. */}
       {info && (
-        <p className="muted" style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}>
+        <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}>
           {info.backend === "agentkit" ? (
             <Ed
               x="Answered by an agent wallet registered in World's AgentBook: it signs, and the press recovers the address and asks AgentBook whose it is. A wallet nobody has registered resolves to nobody."

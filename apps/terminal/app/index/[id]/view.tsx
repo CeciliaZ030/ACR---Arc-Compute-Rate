@@ -96,7 +96,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
 
   return (
     <>
-      <div style={{ marginTop: 40 }}>
+      <div style={{ marginTop: "var(--s-7)" }}>
         <div className="rb-head" style={{ maxWidth: 520 }}>
           <span className="label">{p.index_id}</span>
           {h.onchain ? (
@@ -132,7 +132,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
             </span>
           )}
         </div>
-        <div className="rb-service" style={{ fontSize: 22 }}>
+        <div className="rb-service" style={{ fontSize: "var(--t-7)" }}>
           {serviceName(p.index_id)}
         </div>
         <div className="rb-value">
@@ -168,7 +168,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
           /* This page's copy of the reader's line, scoped to ITS index and
              priced off the same h.value as the hero above. Absent entirely
              when the reader's profile does not buy this index. */
-          <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+          <div className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-2)" }}>
             <Ed x="at your " p="at your " />
             {yourQty} · ≈ {money(yourBill)}/mo
             {yourMove !== null && (
@@ -205,9 +205,9 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
           ) : null}
         </div>
         <HistoryChart history={history} />
-        <div className="lab-counters" style={{ marginTop: 28 }}>
+        <div className="lab-counters" style={{ marginTop: "var(--s-6)" }}>
           <div>
-            <div className="counter-value" style={{ fontSize: 26 }}>
+            <div className="counter-value" style={{ fontSize: "var(--f-1)" }}>
               {(p.vol * 100).toFixed(1)}%
             </div>
             <div className="counter-label label">
@@ -215,7 +215,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
             </div>
           </div>
           <div>
-            <div className="counter-value" style={{ fontSize: 26 }}>
+            <div className="counter-value" style={{ fontSize: "var(--f-1)" }}>
               {fmtInt(p.n_obs)}
             </div>
             <div className="counter-label label">
@@ -223,7 +223,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
             </div>
           </div>
           <div>
-            <div className="counter-value" style={{ fontSize: 26 }}>
+            <div className="counter-value" style={{ fontSize: "var(--f-1)" }}>
               {p.cleaned_pct.toFixed(1)}%
             </div>
             <div className="counter-label label">
@@ -231,7 +231,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
             </div>
           </div>
           <div>
-            <div className="counter-value" style={{ fontSize: 26 }}>
+            <div className="counter-value" style={{ fontSize: "var(--f-1)" }}>
               {editionLabel(p.ts)}
             </div>
             <div className="counter-label label">
@@ -252,7 +252,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 0, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: 0, maxWidth: "var(--measure)" }}
           x={
             <>
               Contracts settle against the on-chain record, not this page
@@ -366,7 +366,7 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
                       {/* The multiple is the sentence: not "another number" but "this many
                           times the wallet figure", read against the row directly above. */}
                       {p.attack_cost_per_bp > 0 && humanBound / p.attack_cost_per_bp >= 2 ? (
-                        <span className="muted" style={{ marginLeft: 8, fontWeight: 400 }}>
+                        <span className="muted" style={{ marginLeft: "var(--s-3)", fontWeight: 400 }}>
                           × {Math.round(humanBound / p.attack_cost_per_bp).toLocaleString()}{" "}
                           <Ed x="the wallet figure" p="the account figure" />
                         </span>

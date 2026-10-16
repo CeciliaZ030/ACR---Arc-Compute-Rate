@@ -19,35 +19,35 @@ export default function Error({
   }, [error]);
 
   return (
-    <section className="section" style={{ maxWidth: 68 * 9 }}>
+    <section className="section" style={{ maxWidth: "var(--measure)" }}>
       <div className="section-head">
         <Ed x="Press stop" p="Something broke" className="label" />
       </div>
       <Ed
         as="p"
         className="standfirst"
-        style={{ marginTop: 8 }}
+        style={{ marginTop: "var(--s-3)" }}
         x="This page hit a fault while setting type."
         p="This page hit a snag while loading."
       />
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 14 }}
+        style={{ fontSize: "var(--t-5)" }}
         x="The rest of the edition keeps printing. Reset the page to re-run it against the live feed."
         p="The rest of the site is fine. Reset this page to try again."
       />
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: "var(--s-5)" }}>
         <button className="btn" onClick={() => reset()}>
           Reset the page
         </button>
       </div>
       {error?.digest ? (
-        <details style={{ marginTop: 20 }}>
+        <details style={{ marginTop: "var(--s-5)" }}>
           <summary className="label" style={{ cursor: "pointer" }}>
             fault reference
           </summary>
-          <pre className="mono" style={{ fontSize: 12, marginTop: 8 }}>
+          <pre className="mono" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}>
             digest: {error.digest}
           </pre>
         </details>

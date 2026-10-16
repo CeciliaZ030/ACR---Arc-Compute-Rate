@@ -51,7 +51,7 @@ function PayerField({
 
   return (
     <form
-      style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
+      style={{ display: "flex", gap: "var(--s-3)", alignItems: "center", flexWrap: "wrap" }}
       onSubmit={(e) => {
         e.preventDefault();
         const addr = text.trim();
@@ -101,7 +101,7 @@ function PayerField({
         </button>
       ) : null}
       {bad ? (
-        <span className="muted" style={{ fontSize: 12, color: "var(--breach)" }}>
+        <span className="muted" style={{ fontSize: "var(--t-3)", color: "var(--breach)" }}>
           <Ed
             x="Not an address: 0x and 40 hex characters."
             p="That is not an address. It needs 0x and 40 characters."
@@ -141,8 +141,8 @@ function RerouteEvidence({
   const to = reroute.to.toLowerCase();
   const from = reroute.from.toLowerCase();
   return (
-    <div style={{ marginTop: 12 }}>
-      <p style={{ margin: 0, fontSize: 13 }}>
+    <div style={{ marginTop: "var(--s-4)" }}>
+      <p style={{ margin: 0, fontSize: "var(--t-4)" }}>
         {verdict === "followed" ? (
           <Ed
             x="The latest purchase went to the suggested seller: the buyer read its own bill and changed shops."
@@ -160,14 +160,14 @@ function RerouteEvidence({
           />
         )}
       </p>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
+      <div style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center", marginTop: "var(--s-3)" }}>
         <span className="label">
           <Ed x="Latest purchases" p="Newest buys" />
         </span>
         {recent.map((r, i) => {
           const age = ageWordsAt(r.settledAt, nowS);
           return (
-            <span key={`${r.seller}-${r.settledAt}`} className="mono" style={{ fontSize: 12.5, display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <span key={`${r.seller}-${r.settledAt}`} className="mono" style={{ fontSize: "var(--t-3)", display: "inline-flex", gap: "var(--s-2)", alignItems: "center" }}>
               <AddressChip address={r.seller} copy={false} />
               {r.seller === to ? (
                 <span className="chip chip-teal"><Ed x="suggested" p="cheaper" /></span>
@@ -194,7 +194,7 @@ function HumanMark({ share, of }: { share: number | null | undefined; of: "this 
   return (
     <span
       className="chip chip-sim"
-      style={{ marginLeft: 6 }}
+      style={{ marginLeft: "var(--s-2)" }}
       title={`${(share * 100).toFixed(0)}% of ${scope} came from wallets the chain resolves to a verified person`}
     >
       <Ed x="human" p="real person" />
@@ -222,7 +222,7 @@ function HumanCell({ rating }: { rating: SellerRating | undefined }) {
       {cell.allSandbox ? (
         <span
           className="chip chip-sim"
-          style={{ marginLeft: 6 }}
+          style={{ marginLeft: "var(--s-2)" }}
           title="Every one of these is a World ID Sandbox identity, not an Orb-verified person."
         >
           sim
@@ -243,7 +243,7 @@ function Histogram({ row }: { row: SellerRating["histogram"] }) {
   const total = bucketTotal(row);
   if (!total) return <span className="muted">…</span>;
   return (
-    <span style={{ display: "inline-flex", gap: 2, alignItems: "flex-end", height: 18 }}>
+    <span style={{ display: "inline-flex", gap: "var(--s-1)", alignItems: "flex-end", height: 18 }}>
       {bars.map((b) => (
         <span
           key={b.key}
@@ -412,12 +412,12 @@ export function TapeView() {
         </div>
         <div className="panel panel-pad">
           {meta ? (
-            <div style={{ display: "flex", gap: 28, flexWrap: "wrap", alignItems: "baseline" }}>
+            <div style={{ display: "flex", gap: "var(--s-6)", flexWrap: "wrap", alignItems: "baseline" }}>
               <span>
                 <span className="label" style={{ display: "block" }}>
                   <Ed x="Indexed to block" p="Caught up to block" />
                 </span>
-                <span className="mono num" style={{ fontSize: 20, color: "var(--sand)" }}>
+                <span className="mono num" style={{ fontSize: "var(--t-6)", color: "var(--sand)" }}>
                   {fmtInt(meta.block)}
                 </span>
               </span>
@@ -433,21 +433,21 @@ export function TapeView() {
                 <span className="label" style={{ display: "block" }}>
                   <Ed x="Subgraph deployment" p="Which copy of the reader" />
                 </span>
-                <span className="mono muted" style={{ fontSize: 12, wordBreak: "break-all" }}>
+                <span className="mono muted" style={{ fontSize: "var(--t-3)", wordBreak: "break-all" }}>
                   {meta.deployment}
                 </span>
                 {/* Named, because a reader cannot tell an API mirror from an indexer.
                     Every slippage figure on this page was computed in the subgraph's
                     own mapping at the block the settlement landed; nothing below
                     recomputes it, which is what makes the provenance worth naming. */}
-                <span className="muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>
+                <span className="muted" style={{ display: "block", fontSize: "var(--t-3)", marginTop: "var(--s-1)" }}>
                   <Ed x="Subgraph Studio, ethonline v0.2.0: every cost below was benchmarked in the mapping at the settling block" p="a public index of the chain; each cost below was worked out as the purchase landed, not later" />
                 </span>
                 {/* The press's own count, because The Graph's dashboard counts only
                     gateway queries made with an API key, and the development URL is
                     capped at 3,000 a day. Said plainly which path this is. */}
                 {transport && transport.via !== "unset" ? (
-                  <span className="mono muted" style={{ display: "block", fontSize: 12, marginTop: 4 }}>
+                  <span className="mono muted" style={{ display: "block", fontSize: "var(--t-3)", marginTop: "var(--s-2)" }}>
                     {fmtInt(transport.queries)} <Ed x="subgraph queries this boot" p="record lookups since the last restart" /> · {fmtInt(transport.cache_hits)}{" "}
                     <Ed x="served from a 20 s cache" p="answered from a short memory" /> ·{" "}
                     {transport.via === "gateway" ? (
@@ -480,7 +480,7 @@ export function TapeView() {
           <h2 className="display">
             <Ed x="What it cost" p="What the robot paid" />
           </h2>
-          <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "var(--s-4)", alignItems: "center", flexWrap: "wrap" }}>
             <PayerField value={payer} onPick={(a) => pick(a)} onReset={() => pick(null)} />
             {card ? (
               <span className="label">
@@ -492,13 +492,13 @@ export function TapeView() {
 
         {card ? (
           <>
-            <div className="panel panel-pad" style={{ marginBottom: 18 }}>
-              <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "baseline" }}>
+            <div className="panel panel-pad" style={{ marginBottom: "var(--s-5)" }}>
+              <div style={{ display: "flex", gap: "var(--s-7)", flexWrap: "wrap", alignItems: "baseline" }}>
                 <span>
                   <span className="label" style={{ display: "block" }}>
                     <Ed x="Spent" p="Paid out" />
                   </span>
-                  <span className="mono num" style={{ fontSize: 24 }}>
+                  <span className="mono num" style={{ fontSize: "var(--f-1)" }}>
                     {money(card.spent_usdc, 6)}
                   </span>
                 </span>
@@ -508,7 +508,7 @@ export function TapeView() {
                   </span>
                   <span
                     className="mono num"
-                    style={{ fontSize: 24, color: "var(--breach)", fontWeight: 600 }}
+                    style={{ fontSize: "var(--f-1)", color: "var(--breach)", fontWeight: 600 }}
                   >
                     {money(card.overpaid_usdc, 6)}
                   </span>
@@ -517,7 +517,7 @@ export function TapeView() {
                   <span className="label" style={{ display: "block" }}>
                     <Ed x="Slippage vs arrival" p="How far above the fair rate" />
                   </span>
-                  <span className="mono num" style={{ fontSize: 24, color: "var(--sand)" }}>
+                  <span className="mono num" style={{ fontSize: "var(--f-1)", color: "var(--sand)" }}>
                     {bp(card.vw_slippage_bp, 1)}
                   </span>
                 </span>
@@ -525,14 +525,14 @@ export function TapeView() {
                   <span className="label" style={{ display: "block" }}>
                     <Ed x="Priced fills" p="Buys we could check" />
                   </span>
-                  <span className="mono num" style={{ fontSize: 24 }}>
+                  <span className="mono num" style={{ fontSize: "var(--f-1)" }}>
                     {fmtInt(card.benchmarked)}
-                    <span className="muted" style={{ fontSize: 14 }}> / {fmtInt(card.purchases)}</span>
+                    <span className="muted" style={{ fontSize: "var(--t-5)" }}> / {fmtInt(card.purchases)}</span>
                   </span>
                 </span>
               </div>
               {card.payer ? (
-                <div style={{ marginTop: 14 }}>
+                <div style={{ marginTop: "var(--s-4)" }}>
                   <span className="label">
                     <Ed x="Payer" p="The wallet that bought" />{" "}
                   </span>
@@ -551,22 +551,22 @@ export function TapeView() {
                     <th>
                       <Ed x="Sells" p="Sells" />
                     </th>
-                    <th style={{ textAlign: "right" }}>
+                    <th>
                       <Ed x="Slippage" p="Above fair rate" />
                     </th>
-                    <th style={{ textAlign: "right" }}>
+                    <th>
                       <Ed x="Volume" p="Amount" />
                     </th>
-                    <th style={{ textAlign: "right" }}>
+                    <th>
                       <Ed x="Share" p="Portion" />
                     </th>
-                    <th style={{ textAlign: "right" }}>
+                    <th>
                       <Ed x="Fills" p="Buys" />
                     </th>
-                    <th style={{ textAlign: "right" }}>
+                    <th>
                       <Ed x="Ours" p="Our own money" />
                     </th>
-                    <th style={{ textAlign: "right" }}>
+                    <th>
                       <Ed x="People" p="Verified people" />
                     </th>
                   </tr>
@@ -578,7 +578,7 @@ export function TapeView() {
                         <AddressChip address={r.seller} copy={false} label={nameOf(r.seller) ?? undefined} />
                         <HumanMark share={r.human_share} of="this payer" />
                       </td>
-                      <td className="mono" style={{ fontSize: 12.5 }}>
+                      <td className="mono" style={{ fontSize: "var(--t-3)" }}>
                         <SellsCell t={terms[r.seller.toLowerCase()]} />
                       </td>
                       <td
@@ -588,21 +588,21 @@ export function TapeView() {
                       >
                         {bp(r.vw_slippage_bp, 1)}
                       </td>
-                      <td className="mono num" style={{ textAlign: "right" }}>
+                      <td className="mono num">
                         {money(r.volume_usdc, 6)}
                       </td>
-                      <td className="mono num muted" style={{ textAlign: "right" }}>
+                      <td className="mono num muted">
                         {r.volume_share === null ? "…" : `${(r.volume_share * 100).toFixed(1)}%`}
                       </td>
-                      <td className="mono num" style={{ textAlign: "right" }}>
+                      <td className="mono num">
                         {fmtInt(r.n)}
                       </td>
-                      <td className="mono num muted" style={{ textAlign: "right" }}>
+                      <td className="mono num muted">
                         {r.synthetic_share === null
                           ? "…"
                           : `${(r.synthetic_share * 100).toFixed(0)}%`}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td>
                         <HumanCell rating={ratings[r.seller.toLowerCase()]} />
                       </td>
                     </tr>
@@ -612,24 +612,24 @@ export function TapeView() {
             </div>
 
             {card.reroute ? (
-              <div className="panel panel-pad" style={{ marginTop: 18 }}>
+              <div className="panel panel-pad" style={{ marginTop: "var(--s-5)" }}>
                 <p className="label">
                   <Ed x="Reroute" p="A cheaper way to buy the same thing" />
                 </p>
-                <p style={{ marginTop: 8 }}>
+                <p style={{ marginTop: "var(--s-3)" }}>
                   <AddressChip address={card.reroute.from} copy={false} />
-                  <span className="muted" style={{ margin: "0 10px" }}>
+                  <span className="muted" style={{ margin: "0 var(--s-3)" }}>
                     →
                   </span>
                   <AddressChip address={card.reroute.to} copy={false} />
-                  <span className="mono num" style={{ marginLeft: 16, color: "var(--finality)" }}>
+                  <span className="mono num" style={{ marginLeft: "var(--s-5)", color: "var(--finality)" }}>
                     {bp(card.reroute.saving_bp, 1)} · {money(card.reroute.saving_usdc, 6)}
                   </span>
                 </p>
                 <Ed
                   as="p"
                   className="muted"
-                  style={{ marginTop: 8, fontSize: 13 }}
+                  style={{ marginTop: "var(--s-3)", fontSize: "var(--t-4)" }}
                   x="Arithmetic on past fills in this window. A suggestion, not a promise about the next one."
                   p="Worked out from past buys. It is a suggestion, not a promise."
                 />
@@ -667,7 +667,7 @@ export function TapeView() {
               x="Nothing to grade for this wallet on the indexed tape: "
               p="There is nothing to check for this wallet yet: "
             />
-            <span className="mono" style={{ fontSize: 13 }}>
+            <span className="mono" style={{ fontSize: "var(--t-4)" }}>
               {nothingToGrade}
             </span>
           </p>
@@ -702,22 +702,22 @@ export function TapeView() {
                   <th>
                     <Ed x="Sells" p="Sells" />
                   </th>
-                  <th style={{ textAlign: "right" }}>
+                  <th>
                     <Ed x="Slippage" p="Above fair rate" />
                   </th>
-                  <th style={{ textAlign: "right" }}>
+                  <th>
                     <Ed x="Volume" p="Amount sold" />
                   </th>
-                  <th style={{ textAlign: "right" }}>
+                  <th>
                     <Ed x="Fills" p="Sales" />
                   </th>
                   <th>
                     <Ed x="Distribution" p="Spread of prices" />
                   </th>
-                  <th style={{ textAlign: "right" }}>
+                  <th>
                     <Ed x="Ours" p="Our own money" />
                   </th>
-                  <th style={{ textAlign: "right" }}>
+                  <th>
                     <Ed x="Coverage" p="How much was scored" />
                   </th>
                 </tr>
@@ -734,7 +734,7 @@ export function TapeView() {
                       <td>
                         <GradeChip rating={r} />
                       </td>
-                      <td className="mono" style={{ fontSize: 12.5 }}>
+                      <td className="mono" style={{ fontSize: "var(--t-3)" }}>
                         {/* Unit and unit price off the seller's latest fill. The
                             unit is what makes two prices comparable at all: $0.44
                             per 1k tokens and $0.0001 per query are not a spread,
@@ -748,21 +748,21 @@ export function TapeView() {
                       >
                         {bp(s.vw_slippage_bp, 1)}
                       </td>
-                      <td className="mono num" style={{ textAlign: "right" }}>
+                      <td className="mono num">
                         {money(usdc6(s.totalVolume) ?? 0, 6)}
                       </td>
-                      <td className="mono num" style={{ textAlign: "right" }}>
+                      <td className="mono num">
                         {fmtInt(s.settlementCount)}
                       </td>
                       <td>
                         <Histogram row={r?.histogram} />
                       </td>
-                      <td className="mono num muted" style={{ textAlign: "right" }}>
+                      <td className="mono num muted">
                         {s.syntheticShare == null
                           ? "…"
                           : `${(s.syntheticShare * 100).toFixed(0)}%`}
                       </td>
-                      <td className="mono num muted" style={{ textAlign: "right" }}>
+                      <td className="mono num muted">
                         {r?.weight_covered_pct == null ? "…" : `${r.weight_covered_pct}%`}
                       </td>
                     </tr>
@@ -783,7 +783,7 @@ export function TapeView() {
         <Ed
           as="p"
           className="muted"
-          style={{ marginTop: 12, fontSize: 13 }}
+          style={{ marginTop: "var(--s-4)", fontSize: "var(--t-4)" }}
           x={`A grade needs ${MIN_RATED_N} priced fills, and rests on the share of the method shown under Coverage, never on all of it.`}
           p={
             <>
@@ -805,12 +805,12 @@ export function TapeView() {
         <div className="panel panel-pad">
           {data?.control ? (
             <>
-              <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "baseline" }}>
+              <div style={{ display: "flex", gap: "var(--s-7)", flexWrap: "wrap", alignItems: "baseline" }}>
                 <span>
                   <span className="label" style={{ display: "block" }}>
                     <Ed x="Venue fills measured" p="Trades checked" />
                   </span>
-                  <span className="mono num" style={{ fontSize: 24 }}>
+                  <span className="mono num" style={{ fontSize: "var(--f-1)" }}>
                     {fmtInt(data.control.fills)}
                   </span>
                 </span>
@@ -821,7 +821,7 @@ export function TapeView() {
                   <span
                     className="mono num"
                     style={{
-                      fontSize: 24,
+                      fontSize: "var(--f-1)",
                       color: data.control.nonZero ? "var(--breach)" : "var(--finality)",
                     }}
                   >
@@ -831,7 +831,7 @@ export function TapeView() {
               </div>
               <Ed
                 as="p"
-                style={{ marginTop: 12 }}
+                style={{ marginTop: "var(--s-4)" }}
                 x="The venue fills at the printed rate, so a fill IS its own benchmark and its slippage can only be zero. That is the point: it is the control that shows the spread above is real dispersion, not an artefact of the method."
                 p="These trades happen at the official rate, so they can never look dear. That is why they are the check: the differences above are real."
               />

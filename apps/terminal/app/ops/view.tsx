@@ -189,7 +189,7 @@ export function OpsView() {
               </span>
             </span>
           </div>
-          <p className="muted" style={{ maxWidth: 68 * 9 }}>
+          <p className="muted" style={{ maxWidth: "var(--measure)" }}>
             <Ed
               x="the checker runs on the press, so there is no verdict while it sleeps. Every other page can fall back to the archived edition; this one deliberately cannot. A stored “all pillars live” would be asserting the health of a service that is not answering. The free-tier press wakes on first visit (~60s) and this page retries by itself."
               p="Our server is waking up, and a saved “all fine” would lie about right now, so we show nothing until it answers."
@@ -243,7 +243,7 @@ export function OpsView() {
                 them used to be here: when the PRESS last swept, and when this
                 browser last asked. A 60s poll behind a 30s CDN window means a
                 "checked 3 min ago" can itself be 90 seconds old. */}
-            <p className="mono muted ops-tally" style={{ fontSize: 12 }}>
+            <p className="mono muted ops-tally" style={{ fontSize: "var(--t-3)" }}>
               {sweptWords ? <span>checked {sweptWords}</span> : null}
               {askedWords ? <span>asked {askedWords}</span> : null}
               {data.duration_s != null ? <span>{data.duration_s.toFixed(1)}s sweep</span> : null}
@@ -274,7 +274,7 @@ export function OpsView() {
             </p>
             {/* Name the other checker rather than implying this is the only
                 one. They answer different questions and both still matter. */}
-            <p className="muted" style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 10 }}>
+            <p className="muted" style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: "var(--s-3)" }}>
               <Ed
                 x="This is the press reporting on itself, from inside. The external gate stays a command: make verify-live. It probes the deployed API and the terminal over the public internet, and can catch a route this process cannot see."
                 p="This is our server checking itself. We also run a separate check from outside, on a laptop, that can catch problems this one cannot see."
@@ -353,7 +353,7 @@ export function OpsView() {
                                   be prose written for a reader. */}
                               <td className="mono">{houseDash(c.label)}</td>
                               {hasDetail && (
-                                <td className="muted" style={{ fontSize: 12 }}>
+                                <td className="muted" style={{ fontSize: "var(--t-3)" }}>
                                   {c.detail ? houseDash(c.detail) : ""}
                                 </td>
                               )}

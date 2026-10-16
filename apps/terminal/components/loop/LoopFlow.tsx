@@ -100,7 +100,7 @@ export function LoopFlow({ wake }: { wake: WakeState }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="A payment lands, the mirror records it, the subgraph benchmarks it, TCA reads the bill, the reroute decides, and the next payment goes where the decision said. Six stations, one wallet, every number live."
         p="A payment lands, is recorded, is checked against the going rate, the robot reads its bill, decides, and pays the better shop next."
       />
@@ -219,7 +219,7 @@ export function LoopFlow({ wake }: { wake: WakeState }) {
         </button>
         <WakeNote wake={wake} />
         {!card && !wake.waking ? (
-          <span className="mono muted" style={{ fontSize: 12.5 }}>
+          <span className="mono muted" style={{ fontSize: "var(--t-3)" }}>
             {data?.tca && !data.tca.available ? (
               <Ed x="no priced fills for this wallet yet: pick another, or buy something" p="no checked buys for this wallet yet: pick another" />
             ) : (
@@ -227,7 +227,7 @@ export function LoopFlow({ wake }: { wake: WakeState }) {
             )}
           </span>
         ) : null}
-        <label className="mono muted" style={{ fontSize: 12.5, display: "inline-flex", gap: 10, alignItems: "center" }}>
+        <label className="mono muted" style={{ fontSize: "var(--t-3)", display: "inline-flex", gap: "var(--s-3)", alignItems: "center" }}>
           <Ed x="threshold" p="only switch if it saves" />
           <input type="range" min={0} max={5000} step={25} value={minBp} onChange={(e) => setMinBp(Number(e.target.value))} aria-label="reroute threshold in basis points" />
           <b style={{ color: "var(--sand)" }}>{minBp} bp</b>
@@ -240,7 +240,7 @@ export function LoopFlow({ wake }: { wake: WakeState }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 12.5, marginTop: 8, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}
         x="That line is the buyer agent's own log line, from the same function it runs with --reroute before it pays. Slide the threshold past the saving and the decision holds; nothing here spends."
         p="That line is exactly what the buying robot prints before it pays; slide the bar past the saving and it stays put. Nothing spends."
       />

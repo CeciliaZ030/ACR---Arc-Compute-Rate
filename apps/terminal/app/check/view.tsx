@@ -177,7 +177,7 @@ function Form({
         {/* Named, because supplying an address changes the ANSWER rather than
             the labelling: the press benchmarks one of our own sellers against
             the fleet and a stranger against the market. */}
-        <span className="muted" style={{ fontSize: 12 }}>
+        <span className="muted" style={{ fontSize: "var(--t-3)" }}>
           <Ed
             x="Nothing is stored and no account is needed. The address only decides which prices you are compared against."
             p="Nothing is saved and you need no account."

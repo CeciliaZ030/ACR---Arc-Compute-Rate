@@ -79,7 +79,7 @@ export function WebhookActivity() {
       {events.length ? (
         <>
           {types.length > 2 && (
-            <div className="segmented" style={{ marginBottom: 12 }}>
+            <div className="segmented" style={{ marginBottom: "var(--s-4)" }}>
               {types.map((t) => (
                 <button key={t} className={t === filter ? "on" : ""} onClick={() => setFilter(t)}>
                   {t === "all" ? "all" : t}
@@ -135,7 +135,7 @@ export function WebhookActivity() {
                       {isOpen && hasPayload ? (
                         <tr>
                           <td colSpan={4} style={{ textAlign: "left", padding: 0 }}>
-                            <pre className="specimen" style={{ margin: "4px 0", maxHeight: 260, overflow: "auto" }}>
+                            <pre className="specimen" style={{ margin: "var(--s-2) 0", maxHeight: 260, overflow: "auto" }}>
                               {JSON.stringify(e.payload, null, 2)}
                             </pre>
                           </td>
@@ -149,8 +149,8 @@ export function WebhookActivity() {
           </div>
         </>
       ) : unreachable ? (
-        <p className="muted" style={{ fontSize: 13, marginTop: 8, maxWidth: 68 * 9 }}>
-          <span className="chip chip-gold" style={{ marginRight: 8 }}>
+        <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}>
+          <span className="chip chip-gold" style={{ marginRight: "var(--s-3)" }}>
             <Ed x="press unreachable" p="server unreachable" />
           </span>
           <Ed
@@ -159,7 +159,7 @@ export function WebhookActivity() {
           />
         </p>
       ) : (
-        <p className="muted" style={{ fontSize: 13, marginTop: 8, maxWidth: 68 * 9 }}>
+        <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}>
           <Ed
             x={
               <>

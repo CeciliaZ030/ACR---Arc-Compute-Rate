@@ -102,7 +102,7 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="Wallets are free; people are not. A World credential lets the gate resolve a wallet to one person for one week, as an opaque id that names nobody, and bill every wallet that person owns as one."
         p="Anyone can make wallets; nobody can make people. World ties a wallet to one person for a week, unnamed, and bills all their wallets as one."
       />
@@ -177,10 +177,10 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
           <Ed x="Prove it" p="Prove it" />
         </button>
         <WakeNote wake={wake} />
-        {proof && !ok ? <span className="mono vermilion" style={{ fontSize: 12.5 }}>{proof.note ?? proof.body?.detail ?? "refused"}</span> : null}
+        {proof && !ok ? <span className="mono vermilion" style={{ fontSize: "var(--t-3)" }}>{proof.note ?? proof.body?.detail ?? "refused"}</span> : null}
       </div>
 
-      <div className="section-head" style={{ marginTop: 28 }}>
+      <div className="section-head" style={{ marginTop: "var(--s-6)" }}>
         <Ed x="This week's people, as the chain records them" p="This week's people, as the chain has them" className="label" />
         <span className="label muted">
           {window != null ? <><Ed x="window" p="week" /> {window}</> : null}
@@ -193,9 +193,9 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
             (the tape answered and the window is empty: the rotation rolled), or
             rings. An index hiccup must not read as "no person exists". */}
         {clustersEnv && clustersEnv.live === false ? (
-          <Ed as="p" className="muted" style={{ fontSize: 13 }} x="The tape did not answer, so no cluster is drawn. An outage is not an empty window." p="The record did not answer, so nothing is drawn. No answer is not the same as nobody." />
+          <Ed as="p" className="muted" style={{ fontSize: "var(--t-4)" }} x="The tape did not answer, so no cluster is drawn. An outage is not an empty window." p="The record did not answer, so nothing is drawn. No answer is not the same as nobody." />
         ) : thisWindow.length === 0 && clustersEnv ? (
-          <Ed as="p" className="muted" style={{ fontSize: 13 }} x="No person is resolved for this window yet. The 7-day rotation rolled and the resolver has not run; the ops console is red until it does." p="Nobody is on this week's list yet. The week rolled over and the list has not been redone; the ops page shows it in red." />
+          <Ed as="p" className="muted" style={{ fontSize: "var(--t-4)" }} x="No person is resolved for this window yet. The 7-day rotation rolled and the resolver has not run; the ops console is red until it does." p="Nobody is on this week's list yet. The week rolled over and the list has not been redone; the ops page shows it in red." />
         ) : null}
         {thisWindow.map((c) => (
           <div key={c.id} className={`ring${c.sandbox ? " sandbox" : ""}${litCluster === c.id.toLowerCase() ? " lit" : ""}`} title={c.id}>
@@ -204,8 +204,8 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
                 <span key={w.id} className="ring-dot" title={w.id} />
               ))}
             </span>
-            <span className="mono muted" style={{ fontSize: 11.5 }}>{short(c.id)}</span>
-            <span className="mono" style={{ fontSize: 11.5 }}>
+            <span className="mono muted" style={{ fontSize: "var(--t-2)" }}>{short(c.id)}</span>
+            <span className="mono" style={{ fontSize: "var(--t-2)" }}>
               {c.wallets.length} <Ed x="wallets" p="wallets" /> · {c.wallets.reduce((a, w) => a + w.settlements, 0)} <Ed x="fills" p="buys" />
               {c.sandbox ? <span className="muted"> · <Ed x="sandbox" p="test" /></span> : null}
             </span>
@@ -213,19 +213,19 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
         ))}
       </div>
       {stale.length ? (
-        <p className="mono muted" style={{ fontSize: 12, marginTop: 8 }}>
+        <p className="mono muted" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}>
           {stale.length} <Ed x="cluster(s) from earlier windows have expired: a resolution rotates rather than lingers" p="older weekly codes have expired: they rotate instead of lasting" />
         </p>
       ) : null}
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 12.5, marginTop: 8, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}
         x="Each ring is one verified person this window; each dot a wallet the chain resolves to them. The id is a hash and the wallet list is public tape data; nothing here walks back to a name."
         p="Each ring is one real person this week; each dot is one of their wallets. The code is a hash and nothing leads back to a name."
       />
 
-      <div className="section-head" style={{ marginTop: 28 }}>
+      <div className="section-head" style={{ marginTop: "var(--s-6)" }}>
         <Ed x="The bound, in people" p="The cost to cheat, counted in people" className="label" />
         <span className="label muted"><Ed x="from ACROracleV2, every hour" p="from the chain, every hour" /></span>
       </div>
@@ -234,12 +234,12 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
         const mult = boundMultiple(human, p.attack_cost_per_bp);
         return (
           <div key={p.index_id} className="meter-row">
-            <span className="mono" style={{ fontSize: 12.5 }}>{p.index_id}</span>
-            <div style={{ display: "grid", gap: 6 }}>
+            <span className="mono" style={{ fontSize: "var(--t-3)" }}>{p.index_id}</span>
+            <div style={{ display: "grid", gap: "var(--s-2)" }}>
               <span className="meter" title="wallet-denominated"><i className="fill-wallet" style={{ width: `${Math.max(2, 100 * logFrac(p.attack_cost_per_bp, lo, hi))}%` }} /></span>
               <span className="meter" title="human-denominated"><i className="fill-human" style={{ width: `${human && human > 0 ? Math.max(2, 100 * logFrac(human, lo, hi)) : 0}%` }} /></span>
             </div>
-            <span className="mono num" style={{ fontSize: 12.5, textAlign: "right" }}>
+            <span className="mono num" style={{ fontSize: "var(--t-3)", textAlign: "right" }}>
               <span className="muted">{money(p.attack_cost_per_bp, 4)}</span>
               <br />
               {human && human > 0 ? <span className="gold">{money(human, 2)}{mult ? ` · ×${Math.round(mult).toLocaleString()}` : ""}</span> : <span className="muted">…</span>}
@@ -247,14 +247,14 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
           </div>
         );
       })}
-      <div className="flow-controls" style={{ marginTop: 6 }}>
+      <div className="flow-controls" style={{ marginTop: "var(--s-2)" }}>
         <span className="chip"><span className="dot" aria-hidden style={{ background: "var(--clay)" }} /> <Ed x="in wallets" p="counted in wallets" /></span>
         <span className="chip chip-gold"><span className="dot" aria-hidden /> <Ed x="in verified people" p="counted in real people" /></span>
       </div>
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 12.5, marginTop: 8, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}
         x="The same move, priced two ways on one log scale: USDC to shift the print one basis point through wallets, and through verified people. Sybils are free; people are not. The chain enforces that the second is never below the first."
         p="The same cheat priced through accounts and through real people: fake accounts are free, people are not, so the second bar is never shorter."
       />

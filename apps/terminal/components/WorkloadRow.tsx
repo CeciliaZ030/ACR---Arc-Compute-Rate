@@ -68,7 +68,7 @@ export function WorkloadRow() {
     set: (v: string) => void,
     aria: string,
   ) => (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--s-3)" }}>
       <span className="label">{label}</span>
       <input
         className="mono"
@@ -80,7 +80,7 @@ export function WorkloadRow() {
         // Width and a tighter pad for an inline figure field; the border,
         // radius and colour now come from the house field vocabulary in
         // globals.css rather than being restated here.
-        style={{ width: 72, padding: "6px 9px" }}
+        style={{ width: 72, padding: "var(--s-2) var(--s-3)" }}
       />
     </span>
   );
@@ -116,15 +116,15 @@ export function WorkloadRow() {
             display: "flex",
             flexWrap: "wrap",
             alignItems: "center",
-            gap: 14,
-            paddingTop: 6,
+            gap: "var(--s-4)",
+            paddingTop: "var(--s-2)",
           }}
         >
           {field(<Ed x="M tokens/mo" p="M words/mo" />, inf, setInf, "million tokens per month")}
           {field(<Ed x="GPU-h/mo" p="GPU hours/mo" />, gpu, setGpu, "GPU hours per month")}
           {field(<Ed x="GB/mo" p="GB/mo" />, data, setData, "gigabytes per month")}
 
-          <span style={{ display: "inline-flex", gap: 8 }}>
+          <span style={{ display: "inline-flex", gap: "var(--s-3)" }}>
             {PRESETS.map((pr) => (
               <button
                 key={pr.name}
@@ -145,7 +145,7 @@ export function WorkloadRow() {
             <Ed x="done" p="done" />
           </button>
 
-          <span className="muted" style={{ fontSize: 11.5 }}>
+          <span className="muted" style={{ fontSize: "var(--t-2)" }}>
             <Ed
               x="saved in your browser · sent nowhere"
               p="saved in your browser · sent nowhere"

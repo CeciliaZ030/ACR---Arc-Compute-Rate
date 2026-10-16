@@ -272,7 +272,7 @@ export function DevelopersView({
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: 40 }}>
+      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
         <Ed
           as="p"
           className="standfirst"
@@ -282,7 +282,7 @@ export function DevelopersView({
         />
       </div>
 
-      <div style={{ marginTop: 32 }}>
+      <div style={{ marginTop: "var(--s-7)" }}>
         <div className="rb-value" style={{ fontSize: "clamp(30px, 3.6vw, 44px)" }}>
           ${price}{" "}
           <span style={{ color: "var(--ink-45)", fontWeight: 400 }}>
@@ -315,7 +315,7 @@ export function DevelopersView({
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}
         x={
           <>
             On the dev gate the console pays a mock header; on the{" "}
@@ -410,7 +410,7 @@ export function DevelopersView({
           </div>
         </div>
         {rev?.recent?.length ? (
-          <div className="table-scroll" style={{ marginTop: 20 }}>
+          <div className="table-scroll" style={{ marginTop: "var(--s-5)" }}>
             <table className="sheet">
               <thead>
                 <tr>
@@ -434,7 +434,7 @@ export function DevelopersView({
             </table>
           </div>
         ) : (
-          <p className="muted" style={{ fontSize: 13, marginTop: 16 }}>
+          <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-5)" }}>
             {/* Same rule as the counters above: "none yet" is a statement about
                 the feed, and we may not make it from a feed we did not read. */}
             {revenueRead ? (
@@ -500,7 +500,7 @@ export function DevelopersView({
                         reader could see. The families were already there in the
                         paths; they just were not drawn. */}
                     <tr>
-                      <td colSpan={5} style={{ paddingTop: 18, borderBottom: 0 }}>
+                      <td colSpan={5} style={{ paddingTop: "var(--s-5)", borderBottom: 0 }}>
                         <span className="label">{FAMILY_HEAD[fam]}</span>
                       </td>
                     </tr>
@@ -574,7 +574,7 @@ export function DevelopersView({
                                    as broken. Same muted shape the register
                                    already uses for a row that needs a wallet
                                    or a proof. */
-                                <span className="muted" style={{ fontSize: 11.5 }}>
+                                <span className="muted" style={{ fontSize: "var(--t-2)" }}>
                                   <Ed x="not on this press" p="not on this service" />
                                 </span>
                               ) : act === "probe" ? (
@@ -630,7 +630,7 @@ export function DevelopersView({
                                 // the right reason, not one blanket sentence:
                                 // the webhook is Circle calling us, and the
                                 // demo starters just want a body.
-                                <span className="muted" style={{ fontSize: 11.5 }}>
+                                <span className="muted" style={{ fontSize: "var(--t-2)" }}>
                                   {e.why === "inbound" ? (
                                     <Ed x="Circle calls this" p="Circle calls this" />
                                   ) : e.why === "post" ? (
@@ -655,12 +655,12 @@ export function DevelopersView({
                               <tr key={e.path + slot}>
                                 <td colSpan={5} style={{ paddingTop: 0 }}>
                                   {o.detail ? (
-                                    <p className="mono muted" role="status" style={{ fontSize: 12.5, margin: "0 0 10px" }}>
+                                    <p className="mono muted" role="status" style={{ fontSize: "var(--t-3)", margin: "0 0 var(--s-3)" }}>
                                       {o.detail}
                                     </p>
                                   ) : (
                                     <>
-                                      <p className="mono" style={{ fontSize: 12.5, margin: "0 0 6px" }}>
+                                      <p className="mono" style={{ fontSize: "var(--t-3)", margin: "0 0 var(--s-2)" }}>
                                         <span className={o.status === 200 ? "green" : "gold"}>
                                           {o.status}
                                         </span>{" "}
@@ -725,7 +725,7 @@ export function DevelopersView({
                                           </>
                                         ) : null}
                                       </p>
-                                      <div className="specimen" style={{ marginBottom: 10 }}>
+                                      <div className="specimen" style={{ marginBottom: "var(--s-3)" }}>
                                         <pre style={{ maxHeight: 220, overflow: "auto" }}>{o.body}</pre>
                                       </div>
                                     </>

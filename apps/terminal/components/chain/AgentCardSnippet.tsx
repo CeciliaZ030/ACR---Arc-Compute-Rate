@@ -31,7 +31,7 @@ type Lang = "curl" | "ts" | "py";
 
 function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="register-row" style={{ fontSize: 13 }}>
+    <div className="register-row" style={{ fontSize: "var(--t-4)" }}>
       <span className="muted" style={{ minWidth: 132 }}>
         {label}
       </span>
@@ -149,7 +149,7 @@ export function AgentCardSnippet({ api }: { api: string }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="An agent names itself with a signed card and the gate believes the key, not a registry: nobody is enrolled and there is no list to run. The card carries its own audience and a short lifetime in place of a contract address, and may claim a human the chain can confirm."
         p="A robot shows an ID card it made itself, no sign-up. It names the service it is for, expires fast, and can name the person behind it."
       />
@@ -165,7 +165,7 @@ export function AgentCardSnippet({ api }: { api: string }) {
       </button>
 
       {ch && (
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: "var(--s-4)" }}>
           <Row label={<Ed x="header" p="sent as" />}>{ch.header}</Row>
           <Row label={<Ed x="audience" p="made out to" />}>{ch.audience}</Row>
           <Row label={<Ed x="chain" p="network" />}>{ch.chain_id}</Row>
@@ -180,7 +180,7 @@ export function AgentCardSnippet({ api }: { api: string }) {
             </Row>
           )}
 
-          <div style={{ marginTop: 14, display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ marginTop: "var(--s-4)", display: "flex", gap: "var(--s-2)", alignItems: "center" }}>
             <Ed x="How an agent calls this" p="How a robot uses it" className="label" />
             {(["py", "ts", "curl"] as Lang[]).map((l) => (
               <button
@@ -194,16 +194,16 @@ export function AgentCardSnippet({ api }: { api: string }) {
               </button>
             ))}
           </div>
-          <div className="specimen" style={{ marginTop: 8 }}>
+          <div className="specimen" style={{ marginTop: "var(--s-3)" }}>
             <button type="button" className="copy-btn" onClick={copy}>
               {copied ? "copied" : "copy"}
             </button>
-            <pre style={{ maxHeight: 420, overflow: "auto", paddingRight: 64 }}>{code}</pre>
+            <pre style={{ maxHeight: 420, overflow: "auto", paddingRight: "var(--s-8)" }}>{code}</pre>
           </div>
           <Ed
             as="p"
             className="muted"
-            style={{ fontSize: 12.5, marginTop: 8 }}
+            style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}
             x="Every value above came from the gate's own challenge just now. A snippet that hardcoded them would keep being copied after the gate changed."
             p="Everything in that code came from the gate itself just now, so it cannot be out of date."
           />
@@ -211,7 +211,7 @@ export function AgentCardSnippet({ api }: { api: string }) {
       )}
 
       {note && (
-        <p className="mono muted" role="status" style={{ fontSize: 12.5, marginTop: 12 }}>
+        <p className="mono muted" role="status" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-4)" }}>
           {note}
         </p>
       )}

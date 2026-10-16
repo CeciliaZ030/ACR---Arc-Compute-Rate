@@ -144,7 +144,7 @@ export function McpSnippet({ api }: { api: string | null }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="Eleven tools any MCP host can call. Ten are reads: check_spend runs the spend agent\u2019s own ladder over any vendor\u2019s invoice, and spend_report totals every bill it has priced. One spends, and only when you set a payer key."
         p="Eleven questions an AI assistant can ask, including whether a bill is fair and whether your agent has been overpaying."
       />
@@ -155,18 +155,18 @@ export function McpSnippet({ api }: { api: string | null }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+          style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
           x="No ACR_API line below, on purpose. The press this page is reading does not carry /par, and the package already defaults to one where every tool answers."
           p="The config has no address in it on purpose. The tool already knows where to look."
         />
       ) : null}
-      <div className="register-row" style={{ fontSize: 13 }}>
+      <div className="register-row" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted" style={{ minWidth: 132 }}>
           <Ed x="tools" p="questions" />
         </span>
         <span className="mono">{TOOLS.join(" · ")}</span>
       </div>
-      <div className="register-row" style={{ fontSize: 13 }}>
+      <div className="register-row" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted" style={{ minWidth: 132 }}>
           <Ed x="install" p="install" />
         </span>
@@ -189,7 +189,7 @@ export function McpSnippet({ api }: { api: string | null }) {
             fork. */}
       </div>
 
-      <div style={{ marginTop: 14, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ marginTop: "var(--s-4)", display: "flex", gap: "var(--s-2)", alignItems: "center", flexWrap: "wrap" }}>
         <Ed x="Paste, then ask" p="Set it up, then ask" className="label" />
         {(["config", "pay", "ask"] as Tab[]).map((t) => (
           <button
@@ -209,16 +209,16 @@ export function McpSnippet({ api }: { api: string | null }) {
           </button>
         ))}
       </div>
-      <div className="specimen" style={{ marginTop: 8 }}>
+      <div className="specimen" style={{ marginTop: "var(--s-3)" }}>
         <button type="button" className="copy-btn" onClick={copy}>
           {copied ? <Ed x="copied" p="copied" /> : <Ed x="copy" p="copy" />}
         </button>
-        <pre style={{ maxHeight: 360, overflow: "auto", paddingRight: 64 }}>{code}</pre>
+        <pre style={{ maxHeight: 360, overflow: "auto", paddingRight: "var(--s-8)" }}>{code}</pre>
       </div>
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 12.5, marginTop: 8 }}
+        style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}
         x="The same answers the buyer agent acts on and this page renders, handed to a model as tools. The repo's mcp/README.md is the long form."
         p="The same answers the buying robot uses, given to an AI assistant as tools it can call."
       />

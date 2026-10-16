@@ -301,12 +301,12 @@ export function ChainStrip({ initial }: { initial: Envelope<TerminalData> }) {
         <span
           className="chip chip-gold plain-only"
           title="every number identical; only the words changed"
-          style={{ marginRight: 10 }}
+          style={{ marginRight: "var(--s-3)" }}
         >
           plain edition
         </span>
         {parts.map((p, i) => (
-          <span key={i} style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+          <span key={i} style={{ display: "inline-flex", gap: "var(--s-3)", alignItems: "center" }}>
             {i > 0 && <span className="sep">·</span>}
             {p}
           </span>

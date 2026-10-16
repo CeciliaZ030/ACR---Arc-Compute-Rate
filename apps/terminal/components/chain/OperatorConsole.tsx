@@ -222,13 +222,13 @@ export function OperatorConsole() {
             <Ed x="Operator desk" p="Staff only" />
           </span>
         </div>
-        <p className="muted" style={{ maxWidth: 68 * 9 }}>
+        <p className="muted" style={{ maxWidth: "var(--measure)" }}>
           <Ed
             x="Settling, rolling, collateral top-ups and treasury transfers live behind a key. Without one configured on the press, this console does not exist at all: the route answers as though it were never built."
             p="The controls that move real money are locked. If nobody has set a key on our server, there is nothing here to unlock."
           />
         </p>
-        <p style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <p style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center" }}>
           <input
             className="mono"
             type="password"
@@ -266,14 +266,14 @@ export function OperatorConsole() {
         </span>
       </div>
 
-      <p className="muted" style={{ maxWidth: 68 * 9 }}>
+      <p className="muted" style={{ maxWidth: "var(--measure)" }}>
         <Ed
           x="Every action prices itself first. The run button stays disabled until a dry run for this exact form has come back, and any edit clears it. The amounts, addresses and series you are about to commit are always ones you have already read."
           p="Every control previews what it would do first, and changing any field makes you preview again."
         />
       </p>
 
-      <p style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+      <p style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center" }}>
         <select
           className="mono"
           value={action}
@@ -316,7 +316,7 @@ export function OperatorConsole() {
       </p>
 
       {action ? (
-        <p className="btn-row" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <p className="btn-row" style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap" }}>
           <button className="btn" onClick={() => void run(true)} disabled={busy}>
             <Ed x={busy ? "pricing…" : "dry run"} p={busy ? "checking…" : "preview it"} />
           </button>
@@ -332,7 +332,7 @@ export function OperatorConsole() {
       ) : null}
 
       {preview ? (
-        <div className="panel panel-pad" style={{ marginTop: 12 }}>
+        <div className="panel panel-pad" style={{ marginTop: "var(--s-4)" }}>
           <span className="label">
             <Ed x="What this would do" p="What would happen" />
           </span>
@@ -343,7 +343,7 @@ export function OperatorConsole() {
               phone, and neither `html` nor `body` sets `overflow-x: hidden`,
               so that was a horizontal scroll of the whole page. The keys are
               field names and none reaches 100px, so the 200 bought nothing. */}
-          <div className="table-scroll" style={{ marginTop: 8 }}>
+          <div className="table-scroll" style={{ marginTop: "var(--s-3)" }}>
             <table className="sheet">
               <tbody>
                 {Object.entries(preview).map(([k, v]) => (
@@ -368,7 +368,7 @@ export function OperatorConsole() {
           only what worked would be missing exactly the entries an operator
           goes looking for after something did not. */}
       {cat?.recent?.length ? (
-        <div className="table-scroll" style={{ marginTop: 20 }}>
+        <div className="table-scroll" style={{ marginTop: "var(--s-5)" }}>
           <table className="sheet">
             <thead>
               <tr>
@@ -411,7 +411,7 @@ export function OperatorConsole() {
                           a tx was present left a successful action saying
                           nothing at all, so of the two success states only
                           one of them said so. */}
-                      <span className="mono" style={{ fontSize: 12, marginLeft: tx ? 8 : 0 }}>
+                      <span className="mono" style={{ fontSize: "var(--t-3)", marginLeft: tx ? 8 : 0 }}>
                         {row.ok ? "ok" : (row.error ?? "refused")}
                       </span>
                     </td>
