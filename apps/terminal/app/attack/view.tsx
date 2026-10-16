@@ -165,7 +165,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
                 out, so every preset buys the same attack. Better to say that
                 than to let a reader change it, see no difference, and wonder
                 what else on this page is decorative. */}
-            <p className="mono muted" style={{ fontSize: "var(--t-2)", marginTop: "var(--s-3)", lineHeight: 1.5 }}>
+            <p className="mono muted" style={{ fontSize: "var(--t-2)", marginTop: "var(--s-3)", lineHeight: "var(--lh-4)" }}>
               {capNote ?? (
                 <Ed
                   x="the trade cap binds before the budget does. Every preset buys the same attack"

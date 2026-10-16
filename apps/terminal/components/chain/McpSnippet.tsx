@@ -137,8 +137,8 @@ export function McpSnippet({ api }: { api: string | null }) {
   }
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         <Ed x="Ask the Tape" p="Ask the receipts" className="label" />
       </div>
       <Ed

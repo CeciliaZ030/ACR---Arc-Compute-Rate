@@ -22,8 +22,8 @@ export function DefensibilityStrip({ data }: { data: TerminalData }) {
     // Reserve the section instead of vanishing — no layout shift when the
     // attack summary streams in a poll later.
     return (
-      <section className="section" aria-busy="true">
-        <div className="section-head">{HEAD}</div>
+      <section aria-busy="true">
+        <div className="block-head">{HEAD}</div>
         <div className="skel" style={{ height: 96 }} />
       </section>
     );
@@ -45,8 +45,8 @@ export function DefensibilityStrip({ data }: { data: TerminalData }) {
   const scale = Math.max(peakVwap, 1);
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         {HEAD}
         <Link href="/attack" className="section-link">
           <Ed x="Attack the index →" p="Try to cheat it yourself →" />

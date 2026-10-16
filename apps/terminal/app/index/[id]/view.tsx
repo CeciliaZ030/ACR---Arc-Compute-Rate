@@ -430,8 +430,8 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
         </details>
       </section>
 
-      <section className="section">
-        <div className="section-head">
+      <section>
+        <div className="block-head">
           <Ed
             x={<>Quote corridor · {p.index_id}</>}
             p={<>Forward prices · where dealers quote {p.index_id}</>}
@@ -454,8 +454,8 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
             marks={{ [p.index_id]: h.value }}
             source={futures.roster?.data?.source}
           />
-          <section className="section">
-            <div className="section-head">
+          <section>
+            <div className="block-head">
               <span className="label">
                 <Ed
                   x={<>Fills against the oracle · {p.index_id}</>}

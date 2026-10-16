@@ -180,7 +180,7 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
         {proof && !ok ? <span className="mono vermilion" style={{ fontSize: "var(--t-3)" }}>{proof.note ?? proof.body?.detail ?? "refused"}</span> : null}
       </div>
 
-      <div className="section-head" style={{ marginTop: "var(--s-6)" }}>
+      <div className="block-head">
         <Ed x="This week's people, as the chain records them" p="This week's people, as the chain has them" className="label" />
         <span className="label muted">
           {window != null ? <><Ed x="window" p="week" /> {window}</> : null}
@@ -225,7 +225,7 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
         p="Each ring is one real person this week; each dot is one of their wallets. The code is a hash and nothing leads back to a name."
       />
 
-      <div className="section-head" style={{ marginTop: "var(--s-6)" }}>
+      <div className="block-head">
         <Ed x="The bound, in people" p="The cost to cheat, counted in people" className="label" />
         <span className="label muted"><Ed x="from ACROracleV2, every hour" p="from the chain, every hour" /></span>
       </div>

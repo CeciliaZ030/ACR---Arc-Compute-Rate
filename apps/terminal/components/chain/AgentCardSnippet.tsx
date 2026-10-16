@@ -141,8 +141,8 @@ export function AgentCardSnippet({ api }: { api: string }) {
   }
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         <Ed x="The agent gate" p="The robot gate" className="label" />
       </div>
 

@@ -55,8 +55,8 @@ export function WebhookActivity() {
     });
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         <Ed
           x="Webhook activity · inbound from Circle"
           p="Payment pings · Circle calls us the moment money moves"

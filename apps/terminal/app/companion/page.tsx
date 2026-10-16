@@ -25,7 +25,7 @@ export default function CompanionPage() {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">The whole thing in six beats</span>
+          <h2 className="label">The whole thing in six beats</h2>
         </div>
         <div className="primer-rail">
           {PRIMER_BEATS.map((b) => (
@@ -38,9 +38,9 @@ export default function CompanionPage() {
       </section>
 
       {GLOSSARY_THEMES.map((theme) => (
-        <section className="section companion-theme" key={theme}>
-          <div className="section-head">
-            <span className="label">{theme}</span>
+        <section className="companion-theme" key={theme}>
+          <div className="block-head">
+            <h3 className="label">{theme}</h3>
           </div>
           <div className="companion-grid">
             {Object.entries(PLAIN_GLOSSARY)

@@ -106,8 +106,8 @@ export function HumanProof() {
   const ch = result?.challenge ?? null;
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         <Ed x="The human gate" p="The real-person gate" className="label" />
       </div>
 

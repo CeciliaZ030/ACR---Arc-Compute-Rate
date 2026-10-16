@@ -152,7 +152,7 @@ export function OpsView() {
 
   return (
     <>
-      <div className="standfirst-block">
+      <div className="page-head">
         <h1 className="display">
           <Ed x="The systems ledger" p="Is everything working?" />
         </h1>
@@ -227,9 +227,9 @@ export function OpsView() {
         <>
           <section className="section">
             <div className="section-head">
-              <span className="label">
+              <h2 className="label">
                 <Ed x="Verdict" p="The short answer" />
-              </span>
+              </h2>
               <span className="label">
                 <span className={`chip ${VERDICT[data.verdict ?? "unread"]?.cls ?? "chip-sky"}`}>
                   <Ed
@@ -294,12 +294,12 @@ export function OpsView() {
                  .anchor-target already carries the right scroll-margin under
                  the sticky masthead, at both breakpoints. */
               <section
-                className="section anchor-target"
+                className="anchor-target"
                 id={`ops-${s.name}`}
                 key={s.name}
               >
-                <div className="section-head">
-                  <span className="label">{SECTION_TITLE[s.name] ?? <>{s.title}</>}</span>
+                <div className="block-head">
+                  <h3 className="label">{SECTION_TITLE[s.name] ?? <>{s.title}</>}</h3>
                   <span className="label ops-head-right">
                     {s.checks.length > 0 && (
                       <span className={`chip ${st.cls}`} title={st.word}>

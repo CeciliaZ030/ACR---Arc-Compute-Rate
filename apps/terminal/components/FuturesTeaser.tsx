@@ -60,8 +60,8 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
   if (!venue) return null; // no venue deployed → keep the landing page uncluttered
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         {HEAD}
         <Link href="/curve" className="section-link">
           <Ed x="Trade the curve →" p="See the trading desk →" />

@@ -190,7 +190,9 @@ function collect() {
   const inScroller = (el) => {
     for (let p = el; p && p !== document.body; p = p.parentElement) {
       const o = getComputedStyle(p).overflowX;
-      if (o === "auto" || o === "scroll") return true;
+      // `hidden` clips too. Without it, the hero's decorative sun path reports
+      // as an overflow on every width, which is a metric crying wolf.
+      if (o === "auto" || o === "scroll" || o === "hidden") return true;
     }
     return false;
   };

@@ -99,6 +99,21 @@ export function Colophon({ initial }: { initial: Envelope<TerminalData> }) {
           >
             <Ed x="systems ledger" p="is it working?" />
           </a>
+          {/* ACR answers as an Aomi app, and until now nothing on this site
+              said so or linked to it. It belongs in this row rather than in a
+              panel or a floating widget: the footer renders on every route, so
+              one chip here is one quiet entry point for the whole paper, which
+              is the whole budget an unengaged reader should have to read past.
+              rel includes noreferrer because this leaves for a third party. */}
+          <a
+            className="chip colophon-act"
+            href="https://chat.aomi.dev/?app=acr-compute-rate&application_id=2938642&lock_app=1"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="ask this desk a question in Aomi chat"
+          >
+            <Ed x="ask in aomi" p="ask it a question" />
+          </a>
         </div>
       </div>
 

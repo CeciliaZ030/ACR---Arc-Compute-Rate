@@ -47,8 +47,8 @@ export function TapeTeaser() {
   const allSandbox = cells.every((c) => c.kind !== "count" || c.allSandbox);
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         {HEAD}
         {/* Three, and the order is the argument: drive one decision, read what
             buying cost, then see the agent deciding a business's whole book of

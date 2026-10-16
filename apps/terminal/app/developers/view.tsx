@@ -367,7 +367,9 @@ export function DevelopersView({
           no USDC, no Gateway wallet, no plain edition for the glosses. */}
       <section className="section anchor-target" id="register">
         <div className="section-head">
-          <Ed x="The contracts" p="The public record" className="label" />
+          <h2 className="label">
+            <Ed x="The contracts" p="The public record" />
+          </h2>
           <a className="section-link" href="/ops">
             <Ed x="systems ledger →" p="is it working? →" />
           </a>
@@ -383,13 +385,15 @@ export function DevelopersView({
         <WalletPanel explorer={explorer} />
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          {revenueRead ? (
-            <Ed x="Machine revenue · live" p="What machines have paid us · live" className="label" />
-          ) : (
-            <Ed x="Machine revenue · not read" p="What machines have paid us · not read" className="label" />
-          )}
+      <section>
+        <div className="block-head">
+          <h3 className="label">
+            {revenueRead ? (
+              <Ed x="Machine revenue · live" p="What machines have paid us · live" />
+            ) : (
+              <Ed x="Machine revenue · not read" p="What machines have paid us · not read" />
+            )}
+          </h3>
         </div>
         <div className="lab-counters">
           <div>
@@ -456,7 +460,9 @@ export function DevelopersView({
 
       <section className="section">
         <div className="section-head">
-          <Ed x="Endpoints" p="What you can ask" className="label" />
+          <h2 className="label">
+            <Ed x="Endpoints" p="What you can ask" />
+          </h2>
           {/* The docs of the host this page READS FROM, for the same reason the
               snippets below name it: NEXT_PUBLIC_ACR_API is the configured
               override, and when it is refused on chain identity this link sent

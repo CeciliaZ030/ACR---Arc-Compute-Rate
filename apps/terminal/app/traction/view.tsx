@@ -378,11 +378,11 @@ function Numbers({ t }: { t: TractionPayload }) {
           NO PERCENTAGES. Each of these is N of M, because every one of them has
           a denominator that can be zero, and a rate over zero prints 100% or
           0% with equal confidence and equal meaninglessness. */}
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <section>
+        <div className="block-head">
+          <h3>
             <Ed x="Without a person in the room" p="What it did on its own" />
-          </h2>
+          </h3>
         </div>
         <p className="standfirst">
           <Ed
@@ -545,23 +545,26 @@ export function TractionView() {
 
   return (
     <>
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <div className="page-head">
+        <div className="page-head-top">
+          <h1>
             <Ed x="Traction" p="Who is using it" />
-          </h2>
+          </h1>
           {traction?.fetchedAt && nowS > 0 ? (
             <span className="label">
               {ageWords(Math.max(0, nowS - Math.round(traction.fetchedAt / 1000)))}
             </span>
           ) : null}
         </div>
-        <p className="standfirst standfirst-block">
+        <p className="standfirst">
           <Ed
             x="Every figure here is counted from the registry and the decision log when you load the page. Nothing on it is maintained by hand, so no number can drift from the rows beside it."
             p="Every number here is counted fresh from the records, so none of them can drift."
           />
         </p>
+      </div>
+
+      <section className="section">
         {/* THIS PAGE RENDERED NOTHING AT ALL, and that is a different symptom
             from /spend's for the same cause. `app/api/operator/traction/route.ts`
             answered 200 with `data: null` when the press was unreachable, so

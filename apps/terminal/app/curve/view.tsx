@@ -142,8 +142,8 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
           Reads book → mark → tape: the desk states the position, the chart
           shows how it got there, the tape scrolls the fills one by one. */}
       {primaryDesk ? (
-        <section className="section">
-          <div className="section-head">
+        <section>
+          <div className="block-head">
             <span className="label">
               <Ed
                 x={<>Fills against the oracle · {primaryDesk.index_id}</>}
@@ -176,8 +176,8 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
         </section>
       ) : null}
 
-      <section className="section">
-        <div className="section-head">
+      <section>
+        <div className="block-head">
           <span className="label">
             <Ed x="The tape · live on-chain fills" p="The trade feed · real trades on the blockchain" />
           </span>
@@ -250,8 +250,8 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
         </div>
       </details>
 
-      <section className="section">
-        <div className="section-head">
+      <section>
+        <div className="block-head">
           <span className="label">Quotes</span>
         </div>
         <div className="table-scroll">
