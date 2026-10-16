@@ -385,24 +385,25 @@ export function TapeView() {
 
   return (
     <>
-      <p className="label">
-        <Ed x="Machine transaction-cost analysis" p="Did this robot pay a fair price" />
-      </p>
-      <h1 className="display" style={{ fontSize: 42, marginTop: 6 }}>
-        <Ed x="The tape" p="The receipts" />
-      </h1>
-      <Ed
-        as="p"
-        className="standfirst"
-        style={{ marginTop: 10 }}
-        x="Every settlement an agent made, priced against the benchmark it could have seen at that moment."
-        p="What a robot paid for computing, next to the fair rate at the time it bought."
-      />
+      <div className="page-head">
+        <p className="label">
+          <Ed x="Machine transaction-cost analysis" p="Did this robot pay a fair price" />
+        </p>
+        <h1 className="display">
+          <Ed x="The tape" p="The receipts" />
+        </h1>
+        <Ed
+          as="p"
+          className="standfirst"
+          x="Every settlement an agent made, priced against the benchmark it could have seen at that moment."
+          p="What a robot paid for computing, next to the fair rate at the time it bought."
+        />
+      </div>
 
       {/* ── is this live? the claim everything else rests on ─────────────── */}
       <section className="section">
         <div className="section-head">
-          <h2 className="display" style={{ fontSize: 22 }}>
+          <h2 className="display">
             <Ed x="Freshness" p="Is this up to date" />
           </h2>
           <span className="label">
@@ -476,7 +477,7 @@ export function TapeView() {
       {/* ── what this agent paid ─────────────────────────────────────────── */}
       <section className="section anchor-target" id="cost">
         <div className="section-head">
-          <h2 className="display" style={{ fontSize: 22 }}>
+          <h2 className="display">
             <Ed x="What it cost" p="What the robot paid" />
           </h2>
           <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -680,7 +681,7 @@ export function TapeView() {
       {/* ── the sellers ──────────────────────────────────────────────────── */}
       <section className="section anchor-target" id="sellers">
         <div className="section-head">
-          <h2 className="display" style={{ fontSize: 22 }}>
+          <h2 className="display">
             <Ed x="Who sold it" p="The sellers" />
           </h2>
           <span className="label">
@@ -797,7 +798,7 @@ export function TapeView() {
       {/* ── the control group ────────────────────────────────────────────── */}
       <section className="section anchor-target" id="control">
         <div className="section-head">
-          <h2 className="display" style={{ fontSize: 22 }}>
+          <h2 className="display">
             <Ed x="The control" p="The sanity check" />
           </h2>
         </div>

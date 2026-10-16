@@ -275,18 +275,20 @@ a {
 }
 .label {
   font-family: var(--eyebrow);
-  font-size: 11px;
+  font-size: var(--t-2);
   font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--tr-6);
   color: var(--ether-45);
 }
 .eyebrow {
   font-family: var(--eyebrow);
-  font-size: 11.5px;
+  /* This was 11.5px / 0.18em against .label's 11px / 0.16em: one role wearing
+     two values that differ by half a pixel. It is a colour variant now. */
+  font-size: var(--t-2);
   font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: var(--tr-6);
   color: var(--sky);
 }
 .eyebrow .ref {
@@ -295,21 +297,48 @@ a {
 .display {
   font-family: var(--display);
   font-weight: 300;
-  letter-spacing: -0.015em;
+  letter-spacing: var(--tr-2);
 }
 h1,
 h2,
-h3 {
+h3,
+h4 {
   font-family: var(--display);
   font-weight: 300;
-  letter-spacing: -0.015em;
+  letter-spacing: var(--tr-2);
   color: var(--ether);
+  /* Headings carried NO size and NO leading in this file. So every bare <h2>
+     rendered at the UA default 1.5em, every <h3> at 1.17em and every <h1> at
+     2em, which is the real reason 80 blocks reached for `.section-head`: the
+     only heading TREATMENT the sheet owned was the loudest one, so anything
+     that wanted to read as a heading had to take a full-width rule and a gold
+     bar with it. Sizes come off the scale now.
+
+     The UA's em-based margins go with them. A head wrapper owns its own
+     spacing, and a standalone heading keeps one small step beneath it. */
+  margin: 0 0 var(--s-3);
+}
+h1 {
+  font-size: var(--t-8);
+  line-height: var(--lh-2);
+}
+h2 {
+  font-size: var(--t-7);
+  line-height: var(--lh-3);
+}
+h3 {
+  font-size: var(--t-5);
+  line-height: var(--lh-3);
+}
+h4 {
+  font-size: var(--t-4);
+  line-height: var(--lh-3);
 }
 .standfirst {
   font-family: var(--body);
-  font-size: 19px;
+  font-size: var(--t-6);
   font-weight: 400;
-  line-height: 1.55;
+  line-height: var(--lh-4);
   color: var(--ether-70);
   max-width: 64ch;
 }
@@ -655,16 +684,64 @@ a.chip:hover,
 .anchor-target {
   scroll-margin-top: 120px;
 }
-.section-head {
-  border-top: 1px solid var(--hairline);
-  padding-top: 12px;
-  margin-bottom: 20px;
+/* Four levels of head, and the hairline plus the gold bar belong to exactly
+   ONE of them. The bar was firing 80 times across the app, eleven of them on
+   /spend, and a chapter mark spent eleven times on one page marks nothing.
+
+   A block earns `.section-head` only if it is a named top-level part of its
+   page: it would appear in a table of contents for that page, or it is a
+   deep-link anchor target. Four per page is the ceiling. Anything subordinate
+   takes `.block-head`; a title inside a panel takes `.card-head`; and the
+   page's own title takes `.page-head`, which is a stack rather than a row.
+
+   The three row-shaped levels share one declaration block, so they cannot
+   drift out of alignment: every head on every page starts on the same left
+   edge and puts its right-hand slot on the same baseline. */
+.section-head,
+.block-head,
+.card-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--s-5);
   flex-wrap: wrap;
   position: relative;
+}
+.section-head h2,
+.section-head h3,
+.block-head h3,
+.card-head h4,
+.page-head h1 {
+  margin: 0;
+}
+.section-head {
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+.block-head {
+  margin-top: var(--s-7);
+  margin-bottom: var(--s-4);
+}
+.card-head {
+  margin-bottom: var(--s-3);
+}
+.page-head {
+  margin-top: var(--s-6);
+}
+/* a page title with a status slot beside it */
+.page-head-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+.page-head > .label {
+  margin: 0 0 var(--s-2);
+}
+.page-head .standfirst {
+  margin-top: var(--s-4);
 }
 .section-head::before {
   content: "";
@@ -677,9 +754,9 @@ a.chip:hover,
 }
 .section-link {
   font-family: var(--eyebrow);
-  font-size: 11px;
+  font-size: var(--t-2);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--tr-6);
   color: var(--gold);
 }
 .section-link:hover {
@@ -1506,8 +1583,12 @@ table.sheet.sheet-checks td:nth-child(3) {
   .nav-links a {
     flex: 0 0 auto;
   }
-  .nav-right {
-    margin-left: 8px;
+  /* `.nav .nav-right`, not `.nav-right`: a media query adds no specificity, so
+     the base rule ~1350 lines below this one was winning and every
+     declaration here had never applied on a phone. Raising specificity is what
+     makes source order stop mattering. Do not simplify this back. */
+  .nav .nav-right {
+    margin-left: var(--s-3);
     flex: 0 0 auto;
     flex-wrap: nowrap;
   }
