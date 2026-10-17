@@ -415,9 +415,6 @@ h4 {
 .green {
   color: var(--finality);
 }
-.sky-text {
-  color: var(--sky);
-}
 .muted {
   color: var(--ether-45);
 }
@@ -429,7 +426,6 @@ h4 {
   margin: 0;
 }
 /* the arc-of-light motif at hairline scale — replaces the old double rule */
-.double-rule,
 .horizon-rule {
   height: 2px;
   border: 0;
@@ -2228,12 +2224,6 @@ details.disclosure summary .disclosure-count {
 }
 
 /* sybil ring */
-.sybil-ring {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3) var(--s-5);
-  align-items: center;
-}
 
 /* ---------- charts ---------- */
 .chart {
