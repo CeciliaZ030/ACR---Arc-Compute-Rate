@@ -51,9 +51,14 @@ export function LoopView({ initial }: { initial: Envelope<TerminalData> }) {
       <ScreenLab wake={wake} />
       <PersonNotWallet data={data} wake={wake} />
 
-      <section className="section">
-        <div className="section-head">
-          <Ed x="Read on" p="Read on" className="label" />
+      {/* A row of pointers off the page is not a fifth chapter beside the four
+          instruments above it. Block, not section: /loop was the last route
+          over the four-chapter cap. */}
+      <section>
+        <div className="block-head">
+          <h3 className="label">
+            <Ed x="Read on" p="Read on" />
+          </h3>
         </div>
         <div className="btn-row">
           <Link href="/tape" className="chip"><Ed x="Read the tape →" p="See the receipts →" /></Link>

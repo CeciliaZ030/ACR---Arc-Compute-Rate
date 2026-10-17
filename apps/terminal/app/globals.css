@@ -173,6 +173,10 @@
   --r-xl: 16px;
   --r-pill: 999px;
 
+  /* the glass blur. Stated in four places before it had a name. NOT the
+     masthead's: that one is deliberately louder, see .masthead-shell.scrolled. */
+  --blur-glass: 12px;
+
   /* ---- compat aliases: the legacy fleet reskins itself ---- */
   --paper: var(--genesis);
   --paper-2: var(--ledger);
@@ -279,22 +283,75 @@ a {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
 }
-.label {
+/* ---- the eyebrow, stated once ----
+   Every uppercase-mono label in the paper used to restate these three lines.
+   They were restated 22 times, which is most of the reason this sheet had 24
+   font sizes and 14 trackings: each site re-picked its own while it was there.
+
+   SIZE AND TRACKING STAY AT THE CALL SITES, deliberately. 17 of the 22
+   genuinely differ (--t-1 through --t-3, and --tr-5 against --tr-6) and
+   collapsing those would move pixels. Only the five that were already
+   byte-identical to .label join the size rule below.
+
+   `font-weight: 400` is load-bearing, not decoration: remove a selector from
+   this list and `table.sheet th`, `.term-pop b` and `.companion-entry b` go
+   bold on the UA default.
+
+   NOT in this list, on purpose: `.addr-chip .addr-copy`, `.footnotes li::before`,
+   `.mini-btn` and `.primer-beat::before` want the eyebrow FACE without the
+   TREATMENT. Two of them render counter digits, which 0.16em would space out.
+   `.desk-steps-cap` is not an eyebrow at all: it is mono and lowercase.
+
+   And no `display` here, ever: `.label` and `.eyebrow` both reach
+   `<Ed className>`, which forwards to both edition branches, so a single-class
+   `display` declared after `.ed-p` would unhide the plain edition app-wide. */
+.label,
+.eyebrow,
+.nav a,
+.section-link,
+.home-hero-scroll,
+details.disclosure summary,
+.chain-switch,
+.chip,
+.chain-strip,
+.dateline,
+.rb-cost,
+table.sheet th,
+.btn,
+.segmented button,
+.ops-recheck,
+.ops-cap,
+.specimen .copy-btn,
+.gate-badge,
+.register-head,
+.awaiting,
+.skel-caption,
+.term-pop b,
+.companion-entry b {
   font-family: var(--eyebrow);
-  font-size: var(--t-2);
   font-weight: 400;
   text-transform: uppercase;
+}
+
+/* The five that were already at .label's exact --t-2 / --tr-6 and differ from
+   it in colour alone. Each still sets its own colour at its own site. */
+.label,
+.eyebrow,
+.nav a,
+.section-link,
+.home-hero-scroll,
+details.disclosure summary,
+.chain-switch {
+  font-size: var(--t-2);
   letter-spacing: var(--tr-6);
+}
+
+.label {
   color: var(--ether-45);
 }
 .eyebrow {
-  font-family: var(--eyebrow);
   /* This was 11.5px / 0.18em against .label's 11px / 0.16em: one role wearing
      two values that differ by half a pixel. It is a colour variant now. */
-  font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: var(--tr-6);
   color: var(--sky);
 }
 .eyebrow .ref {
@@ -382,8 +439,8 @@ h4 {
 /* ---------- glass panel ---------- */
 .panel {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-brd);
   border-radius: var(--r-lg);
   box-shadow: var(--glow-validator);
@@ -438,10 +495,7 @@ h4 {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-70);
   border: 1px solid var(--hairline-strong);
@@ -508,20 +562,41 @@ a.chip:hover,
   box-shadow: none;
   border: 1px dashed var(--ether-45);
 }
-.addr-chip .addr-copy {
-  font-family: var(--eyebrow);
-  font-size: var(--t-1);
+/* The quiet button: a hairline box that brightens on hover. Four of these
+   shipped with byte-identical faces AND four byte-identical :hover rules.
+   Size, padding, position and margin stay at each call site, because those are
+   the only things that genuinely differ.
+
+   Declared here, above all four, so every site's own declarations still win on
+   source order: that is what lets `.specimen .copy-btn` keep its opaque
+   background while the other three stay transparent.
+
+   NOT `.lab-presets button`: it is mono rather than eyebrow, it is --ether-70,
+   and it has never had a hover. Adding it here would give it one. */
+.addr-chip .addr-copy,
+.ops-recheck,
+.specimen .copy-btn,
+.mini-btn {
   color: var(--ether-45);
   background: transparent;
   border: 1px solid var(--hairline);
   border-radius: var(--r-sm);
-  padding: 1px var(--s-2);
   cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
+  transition:
+    color var(--dur-1) var(--ease-expo),
+    border-color var(--dur-1) var(--ease-expo);
 }
-.addr-chip .addr-copy:hover {
+.addr-chip .addr-copy:hover,
+.ops-recheck:hover,
+.specimen .copy-btn:hover,
+.mini-btn:hover {
   color: var(--ether);
   border-color: var(--hairline-strong);
+}
+.addr-chip .addr-copy {
+  font-family: var(--eyebrow);
+  font-size: var(--t-1);
+  padding: 1px var(--s-2);
 }
 .addr-chip a:hover {
   color: var(--sky);
@@ -555,6 +630,8 @@ a.chip:hover,
 }
 .masthead-shell.scrolled {
   background: rgba(0, 11, 36, 0.72);
+  /* 14, not --blur-glass's 12: the masthead sits over moving content when
+     scrolled and needs to separate harder than a panel does. Deliberate. */
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom-color: var(--glass-brd);
@@ -600,11 +677,6 @@ a.chip:hover,
   display: contents;
 }
 .nav a {
-  font-family: var(--eyebrow);
-  font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: var(--tr-6);
   color: var(--ether-70);
   padding-bottom: var(--s-1);
   transition: color var(--dur-1) var(--ease-expo);
@@ -620,28 +692,9 @@ a.chip:hover,
   margin-left: auto;
 }
 
-/* live pulse (legacy) + status pill */
-.pulse {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-3);
-  font-family: var(--eyebrow);
-  font-size: var(--t-2);
-  text-transform: uppercase;
-  letter-spacing: var(--tr-5);
-}
-.pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
-  animation: breathe 2s ease-in-out infinite;
-}
-.pulse-dot.off {
-  background: transparent;
-  border: 1px solid var(--gold);
-  animation: none;
-}
+/* `breathe` outlived its first callers. `.pulse`, `.pulse-dot` and
+   `.pulse-dot.off` were deleted once no .tsx named any of them; the live status
+   pill is `.nav-pulse`. The keyframes stay: `.chip .dot.breathe` reads them. */
 @keyframes breathe {
   0%,
   100% {
@@ -662,10 +715,7 @@ a.chip:hover,
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2) var(--s-3);
-  font-family: var(--eyebrow);
   font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-45);
 }
@@ -760,10 +810,6 @@ a.chip:hover,
   background: var(--horizon-line);
 }
 .section-link {
-  font-family: var(--eyebrow);
-  font-size: var(--t-2);
-  text-transform: uppercase;
-  letter-spacing: var(--tr-6);
   color: var(--gold);
 }
 .section-link:hover {
@@ -860,7 +906,7 @@ a.chip:hover,
 .home-hero-rate {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: clamp(64px, 13vw, 184px);
+  font-size: var(--f-4);
   line-height: var(--lh-1);
   letter-spacing: var(--tr-1);
   color: var(--sand);
@@ -913,10 +959,6 @@ a.chip:hover,
   flex-wrap: wrap;
 }
 .home-hero-scroll {
-  font-family: var(--eyebrow);
-  font-size: var(--t-2);
-  text-transform: uppercase;
-  letter-spacing: var(--tr-6);
   color: var(--ether-45);
   animation: hero-scroll-cue 2.4s ease-in-out infinite;
 }
@@ -938,8 +980,8 @@ a.chip:hover,
   display: block;
   padding: var(--s-5) var(--s-5) var(--s-5);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-brd);
   border-radius: var(--r-lg);
   transition: border-color var(--dur-2) var(--ease-expo), transform var(--dur-2) var(--ease-expo),
@@ -996,10 +1038,7 @@ a.chip:hover,
   margin-top: var(--s-2);
 }
 .rb-cost {
-  font-family: var(--eyebrow);
   font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--clay);
   margin-top: var(--s-2);
@@ -1014,14 +1053,6 @@ a.chip:hover,
   margin-top: var(--s-4);
   flex-wrap: wrap;
 }
-.settled-mark {
-  font-family: var(--eyebrow);
-  font-size: var(--t-1);
-  letter-spacing: var(--tr-4);
-  text-transform: uppercase;
-  color: var(--finality);
-}
-
 /* ---------- standfirst block ---------- */
 .standfirst-block {
   margin-top: var(--s-8);
@@ -1201,10 +1232,7 @@ table.sheet {
   font-size: var(--t-4);
 }
 table.sheet th {
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-45);
   text-align: right;
@@ -1245,10 +1273,7 @@ table.sheet .row-link:focus-visible {
 
 /* ---------- buttons & controls ---------- */
 .btn {
-  font-family: var(--eyebrow);
   font-size: var(--t-3);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--sand);
   background: transparent;
@@ -1346,10 +1371,7 @@ select {
   overflow: hidden;
 }
 .segmented button {
-  font-family: var(--eyebrow);
   font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-70);
   background: transparent;
@@ -1469,21 +1491,9 @@ table.sheet.sheet-checks td:nth-child(3) {
 }
 .ops-recheck {
   margin-left: var(--s-5);
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
-  color: var(--ether-45);
-  background: transparent;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
   padding: var(--s-1) var(--s-3);
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
-}
-.ops-recheck:hover {
-  color: var(--ether);
-  border-color: var(--hairline-strong);
 }
 /* The section head's right side carries a standing chip AND a count. */
 .ops-head-right {
@@ -1498,9 +1508,7 @@ table.sheet.sheet-checks td:nth-child(3) {
   gap: var(--s-2);
 }
 .ops-cap {
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-45);
   white-space: nowrap;
@@ -1649,11 +1657,6 @@ details.disclosure {
   border-top: 1px solid var(--hairline);
 }
 details.disclosure summary {
-  font-family: var(--eyebrow);
-  font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: var(--tr-6);
   color: var(--ether-70);
   padding: var(--s-4) 0;
   cursor: pointer;
@@ -1743,29 +1746,17 @@ details.disclosure summary .disclosure-count {
   position: absolute;
   top: 10px;
   right: 10px;
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
-  color: var(--ether-45);
+  /* the one face difference that is real: this sits ON a code specimen, so it
+     needs to be opaque. Declared after the shared rule, so it wins. */
   background: rgba(0, 11, 36, 0.7);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
   padding: var(--s-2) var(--s-3);
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
-}
-.specimen .copy-btn:hover {
-  color: var(--ether);
-  border-color: var(--hairline-strong);
 }
 
 /* ---------- api console ("the wire") ---------- */
 .gate-badge {
-  font-family: var(--eyebrow);
   font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
 }
 .console {
@@ -1800,17 +1791,7 @@ details.disclosure summary .disclosure-count {
 .mini-btn {
   font-family: var(--eyebrow);
   font-size: var(--t-2);
-  color: var(--ether-45);
-  background: transparent;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
   padding: var(--s-1) var(--s-3);
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
-}
-.mini-btn:hover {
-  color: var(--ether);
-  border-color: var(--hairline-strong);
 }
 .console-actions {
   display: flex;
@@ -1871,8 +1852,8 @@ details.disclosure summary .disclosure-count {
   align-items: center;
   gap: var(--s-4);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid rgba(79, 179, 169, 0.4);
   border-radius: var(--r-lg);
   box-shadow: 0 8px 60px rgba(79, 179, 169, 0.22);
@@ -2268,9 +2249,7 @@ a.colophon-act:hover::after {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2) var(--s-3);
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-45);
   padding-bottom: var(--s-3);
@@ -2329,9 +2308,7 @@ a.colophon-act:hover::after {
 
 /* ---------- states ---------- */
 .awaiting {
-  font-family: var(--eyebrow);
   font-size: var(--t-3);
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--ether-45);
   padding: var(--s-8) 0;
@@ -2446,10 +2423,8 @@ a.colophon-act:hover::after {
   margin: var(--s-3) 0;
 }
 .skel-caption {
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
   letter-spacing: var(--tr-6);
-  text-transform: uppercase;
   color: var(--ink-45);
   margin: var(--s-5) 0 var(--s-3);
 }
@@ -2761,7 +2736,6 @@ a.colophon-act:hover::after {
   .home-hero-sky .hh-sun,
   .home-hero-scroll,
   .home-hero-inner,
-  .pulse-dot,
   .flow-node.lit,
   .digit-in,
   .tick-flash,
@@ -2906,10 +2880,6 @@ html[data-edition-turn] .plain-only {
   border: 0;
   background: transparent;
   padding: var(--s-3) var(--s-2);
-  font-family: var(--eyebrow);
-  font-size: var(--t-2);
-  letter-spacing: var(--tr-6);
-  text-transform: uppercase;
   color: var(--ether-45);
   cursor: pointer;
   transition: color var(--dur-1) var(--ease-quart);
@@ -3005,8 +2975,8 @@ html[data-edition-turn] .plain-only {
   max-width: min(320px, 78vw);
   padding: var(--s-3) var(--s-4);
   background: rgba(11, 34, 62, 0.94);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-brd);
   border-radius: var(--r-md);
   box-shadow: var(--glow-validator);
@@ -3031,10 +3001,7 @@ html[data-edition-turn] .plain-only {
 }
 .term-pop b {
   display: block;
-  font-family: var(--eyebrow);
   font-size: var(--t-1);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--sky);
   margin-bottom: var(--s-2);
@@ -3101,10 +3068,7 @@ html[data-edition-turn] .plain-only {
 }
 .companion-entry b {
   display: block;
-  font-family: var(--eyebrow);
   font-size: var(--t-2);
-  font-weight: 400;
-  text-transform: uppercase;
   letter-spacing: var(--tr-5);
   color: var(--sand);
   margin-bottom: var(--s-2);
@@ -3321,15 +3285,6 @@ table.sheet td.wrap-left {
   row-gap: var(--s-2);
 }
 
-/* The skeletons' inter-block gap, from the same token the real page uses, so
-   the two cannot drift apart again.
-
-   It has to be declared down here. `.skel-line` and `.skel-row` set their
-   spacing with the SHORTHAND `margin: 6px 0` / `8px 0`, further up the file
-   than `.section` — so `className="section"` on a skeleton block loses to them
-   at equal specificity and silently does nothing, which is how this fix was
-   first written and would have shipped looking correct. Only source order
-   settles it. Do not tidy this upwards. */
 /* A LABEL LINE UNDER A FIGURE IS PROSE, and `table.sheet td` is nowrap.
    A long one — a benchmark's refusal, a screening service's reason — widened
    its whole column instead of wrapping: "one seller, so no benchmark" grew the
@@ -3345,6 +3300,15 @@ table.sheet td.mono .label {
   margin-left: auto;
 }
 
+/* The skeletons' inter-block gap, from the same token the real page uses, so
+   the two cannot drift apart again.
+
+   It has to be declared down here. `.skel-line` and `.skel-row` set their
+   spacing with the SHORTHAND `margin: 6px 0` / `8px 0`, further up the file
+   than `.section` — so `className="section"` on a skeleton block loses to them
+   at equal specificity and silently does nothing, which is how this fix was
+   first written and would have shipped looking correct. Only source order
+   settles it. Do not tidy this upwards. */
 .skel-gap {
   margin-top: var(--section-gap);
 }
