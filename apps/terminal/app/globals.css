@@ -1806,6 +1806,16 @@ table.sheet.sheet-checks td:nth-child(3) {
   .masthead .nav {
     flex-wrap: wrap;
     gap: 0 10px;
+    /* Every control line ends at the same edge. `margin-left: auto` below
+       right-aligns the FIRST control, which is the whole group only while the
+       group shares one line. In the plain edition it does not: "REAL NETWORK |
+       PRACTICE NETWORK" measures 276px against the 164px of "MAINNET |
+       TESTNET", so at 375px the 124px edition toggle wraps to a line of its
+       own — and that line, having no first-child rule, sat hard LEFT under a
+       right-aligned row. Justifying the container fixes every line at once.
+       Row 1 cannot be affected: `.nav-links` is `flex: 1 1 0` and eats the
+       free space, so that line has none to distribute. */
+    justify-content: flex-end;
   }
   /* `.nav .nav-right`, not `.nav-right`: the base `.nav-right` rule sits
      ~1,400 lines BELOW this block, and a media query adds no specificity, so
