@@ -1562,6 +1562,34 @@ table.sheet.sheet-checks td:nth-child(3) {
   margin: var(--s-3) 0 0;
 }
 @media (max-width: 640px) {
+  /* THE PHONE GUTTER. `.container` had no media query at all, so a 375px
+     screen got a 327px column — the measurement this file blames twice for
+     clipping, once for a BUY figure 332px wide and once for a 400px block in a
+     283px panel. 16px each side gives 343.
+
+     LONGHAND, and this is not style. `main` is `className="container page"`,
+     and `.page` sets `padding-bottom` AFTER `.container`'s shorthand at equal
+     specificity. A `padding: 0 var(--s-5)` here would win on source order and
+     zero the bottom padding of every page in the app on phones. The footer
+     already learned this lesson the hard way: see the comment on `.colophon`,
+     whose shorthand had been silently eating the same inset.
+
+     `.colophon` needs its own entry at (0,2,0) for that exact reason — its
+     shorthand is declared later, so it would keep 24px while the column above
+     it moved to 16, which is the misalignment that comment was written to fix. */
+  .container {
+    padding-left: var(--s-5);
+    padding-right: var(--s-5);
+  }
+  .container.colophon {
+    padding: var(--s-6) var(--s-5) var(--s-8);
+  }
+  /* the panel's own inset sits inside the container's: both at 16 gives a
+     311px panel on a 375px screen instead of 283. */
+  .panel-pad {
+    padding: var(--s-5);
+  }
+
   .desk-steps li + li::before {
     width: 8px;
     margin-right: var(--s-2);
@@ -1573,7 +1601,12 @@ table.sheet.sheet-checks td:nth-child(3) {
      ate ~200px — near a third of an iPhone SE, on every page, forever. Scroll
      the links instead and keep the two CONTROLS pinned: the edition toggle and
      the status pill are things a reader uses, not decoration to push offscreen. */
-  .nav {
+  /* `.masthead .nav`, not `.nav`. A media query adds no specificity, so the
+     tablet rule below — which also matches a phone — was winning on source
+     order and the phone nav ran a 12px gap, giving back 12px of the 327px the
+     comment above is about. Second instance of this lesson in this block; see
+     `.nav .nav-right` just below. Do not simplify either back. */
+  .masthead .nav {
     flex-wrap: nowrap;
     gap: 0;
   }
@@ -1586,9 +1619,12 @@ table.sheet.sheet-checks td:nth-child(3) {
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    /* bleed to the container edge so a cut-off link reads as "there is more" */
-    margin-left: calc(-1 * var(--s-6));
-    padding: 0 var(--s-3) 0 var(--s-6);
+    /* bleed to the container edge so a cut-off link reads as "there is more".
+       --s-5, matching the phone gutter set at the top of this block: these two
+       are the same measurement written twice, and if they drift the strip
+       bleeds past the column edge. */
+    margin-left: calc(-1 * var(--s-5));
+    padding: 0 var(--s-3) 0 var(--s-5);
     -webkit-mask-image: linear-gradient(90deg, #000 0 88%, transparent 100%);
     mask-image: linear-gradient(90deg, #000 0 88%, transparent 100%);
   }
@@ -2325,6 +2361,32 @@ a.colophon-act:hover::after {
 
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
+  /* Moved up from a 760px block that held these four rules and nothing else.
+     760 and 900 were both "tablet", so the home page reflowed twice on the way
+     down: .hero at 760, then .facts and .defense at 900. One step now. Each of
+     these reflows INTO more space per cell, so none of them can clip. */
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  /* Name and address hold the line; the gloss drops beneath both. Placed
+     explicitly, because auto-flow puts a 1/-1 span on its own row and then
+     sends the address, which follows it in source order, to a THIRD row. */
+  .register-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--s-1);
+  }
+  .register-name {
+    grid-area: 1 / 1;
+  }
+  .register-addr {
+    grid-area: 1 / 2;
+  }
+  .register-gloss {
+    grid-area: 2 / 1 / 3 / -1;
+  }
+  .nav {
+    gap: var(--s-4);
+  }
   .lab {
     grid-template-columns: 1fr;
     gap: var(--s-7);
@@ -2351,35 +2413,6 @@ a.colophon-act:hover::after {
     justify-content: flex-start;
   }
 }
-@media (max-width: 760px) {
-  .hero {
-    grid-template-columns: 1fr;
-  }
-  /* Name and address hold the line; the gloss drops beneath both. Placed
-     explicitly, because auto-flow puts a 1/-1 span on its own row and then
-     sends the address, which follows it in source order, to a THIRD row. */
-  .register-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: var(--s-1);
-  }
-  .register-name {
-    grid-area: 1 / 1;
-  }
-  .register-addr {
-    grid-area: 1 / 2;
-  }
-  .register-gloss {
-    grid-area: 2 / 1 / 3 / -1;
-  }
-  .nav {
-    gap: var(--s-4);
-  }
-  .toast {
-    left: 24px;
-    right: 24px;
-  }
-}
-
 /* ---------- skeletons: "setting type…" ----------
    The streaming placeholder vocabulary. Quiet ink-wash bars with a slow gold
    sheen — the page is being typeset, not broken. Uses existing tokens only. */
@@ -3089,6 +3122,14 @@ html[data-edition-turn] .plain-only {
   }
 }
 @media (max-width: 640px) {
+  /* Down here, not in the 640 block up at the masthead: `.toast`'s base rule
+     is between the two, and a (0,1,0) `.toast` declared before it would lose
+     `right` on source order. A stretched toast is a banner, so this is a phone
+     rule rather than the tablet rule it used to be. */
+  .toast {
+    left: var(--s-6);
+    right: var(--s-6);
+  }
   .primer-rail {
     grid-template-columns: 1fr;
   }

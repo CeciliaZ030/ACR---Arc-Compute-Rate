@@ -185,8 +185,16 @@ function collect() {
   ).length;
   const subHeads = main.querySelectorAll(".block-head, .card-head").length;
 
-  // Overflow, excusing anything inside a deliberate horizontal scroller (.table-scroll).
-  const vw = window.innerWidth;
+  /* Overflow, excusing anything inside a deliberate horizontal scroller.
+
+     clientWidth, NOT window.innerWidth. Under Chrome's mobile emulation
+     innerWidth is the VISUAL viewport, which includes the page's scale: at a
+     375px device it reported 446 and, on a longer page, 524. Measuring
+     overflow against that number silently excuses up to 150px of it, which is
+     the entire bug class this metric exists to catch, and it made every phone
+     row of this census read clean. clientWidth is the layout viewport and is
+     375 in every configuration. */
+  const vw = document.documentElement.clientWidth;
   const inScroller = (el) => {
     for (let p = el; p && p !== document.body; p = p.parentElement) {
       const o = getComputedStyle(p).overflowX;
