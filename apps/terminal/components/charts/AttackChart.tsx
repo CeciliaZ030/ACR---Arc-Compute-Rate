@@ -48,7 +48,12 @@ export function AttackChart({
   const atkX1 = atkHours.length ? x(Math.max(...atkHours) + 1) : null;
 
   return (
-    <div className={faded ? "stage-faded" : undefined}>
+    /* The fade sits on the CHART, not on this wrapper. A container opacity
+       composites its whole subtree, so a child cannot opt out of it, and with
+       it here the legend below read at 2.07:1 — the archived exercise was
+       labelled in ink nobody could follow. The graphics are the thing that
+       should recede; the words naming them are not. */
+    <div>
       <div className="reading" aria-live="polite">
         <span className="vermilion">
           <i className="key-swatch" />
@@ -67,7 +72,7 @@ export function AttackChart({
       </div>
       <svg
         ref={svgRef}
-        className="chart"
+        className={faded ? "chart stage-faded" : "chart"}
         viewBox={`0 0 ${W} ${H}`}
         tabIndex={0}
         role="img"

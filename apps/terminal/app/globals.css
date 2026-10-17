@@ -415,9 +415,6 @@ h4 {
 .green {
   color: var(--finality);
 }
-.sky-text {
-  color: var(--sky);
-}
 .muted {
   color: var(--ether-45);
 }
@@ -429,7 +426,6 @@ h4 {
   margin: 0;
 }
 /* the arc-of-light motif at hairline scale — replaces the old double rule */
-.double-rule,
 .horizon-rule {
   height: 2px;
   border: 0;
@@ -499,6 +495,14 @@ h4 {
   font-size: var(--t-1);
   letter-spacing: var(--tr-5);
   color: var(--ether-70);
+  /* A <span> has no default background; a <button> has `buttonface`, which
+     measures rgb(107,107,107) on this page. 35 of the chips in this paper ARE
+     buttons, so a third of them rendered as mid-grey pills on navy — and the
+     worst contrast reading on the site, "Prove as a demo human" at 2.44:1, was
+     gold ink on that grey rather than on the page. No chip variant sets one
+     either, so this single line is the whole fix. Do not delete it on the
+     grounds that spans do not need it. */
+  background: transparent;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
   padding: var(--s-2) var(--s-3);
@@ -598,6 +602,11 @@ a.chip:hover,
   font-family: var(--eyebrow);
   font-size: var(--t-1);
   padding: 1px var(--s-2);
+  /* 19x22 was under the 24x24 pointer target on BOTH axes — "cp" is a narrow
+     label, so height alone was not enough. */
+  min-height: 24px;
+  min-width: 24px;
+  justify-content: center;
 }
 .addr-chip a:hover {
   color: var(--sky);
@@ -679,7 +688,11 @@ a.chip:hover,
 }
 .nav a {
   color: var(--ether-70);
-  padding-bottom: var(--s-1);
+  /* 4px top AND bottom, not 2px bottom alone. An 11px line box is ~17px, which
+     left every one of the ten nav links a 19px pointer target against WCAG
+     2.2's 24x24. Split evenly so the text does not move; the active underline
+     rides 2px lower, which it can afford. */
+  padding: var(--s-2) 0;
   transition: color var(--dur-1) var(--ease-expo);
 }
 .nav a:hover {
@@ -812,7 +825,20 @@ a.chip:hover,
   background: var(--horizon-line);
 }
 .section-link {
+  /* same reason as .chip: this class sits on a <button> in one place, and a
+     bare button brings its own grey face and border. */
+  background: transparent;
+  border: 0;
   color: var(--gold);
+  /* 16px tall, under WCAG 2.2's 24px pointer target. Padding alone could not
+     fix it: these are inline, and vertical padding on an inline box paints
+     without taking layout height. inline-flex makes it count. They sit in a
+     baseline-aligned head row, so the text does not move. Declared far above
+     `.ed-p`, so setting `display` here cannot unhide the plain edition. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: var(--s-2) 0;
 }
 .section-link:hover {
   box-shadow: inset 0 -1px 0 var(--gold);
@@ -832,10 +858,20 @@ a.chip:hover,
   position: relative;
   overflow: hidden;
   margin-top: var(--s-6);
-  min-height: clamp(440px, 74vh, 720px);
+  /* Measured on the live page at 1440: 238px of chrome sits above this, and
+     the hero's own CONTENT is 676px, so `min-height` only binds on tall
+     screens and the next section head landed 170px below an 800px fold and
+     70px below a 900px one. A reader met one number and had to scroll on
+     faith.
+
+     Closing that gap completely would mean shrinking the dawn numeral, which
+     is the paper's signature and not a thing to trade for a fold. So this
+     tightens what can be tightened — 16px off each padding edge and a lower
+     ceiling — and the scroll cue below carries the rest of the job. */
+  min-height: clamp(400px, 60vh, 600px);
   display: flex;
   align-items: center;
-  padding: clamp(28px, 5vw, 64px);
+  padding: clamp(24px, 4vw, 48px);
   border: 1px solid var(--glass-brd);
   border-radius: var(--r-xl);
   background: var(--dawn-soft);
@@ -982,13 +1018,20 @@ a.chip:hover,
   flex-wrap: wrap;
 }
 .home-hero-scroll {
-  color: var(--ether-45);
+  /* --ether-70, not --ether-45, and the keyframe floors at 0.8 rather than 0.5.
+     This cue is the one thing on the first screen that says there is more
+     below, and it was rgba(…,0.55) multiplied by an opacity pulsing down to
+     0.5 — an effective alpha of 0.275 at its dimmest, caught live at 0.41. It
+     still breathes; it no longer disappears. Also 17px tall, which was under
+     the 24px pointer target. */
+  color: var(--ether-70);
+  padding: var(--s-2) 0;
   animation: hero-scroll-cue 2.4s ease-in-out infinite;
 }
 @keyframes hero-scroll-cue {
   0%,
   100% {
-    opacity: 0.5;
+    opacity: 0.8;
   }
   50% {
     opacity: 1;
@@ -1106,6 +1149,16 @@ a.chip:hover,
 .tape::after {
   right: 0;
   background: linear-gradient(270deg, var(--genesis), transparent);
+}
+
+/* The edge fades belong to MOTION. `.tape-static` reuses this wrapper for the
+   quiet state and has no horizontal padding, so its sentence began underneath
+   the 60px left fade: "awaiting fills: the desk is quiet…" rendered as
+   "…aiting fills" on the home page. A fade over text that is not going
+   anywhere is just an erased word. */
+.tape:has(.tape-static)::before,
+.tape:has(.tape-static)::after {
+  content: none;
 }
 .tape-track {
   display: flex;
@@ -1517,6 +1570,8 @@ table.sheet.sheet-checks td:nth-child(3) {
   font-size: var(--t-1);
   letter-spacing: var(--tr-5);
   padding: var(--s-1) var(--s-3);
+  /* 21px tall was under the pointer-target minimum. */
+  min-height: 24px;
 }
 /* The section head's right side carries a standing chip AND a count. */
 .ops-head-right {
@@ -1902,6 +1957,8 @@ details.disclosure summary .disclosure-count {
   font-family: var(--eyebrow);
   font-size: var(--t-2);
   padding: var(--s-1) var(--s-3);
+  /* 22px was 2px under the pointer-target minimum. */
+  min-height: 24px;
 }
 .console-actions {
   display: flex;
@@ -2145,8 +2202,13 @@ details.disclosure summary .disclosure-count {
 .counter-label {
   margin-top: var(--s-2);
 }
+/* The archived exercise, shown until you run your own. 0.6, not 0.45: this
+   now sits on the <svg> alone (see AttackChart), and the chart carries its own
+   text — at 0.45 the ether ink in it measured 3.62:1 against the 4.5:1 this UI
+   holds itself to, and the vermilion legend outside it measured 2.07:1. At 0.6
+   the chart still recedes and every word in it is legible. */
 .stage-faded {
-  opacity: 0.45;
+  opacity: 0.6;
 }
 .verdict {
   font-family: var(--display);
@@ -2162,12 +2224,6 @@ details.disclosure summary .disclosure-count {
 }
 
 /* sybil ring */
-.sybil-ring {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3) var(--s-5);
-  align-items: center;
-}
 
 /* ---------- charts ---------- */
 .chart {
