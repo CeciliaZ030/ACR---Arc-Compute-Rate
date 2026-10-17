@@ -19,7 +19,19 @@
   --genesis: #000b24; /* Genesis Void — page base */
   --ledger: #0b223e; /* Ledger Deep — panel base */
   --protocol: #1b3158; /* Protocol Navy — raised / hover */
-  --validator: #2f578c; /* Validator Blue — active borders, focus */
+  /* Validator Blue, and in practice it is the FOCUS RING: all five uses of it
+     in this file are `outline` on a `:focus-visible` rule, and no .tsx names
+     it. It used to be #2f578c, which measured 2.67:1 on the page base and
+     2.18:1 on a panel — under the 3:1 that WCAG 2.2 SC 1.4.11 asks of a focus
+     indicator, so every keyboard user got a ring they could barely see.
+
+     Same hue (214deg) and saturation; lightness lifted 37% -> 55%. That reads
+     5.10:1 on the page and 4.17:1 on a panel. NOT the cheapest value that
+     passes — #4077bf clears it at 4.29 and 3.51, and 3.51 leaves nothing for
+     the panel tints already in this sheet. A focus ring is the one thing that
+     must never be marginal, so do not darken this back toward the palette's
+     other blues. scripts/measure-a11y.mjs now fails if you do. */
+  --validator: #5384c5;
   --cipher: #412c5c; /* Cipher Violet — adversary-room tint */
   --plum: #664c88; /* Quantum Plum — adversary accents */
 

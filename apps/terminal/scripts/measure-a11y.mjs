@@ -4,6 +4,7 @@
  *
  *   1. every text run at 4.5:1 contrast or better
  *   2. every BUTTON at least 24x24 (WCAG 2.2 SC 2.5.8)
+ *   3. every keyboard focus ring at 3:1 (WCAG 2.2 SC 1.4.11)
  *
  * Sibling of measure-ui.mjs and built the same way: headless Chrome over raw
  * CDP, no dependencies, reading getComputedStyle rather than the source,
@@ -178,6 +179,69 @@ function audit() {
   };
 }
 
+/**
+ * The ring on whatever has focus right now. Self-contained because it is
+ * stringified, which is why the colour helpers appear twice in this file.
+ *
+ * This reads the element the KEYBOARD reached, never one we focused from
+ * script: `:focus-visible` is the rule that carries the ring, and Chrome does
+ * not reliably match it for a programmatic `.focus()`. The caller drives real
+ * Tab presses through Input.dispatchKeyEvent.
+ */
+function focusProbe() {
+  const el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  if (el.closest("button:disabled, input:disabled, select:disabled")) return null;
+  const parse = (c) => {
+    const m = c && c.match(/[\d.]+/g);
+    if (!m) return null;
+    const a = m.map(Number);
+    return a.length >= 3 ? { r: a[0], g: a[1], b: a[2], a: a.length > 3 ? a[3] : 1 } : null;
+  };
+  const lum = (c) => {
+    const f = (v) => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  };
+  const bgOf = (e) => {
+    for (let p = e; p; p = p.parentElement) {
+      const b = parse(getComputedStyle(p).backgroundColor);
+      if (b && b.a > 0.5) return b;
+    }
+    return { r: 0, g: 11, b: 36 };
+  };
+  const cs = getComputedStyle(el);
+  const name =
+    el.tagName.toLowerCase() +
+    (typeof el.className === "string" && el.className.trim()
+      ? "." + el.className.trim().split(/\s+/)[0]
+      : "");
+  const label = (el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 28);
+  const width = parseFloat(cs.outlineWidth) || 0;
+  /* A box-shadow ring is a legitimate alternative to an outline, so a element
+     wearing one is not reported for want of an outline. */
+  const hasShadowRing = cs.boxShadow && cs.boxShadow !== "none";
+  if (cs.outlineStyle === "none" || width === 0) {
+    return hasShadowRing ? null : { el: name, label, reason: "no visible focus ring" };
+  }
+  const fg = parse(cs.outlineColor);
+  if (!fg) return null;
+  const bg = bgOf(el);
+  const over = {
+    r: fg.r * fg.a + bg.r * (1 - fg.a),
+    g: fg.g * fg.a + bg.g * (1 - fg.a),
+    b: fg.b * fg.a + bg.b * (1 - fg.a),
+  };
+  const L1 = lum(over), L2 = lum(bg);
+  const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+  // SC 1.4.11 Non-text Contrast: a focus indicator needs 3:1.
+  if (ratio < 3)
+    return { el: name, label, ratio: +ratio.toFixed(2), reason: "focus ring below 3:1" };
+  return null;
+}
+
 class Cdp {
   constructor(ws) {
     this.ws = ws;
@@ -290,7 +354,35 @@ async function main() {
       }
       await sleep(1200);
       const r = await cdp.call(audit);
-      const n = r.contrast.length + r.targets.length;
+
+      /* Walk the keyboard path. 20 stops covers the masthead and the first
+         screen of content, which is enough to catch a ring that is wrong
+         globally without making this census slow. */
+      const rings = [];
+      const seen = new Set();
+      for (let i = 0; i < 20; i++) {
+        for (const type of ["rawKeyDown", "keyUp"]) {
+          await cdp.send("Input.dispatchKeyEvent", {
+            type,
+            windowsVirtualKeyCode: 9,
+            nativeVirtualKeyCode: 9,
+            code: "Tab",
+            key: "Tab",
+          });
+        }
+        let f = null;
+        try {
+          f = await cdp.call(focusProbe);
+        } catch {
+          /* mid-navigation */
+        }
+        if (f && !seen.has(f.el + f.reason)) {
+          seen.add(f.el + f.reason);
+          rings.push(f);
+        }
+      }
+      r.rings = rings;
+      const n = r.contrast.length + r.targets.length + rings.length;
       bad += n;
       const short = route.split("?")[0];
       console.log(`${n ? "✗" : "✓"} ${short.padEnd(16)} ${n} finding(s)`);
@@ -298,11 +390,15 @@ async function main() {
         console.log(`    contrast ${c.ratio}:1 (needs ${c.need}) ${c.size} ${c.el} — ${c.text}`);
       for (const t of r.targets)
         console.log(`    target ${t.w}x${t.h} (needs 24x24) ${t.el} — ${t.text}`);
+      for (const f of r.rings)
+        console.log(
+          `    focus ${f.ratio ? f.ratio + ":1 (needs 3)" : f.reason} ${f.el} — ${f.label}`,
+        );
     }
     console.log(
       bad
-        ? `\n${bad} finding(s). Every text run must reach 4.5:1 and every enabled button 24x24.`
-        : "\nevery text run reaches 4.5:1 and every enabled button is at least 24x24",
+        ? `\n${bad} finding(s). Text runs must reach 4.5:1, enabled buttons 24x24, focus rings 3:1.`
+        : "\nevery text run reaches 4.5:1, every enabled button is at least 24x24,\nand every focus ring the keyboard reaches is at 3:1 or better",
     );
   } finally {
     chrome.kill("SIGKILL");
