@@ -213,16 +213,34 @@ function collect() {
     }
   }
 
-  // Chart left gutters, in rendered px. Charts share a 760-unit viewBox at the same CSS
-  // width, so one of these drawing at a different x is directly visible side by side.
+  /* Chart left gutters, in rendered px. Every chart here shares a 760-unit
+     viewBox at the same CSS width, so one of them drawing at a different x is
+     a visible offset between two charts a reader sees side by side.
+
+     THE Y-AXIS, not the first <line> in the SVG. The first line is a gridline
+     on some of these charts and the axis on others, so the old version
+     reported nine distinct "gutters" for four charts and could never confirm
+     or deny the one real misalignment it existed to catch. Each chart draws
+     its axis as a VERTICAL line (x1 === x2) at exactly M.left, so the
+     leftmost vertical line is the gutter, by construction. */
   const gutters = new Set();
   for (const svg of main.querySelectorAll("svg")) {
-    const line = svg.querySelector("line");
     const vb = svg.viewBox && svg.viewBox.baseVal;
     const w = svg.getBoundingClientRect().width;
-    if (!line || !vb || !vb.width || !w) continue;
-    const x1 = parseFloat(line.getAttribute("x1") || "0");
-    gutters.add(Math.round(x1 * (w / vb.width)));
+    if (!vb || !vb.width || !w) continue;
+    let axis = null;
+    for (const line of svg.querySelectorAll("line")) {
+      const x1 = parseFloat(line.getAttribute("x1") || "NaN");
+      const x2 = parseFloat(line.getAttribute("x2") || "NaN");
+      if (!Number.isFinite(x1) || x1 !== x2) continue; // not vertical
+      if (axis === null || x1 < axis) axis = x1;
+    }
+    /* In viewBox UNITS, not rendered px. Every chart here shares the same
+       760-unit viewBox at the same CSS width, so the unit is the comparable
+       quantity and the pixel value is just that unit times whichever of the
+       five widths this row is. Reporting px turned one gutter into five
+       numbers and made disagreement impossible to see. */
+    if (axis !== null) gutters.add(Math.round(axis));
   }
 
   // One left edge for every top-level child is what "aligned" means, measurably.

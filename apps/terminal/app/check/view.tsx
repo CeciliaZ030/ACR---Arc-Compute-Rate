@@ -213,9 +213,13 @@ function Source({ c }: { c: ParCheck }) {
   return (
     <div className="panel panel-pad">
       <div className="card-head">
-        <h4>
+        {/* h3, not h4: this panel sits straight under the section head, so an
+            h4 here skips a level in the outline for nothing. It carries no
+            class, so it takes h3's --t-5 — a panel's own title, slightly
+            larger than the 13px body beneath it, which is what it should be. */}
+        <h3>
           <Ed x="What you were compared against" p="Who we compared you to" />
-        </h4>
+        </h3>
         <span className={fleet ? "chip chip-gold" : "chip chip-teal"}>
           {fleet ? (
             <Ed x="our own sellers" p="our own sellers" />
