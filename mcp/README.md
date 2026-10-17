@@ -10,9 +10,35 @@ query at all**.
 npx -y acr-mcp          # no clone, no path to edit
 ```
 
+### Hosted, no install
+
+The same tools also run at a URL any remote-MCP client can add. It is this
+package (pinned to the version above) behind Streamable HTTP, stateless, one
+endpoint per chain:
+
+```
+https://arc-compute-rate.vercel.app/api/mcp?chain=mainnet
+https://arc-compute-rate.vercel.app/api/mcp?chain=testnet
+```
+
+```bash
+claude mcp add --transport http acr-tca "https://arc-compute-rate.vercel.app/api/mcp?chain=mainnet"
+```
+
+Cursor (`~/.cursor/mcp.json`): `{"mcpServers":{"acr-tca":{"url":"<url>"}}}`. VS Code
+(`.vscode/mcp.json`): `{"servers":{"acr-tca":{"type":"http","url":"<url>"}}}`. Claude.ai:
+Settings, Connectors, Add custom connector.
+
+The hosted server lists 9 tools, every read except `spend_report`, and holds no
+keys and stores nothing. Two tools stay local, refused by name if called:
+`pay_and_read` (it pays with your own key) and `spend_report` (it reads the
+ledger `check_spend` writes on your machine). `/developers#mcp` on the terminal
+runs every hosted tool live with your own wallet and bill, and tests the
+connection the way a client does.
+
 **If that 404s, the package is not on npm yet** and the clone below is the way
 in — it is two commands and it is verified, not merely written down (a fresh
-checkout builds in about four seconds and its 108 tests pass). Nothing else
+checkout builds in about four seconds and its 114 tests pass). Nothing else
 differs: the same `dist/server.js`, the same env block, the same eleven tools.
 
 <details><summary>From a clone — the route that works today, and how you pin a fork</summary>
@@ -102,6 +128,62 @@ ever do meet a cold start, the symptom is one slow first call, not an error.
 | `benchmark_price` | one quote priced against what the market is actually paying | no |
 | `get_rate` | the on-chain print for an index | no |
 | `query_tape` | any named subgraph operation through the seller's read proxy | no |
+
+## Demo: an agent's spend, end to end
+
+One command runs the conversation an operator would have with an agent that buys
+inference, through the real server over stdio exactly as a host speaks to it — and
+**every step is also an assertion**, so the demo fails (exit 1) the moment it stops
+demonstrating something:
+
+```bash
+npm run demo                                          # tokens the agent bought — spends nothing
+ACR_DEMO_PAY=1 ACR_PAYER_PRIVATE_KEY=0x… npm run demo # + USDC the agent spent: one $0.0001 query on Arc testnet
+```
+
+Part 1, as it printed against the default press on 2026-10-13 (checks trimmed):
+
+```
+you  › "My agent was billed 0.20 USDC for 1M tokens of inference. Should it pay?"
+tool › check_spend {"billed_usdc":0.2,"quantity":1000,"unit":"$/1k tokens"}
+acr  › you paid 0.000200 USDC per 1k tokens; the going rate is 0.000400 across 5 published prices
+acr  › cheapest: GPT-4o mini (openai/gpt-4o-mini) at 0.000262 per 1k
+acr  › verdict under_par (-5,000 bp) → the spend agent would PAY
+
+you  › "Then it was billed 0.47 USDC for 23k tokens by its inference provider. Should it pay that?"
+tool › check_spend {"billed_usdc":0.47,"quantity":23,"unit":"$/1k tokens"}
+acr  › you paid 0.0204 USDC per 1k tokens; the going rate is 0.000400 across 5 published prices
+acr  › verdict over_par (+500,870 bp) → the spend agent would ESCALATE
+acr  › 0.463963 USDC of this bill was avoidable at the cheapest published price
+
+you  › "Has my agent been overpaying for tokens?"
+tool › spend_report {"days":1}
+acr  › 2 bills checked · 1 over the going rate · worst +500,870 bp
+acr  › 0.463963 USDC could have been paid instead
+```
+
+What it asserts: each bill is priced against the **open market** with at least two
+cited quotes and a current basket; the fair bill is paid and the expensive one is
+not waved through; and the report's avoidable total equals the second bill's
+saving to the micro-USDC. It runs against its own throwaway spend log, so your
+`~/.acr/spend.jsonl` is never touched.
+
+Part 2 makes one real testnet payment and reads it back: `can_i_pay` green on all
+seven rungs, `pay_and_read` settles $0.0001 (settlement `53cb9387…`), and
+`payment_receipts` finds that settlement on the press's tape. It also compares two
+views of the same wallet, and that comparison is where it found something: on the
+testnet press **36 receipts are held but the chain shows 1 purchase** — receipts
+there are not reaching the on-chain mirror, so `wallet_tca` under-reports what that
+wallet spent. That is printed as a measured gap (◌), not a pass and not a failure,
+because the fix is an operator one.
+
+**The example this replaced.** `/developers` used to teach "billed 0.47 USDC for 23k
+tokens **by 0xefe0…**". That address is ACR's own seller, and the press prices a seller
+ACR operates only against ACR's fleet, never the market — so the answer was "pay,
+unbenchmarked" on mainnet and "pay, −9,609 bp" on testnet, while the same bill with no
+vendor is the +500,870 bp escalation above. `check_spend` now adds a `hint` whenever a
+bill was judged against the fleet, naming the call that prices it against the market;
+the demo's last step asks exactly that question and checks the hint is there.
 
 ## Should I pay this bill?
 

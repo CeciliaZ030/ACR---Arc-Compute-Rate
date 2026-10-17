@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 
 from acr_core import get_settings
 
@@ -45,6 +45,12 @@ APPROVAL_TYPES = {
 }
 
 POLICY_ABI = [
+    {
+        "name": "consumedDecisionHashes", "type": "function",
+        "stateMutability": "view",
+        "inputs": [{"name": "decisionHash", "type": "bytes32"}],
+        "outputs": [{"name": "", "type": "bool"}],
+    },
     {
         "name": "spend",
         "type": "function",
@@ -161,9 +167,13 @@ def usdc_units(amount: str | int | float | Decimal) -> int:
         d = Decimal(str(amount))
     except (InvalidOperation, ValueError) as exc:
         raise ValueError(f"not an amount: {amount!r}") from exc
+    if not d.is_finite():
+        raise ValueError("USDC amount must be finite")
     if d < 0:
         raise ValueError(f"negative amount: {amount!r}")
-    scaled = d * USDC
+    with localcontext() as ctx:
+        ctx.prec = max(78, len(d.as_tuple().digits) + 6)
+        scaled = d * USDC
     if scaled != scaled.to_integral_value():
         raise ValueError(
             f"{amount} is finer than USDC's 6 decimals; round it before paying, "
@@ -404,8 +414,13 @@ class PolicyClient:
 
     def budget(self, category: str) -> dict | None:
         """One category's live budget, with the period already rolled by the
-        contract's own view — so what this reports is what it will enforce."""
-        if not self.configured() or self._connect() is None:
+        contract's own view — so what this reports is what it will enforce.
+
+        A PUBLIC READ: it needs the wallet address and a node, not a signer. Gating
+        it on `configured()` made a keyless host (the mainnet probe that serves
+        `/operator/*`) report "no budget set on chain" for a wallet that had one.
+        """
+        if not self.wallet_address or self._connect() is None:
             return None
         try:
             row = self._contract().functions.budgetOf(category_id(category)).call()
@@ -454,7 +469,7 @@ class PolicyClient:
         page already refuses.
         """
         w3 = self._connect()
-        if not self.configured() or w3 is None:
+        if not self.wallet_address or w3 is None:  # a public read: no signer needed
             return None
         try:
             token = self._contract().functions.usdc().call()

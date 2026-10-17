@@ -58,7 +58,9 @@ from .humanid import (
     require_human,
     stray_world_credentials,
 )
-from .onchain import get_futures, get_reader
+from .onchain import OracleUnreachable, get_futures, get_reader
+from .payments import require_business_credential
+from .payments import router as payments_router
 from .poster import OraclePoster
 from .statement import build_statement
 from .store import PrintStore
@@ -433,6 +435,45 @@ async def _operator_loop(stop: asyncio.Event) -> None:
             log.exception("operator tick failed")
 
 
+async def _humans_tick() -> None:
+    """One look by the humans chore, contained like every other chore: a failure
+    is recorded and logged, and never reaches the press."""
+    from . import keeper
+
+    try:
+        verdict = await asyncio.to_thread(keeper.humans_once)
+        # A quiet look (cooldown, or the window already done) keeps the last real
+        # verdict. Recording its None would turn "not resolving: …" into what /ops
+        # renders as "nothing to do" within one tick.
+        keeper.record("humans", verdict if verdict is not None else keeper.last_verdict("humans"))
+        if verdict:
+            log.info("keeper humans: %s", verdict)
+    except Exception as exc:  # a chore must never cost a beat
+        keeper.record("humans", f"failed: {exc}")
+        log.warning("keeper humans failed", exc_info=True)
+
+
+async def _humans_loop(stop: asyncio.Event) -> None:
+    """Resolve each rotation window's humans, on its own clock.
+
+    ITS OWN TASK, like `_operator_loop` and for the same reason: a Circle-signed
+    `record` blocks for up to two minutes while Circle confirms it, which the
+    60 s warm loop must never wait on. The interval comes first, so a boot is
+    never also a burst of identity writes.
+    """
+    from . import keeper
+
+    while not stop.is_set():
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=keeper.HUMANS_TICK_S)
+        except TimeoutError:
+            pass
+        if stop.is_set():
+            break
+        if keeper.humans_enabled():
+            await _humans_tick()
+
+
 #: The systems-ledger snapshot, recomputed on its own slow timer. None until
 #: the first pass lands — served as "pending", never as an empty dashboard.
 _ops_cache: dict | None = None
@@ -621,6 +662,7 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(_warm_chain(stop)),
         asyncio.create_task(_ops_loop(stop)),
         asyncio.create_task(_operator_loop(stop)),
+        asyncio.create_task(_humans_loop(stop)),
     ]
     try:
         yield
@@ -632,6 +674,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ACR — The Arc Compute Rate", version="0.1.0", lifespan=lifespan)
+
+app.include_router(payments_router)
 
 # CORS so the public API is queryable cross-origin from browsers (the Terminal
 # proxies server-side and doesn't need this, but direct API/`/docs` use does).
@@ -1724,6 +1768,7 @@ def operator_ledger(
     # lists every slug publicly — and would break `verify_operator.py`, whose
     # unknown-business check accepts 404/422/503 and not 401. Off by default; see
     # `require_business_read`.
+    require_business_credential(request, b.slug)
     require_business_read(agent, b)
     since = time.time() - max(1, min(365, int(days))) * 86_400
     rows = read_decisions(business=b.slug, since=since)
@@ -1828,6 +1873,7 @@ def operator_audit(
     # lists every slug publicly — and would break `verify_operator.py`, whose
     # unknown-business check accepts 404/422/503 and not 401. Off by default; see
     # `require_business_read`.
+    require_business_credential(request, b.slug)
     require_business_read(agent, b)
     window = max(1, min(365, int(days)))
     since = time.time() - window * 86_400
@@ -1887,6 +1933,7 @@ def operator_statement(
     # lists every slug publicly — and would break `verify_operator.py`, whose
     # unknown-business check accepts 404/422/503 and not 401. Off by default; see
     # `require_business_read`.
+    require_business_credential(request, b.slug)
     require_business_read(agent, b)
     st = build_statement(
         business, days=days, limit=limit, tca_fn=payer_tca, policy_for=_policy_for
@@ -2011,13 +2058,20 @@ def onchain_print(
 ) -> dict:
     """The settlement-grade print read straight from ``ACROracle`` on-chain.
 
-    Ungated (a public read of chain state). 503 if no oracle is configured;
-    404 if the oracle has no print for this index yet.
+    Ungated (a public read of chain state). 503 if no oracle is configured or
+    the chain did not answer (ask again); 404 only if the oracle has no print
+    for this index yet. Served from the warm cache inside its TTL
+    (``OracleReader.latest``).
     """
     reader = get_reader()
     if not reader.configured:
         raise HTTPException(status_code=503, detail="no oracle configured (set ACR_ORACLE_ADDRESS)")
-    r = reader.read(index_id)
+    try:
+        r = reader.latest(index_id)
+    except OracleUnreachable:
+        raise HTTPException(
+            status_code=503, detail=f"the chain did not answer for {index_id}; ask again shortly"
+        ) from None
     if r is None:
         raise HTTPException(status_code=404, detail=f"no on-chain print for {index_id}")
     _meter_agent(request, agent)

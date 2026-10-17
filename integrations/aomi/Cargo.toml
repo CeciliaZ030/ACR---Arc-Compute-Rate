@@ -1,0 +1,26 @@
+[package]
+name    = "acr-compute-rate"
+version = "0.2.0"
+edition = "2024"
+publish = false
+
+# THIS FOLDER IS ITS OWN WORKSPACE ROOT. Aomi's platform build
+# (aomi-labs/community-apps, deploy_project.py `cargo_context`) walks up from
+# here to the first Cargo.toml with a [workspace] table and demands Cargo.lock
+# beside it, ignoring `exclude`. Without this table it stops at the repo root's
+# Cargo.toml (which exists only for the deploy gate) and refuses the deploy.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+aomi-sdk   = "=5.1.1"
+schemars   = "1"
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest    = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+
+[build-dependencies]
+serde_json = "1"
+reqwest = { version = "0.12", default-features = false }

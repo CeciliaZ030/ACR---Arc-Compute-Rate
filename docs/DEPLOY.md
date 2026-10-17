@@ -108,7 +108,9 @@ oracle is drifting toward stale with no press able to write. The chain itself is
 healthy — the subgraph is synced to the head, `hasIndexingErrors: false`.
 
 The service is declared in [`render.yaml`](../render.yaml) at the repo root: a
-`runtime: image` web service pulling `docker.io/kaushtubh02/acr-api:latest`, health-
+`runtime: image` web service pinned to a dated `docker.io/kaushtubh02/acr-api:<tag>`
+(never `:latest`: the dashboard's pin is what runs, and `deploy/redeploy-render.sh`
+now sets it to the tag it pushes and reads it back — `scripts/render_pin.py`), health-
 checked at `/health`, with the Arc RPC, the four contract addresses and the Circle
 wallet ids set as plain env vars and the three Circle credentials
 (`ACR_CIRCLE_API_KEY`, `ACR_CIRCLE_ENTITY_SECRET`, `ACR_CIRCLE_WEBHOOK_PUBLIC_KEY`)

@@ -63,6 +63,7 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   "components/loop/PersonNotWallet.tsx": 43,
   "app/loop/view.tsx": 4,
   "components/WorkloadRow.tsx": 8, // the editor: trigger, three field labels, done, privacy line
+  "components/EmbedRow.tsx": 8, // the embed row: trigger, three forms, copy/copied, the live line, done
   "components/WorkloadChip.tsx": 1, // one label; the figure itself is a number, outside <Ed>
   "components/WalletFunding.tsx": 6, // the balance line, deposit, bridge (busy + idle) and the bridge note
   // The §5.9 read gate. Both editions carry the whole refusal, because a
@@ -98,7 +99,7 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   // those eight, and they are exactly the sort of copy that gets dropped in a
   // refactor without any gate noticing.
   "app/check/view.tsx": 48,
-  // two states, two registers each: the footnote and the chip.
+  // two sides, two registers each: mainnet | testnet, one <Ed> per button.
   "components/ChainToggle.tsx": 2,
   "components/spend/EscalationActions.tsx": 11, // the key, the buttons, why they are off without one, the note, who signs
   "components/chain/OperatorConsole.tsx": 13, // the locked + unlocked states both speak
@@ -119,7 +120,8 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   // dual-renders, and the "what would answer this" line has three backends.
   "components/chain/HumanProof.tsx": 32,
   "components/chain/AgentCardSnippet.tsx": 12,
-  "components/chain/McpSnippet.tsx": 7,
+  // The hosted-MCP playground: URL, inputs, live runs and per-client setup.
+  "components/chain/McpSnippet.tsx": 27,
   // The shop floor, folded in from the old /exchange route. Rendered only when
   // its disclosure is open, so a reader of /curve does not pay for its tickers.
   "components/chain/ShopFloor.tsx": 42,
@@ -159,8 +161,12 @@ const EXEMPT: Record<string, string> = {
   "app/spend/page.tsx": "metadata only — the client hook owns the queue, like /ops",
   "app/traction/page.tsx": "metadata only — the client hook owns the count, like /ops",
   "app/check/page.tsx": "metadata only — a price check has no answer until a visitor types one",
+  "app/og/home/route.tsx": "a preview image has one edition, the expert one; it is a picture, not a page",
+  "app/og/check/route.tsx": "a preview image has one edition, the expert one; it is a picture, not a page",
   "app/index/[id]/page.tsx": "metadata only",
   "app/companion/page.tsx": "the reader's companion IS the plain voice — one register",
+  "components/AgentDrawer.tsx": "plain-language chat shell in both editions",
+  "components/AgentChat.tsx": "third-party Aomi widget, no host-authored copy",
   "components/Ed.tsx": "edition machinery",
   "components/Term.tsx": "edition machinery",
   "components/EditionToggle.tsx": "edition machinery",
@@ -305,6 +311,11 @@ test("ledger: every surface is covered or exempt, classed, and its classes exist
      comment it can assume nothing from globals.css — a var() there resolves to
      nothing. Its literals are correct and must stay. */
   const SCALE_EXEMPT = new Set(["app/global-error.tsx"]);
+  /* The og/ routes are not the website. They render a PNG through Satori, which
+     has no cascade and no custom properties: `var(--t-4)` there resolves to
+     nothing and the text disappears from the image. Their numbers are the
+     image's own geometry and belong as literals. */
+  const scaleExempt = (f: string) => SCALE_EXEMPT.has(f) || f.startsWith("app/og/");
   const offScale: string[] = [];
   const propRe = new RegExp(`\\b(${SCALED.join("|")}):\\s*([^,}]+)`, "g");
   /* The text of every `style=` prop, read by balancing braces rather than by
@@ -335,7 +346,7 @@ test("ledger: every surface is covered or exempt, classed, and its classes exist
     return out;
   };
   for (const file of ALL) {
-    if (SCALE_EXEMPT.has(file)) continue;
+    if (scaleExempt(file)) continue;
     const src = readFileSync(join(ROOT, file), "utf8");
     for (const body of styleProps(src)) {
       for (const m of body.matchAll(propRe)) {

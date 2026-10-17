@@ -81,6 +81,11 @@ PAR_EXAMPLE = (
 OMIT = {
     "/ops/verify": "operator console, token-gated",
     "/ops/actions": "operator console, token-gated, spends money",
+    # The owner payment inbox (#66): bearer-token routes for the treasury App,
+    # off (401) until ACR_TREASURY_API_TOKEN is set. Owner tooling, not the API.
+    "/operator/payments": "owner payment inbox, token-gated",
+    "/operator/payments/prepare": "owner payment inbox, token-gated, stages a payment for the owner to sign",
+    "/operator/payments/verify": "owner payment inbox, token-gated",
 }
 
 

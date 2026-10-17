@@ -13,15 +13,26 @@
  * during SSR would be one visitor's chain applied to the next one's render —
  * the exact failure the whole three-carrier design exists to prevent.
  *
- * So: the server snapshot stays the constant default, **no server component may
- * branch on this hook**, and every server-side read goes through
+ * So: the server snapshot never comes from module state, **no server component
+ * may branch on this hook**, and every server-side read goes through
  * `serverChain()` (lib/serverChain.ts) or `requestChain(req)` (lib/envelope.ts)
  * instead. The client adopts the server's answer from the `data-chain` attribute
  * the layout renders, which needs no boot script precisely because the server
  * already knew it.
+ *
+ * THE SERVER SNAPSHOT IS THE LAYOUT'S ANSWER, CARRIED BY CONTEXT. A constant
+ * default kept the singleton safe, but React also uses the server snapshot for
+ * the HYDRATION render on the client, so every chain-keyed hook first rendered
+ * for mainnet on a testnet page. Measured 2026-10-14: the testnet /curve fired
+ * `/api/futures?chain=mainnet` beside `?chain=testnet` 1.4 s after load, and
+ * `keepPreviousData` could show the mainnet desk until the testnet one landed.
+ * `ChainProvider` takes the chain the layout read from the cookie as a PROP,
+ * and a prop is per request, so the server render, the hydration render and
+ * the first fetch all agree with `<html data-chain>`. Outside the provider (the
+ * global error page renders its own document) the constant default stands.
  */
 
-import { useSyncExternalStore } from "react";
+import { createContext, createElement, useContext, useSyncExternalStore, type ReactNode } from "react";
 
 import {
   CHAIN_ATTR,
@@ -47,8 +58,16 @@ function subscribe(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
+const ServedChain = createContext<ChainKey>(DEFAULT_CHAIN);
+
+/** The chain this request was served for: `app/layout.tsx` wraps the page in it. */
+export function ChainProvider({ chain, children }: { chain: ChainKey; children?: ReactNode }) {
+  return createElement(ServedChain.Provider, { value: chain }, children);
+}
+
 export function useChain(): ChainKey {
-  return useSyncExternalStore(subscribe, read, () => DEFAULT_CHAIN);
+  const served = useContext(ServedChain);
+  return useSyncExternalStore(subscribe, read, () => served);
 }
 
 /** Switch chains, and reload.

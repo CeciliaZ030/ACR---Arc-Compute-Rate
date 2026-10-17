@@ -23,7 +23,13 @@ services:
     plan: free # NB: no persistent disk. See the faucet ledger note below.
     region: oregon
     image:
-      url: docker.io/kaushtubh02/acr-api:latest
+      # PINNED, like the two services below, and the dashboard is the truth:
+      # this line said `:latest` while the live service ran the 10-09 pin, so
+      # pushing `:latest` deployed nothing (2026-10-14). The deploy script now
+      # pins the service to the tag it pushes (scripts/render_pin.py); keep
+      # this line in step with it. 2026-10-16-0632 carries the press's own humans
+      # chore (#75); rollback: 2026-10-14-1339.
+      url: docker.io/kaushtubh02/acr-api:2026-10-16-0632
     healthCheckPath: /health
     envVars:
       # --- Arc + the deployed contracts -----------------------------------
@@ -198,6 +204,14 @@ services:
       # runs, refuses every human claim, and says so on /ops and in the footer.
       - key: ACR_HUMANID_MIRROR_ADDRESS
         value: "0x7f41faA38F35F1FABfc76Df5B1618fC8d0c0d8e5"
+      # The press resolves each 7-day window's humans itself (keeper.humans_once),
+      # with the salt and the one authorized signer it already holds. Until
+      # 2026-10-16 this was a laptop chore that had silently stopped: the last
+      # resolved window was 2958, five weeks back. Testnet only, deliberately:
+      # mainnet's service does not set it, so no image change starts writing
+      # identity to that chain.
+      - key: ACR_KEEPER_HUMANS
+        value: "1"
 
       # --- Paths + CORS ----------------------------------------------------
       # NOTE: the free plan has NO persistent disk, so these files (and the
@@ -492,8 +506,14 @@ services:
         value: /etc/secrets/acr_armor_sa.json
 
       # --- paths + self -------------------------------------------------------
+      # The anti-sleep loop. This was `""` ("once Render assigns it") and never
+      # filled in, so the one service that signs mainnet prints slept on the
+      # free plan and posted only when something woke it: ACR-INF went 3.3 h
+      # stale on 2026-10-13. tests/test_render_self_ping.py pins it to the host
+      # keepalive.yml audits. It takes effect when it is also set on the live
+      # service (this file is applied by a deploy, not read at runtime).
       - key: ACR_SELF_URL
-        value: "" # this service's own public URL, once Render assigns it
+        value: https://acr-api-mainnet.onrender.com
       - key: ACR_RECEIPT_LOG_PATH
         value: data/x402_receipts.jsonl
       - key: ACR_RECEIPT_ARCHIVE_PATH
@@ -579,41 +599,36 @@ services:
       # read six routes short the whole time. So this line says what Render
       # serves right now.
       #
-      # 2026-10-12-1118 is BUILT, PUSHED and VERIFIED BY RUNNING IT, and is the
-      # next pin. It is the first image carrying the `acr-operator` registry row
-      # and the `usdc()` entry in POLICY_ABI (54df1cc) — `balance_usdc()` had
-      # never once worked against a real contract without it. Verified in that
-      # image rather than trusting the build:
-      #   docker run -p 8097:8000 --platform linux/amd64 …:2026-10-12-1118
-      #   /openapi.json         -> 50 routes, 5 of them /operator/*, /par present
-      #   /operator/businesses  -> 3 rows: acr-fleet, sandbox, acr-operator
-      #                            (the running 10-09 image serves 2 — this is
-      #                            the witness the old image provably fails)
-      #   POLICY_ABI            -> usdc() declared
-      # `docker images` reports 352MB against the older pins' 1.56GB for the
-      # buildkit-attestation reason recorded on the block above. It is not a
-      # broken build; running the container is what settles it.
+      # 2026-10-14-1339 since 2026-10-15, the image the testnet press runs. This
+      # line said 10-09-1755 while Render ran 10-13-0541: a second declaration
+      # that outlived what it declared, found by `render_pin.py show`.
+      #
+      # WHY IT MOVED. This host is DEFAULT_API, so it answers mainnet for the
+      # hosted MCP server (whenever acr-api-mainnet lacks /par) and for the Aomi
+      # App. 10-13-0541 predates #61, and while Arc mainnet throttled it reported
+      # every throttled read as `404 no on-chain print`: 5 of 6 /onchain/ACR-INF
+      # reads on 2026-10-15, so get_rate failed for agents on the default URL.
+      # On 10-14-1339 the same reads went 10 of 10 to 200.
       #
       # The swap is TWO calls, and a plain deploy is not one of them — a POST to
       # /deploys on a pinned service re-pulls the same tag and changes nothing:
-      #   render services update srv-db28nc97lnhs73e1tgfg \
-      #     --image docker.io/kaushtubh02/acr-api:2026-10-12-1118 --confirm
-      #   render deploys create srv-db28nc97lnhs73e1tgfg --wait
+      #   scripts/render_pin.py pin srv-db28nc97lnhs73e1tgfg <image:tag>
+      #   POST /v1/services/srv-db28nc97lnhs73e1tgfg/deploys, then
+      #   scripts/render_pin.py assert srv-db28nc97lnhs73e1tgfg <image:tag>
+      # (plain RENDER_API_KEY owns this service, not the _PYPI_WORKSPACE one).
       # Both archive preflights were run against this host first and both came
-      # back 0 rows at risk (19 decisions, all 19 already in the repo archive;
-      # 0 live receipts). THAT ORDER IS NOT OPTIONAL on a plan with no disk:
-      # the decision log and the receipt log are erased by the deploy and
-      # rehydrate only from what ships inside the image.
-      # 2026-10-13: DEPLOYED, and the pin is now evidence rather than a
-      # declaration. `2026-10-12-1118` went on first and gave the third
-      # registry row, but `age_s` stayed null — that image was built at 11:18
-      # and the basket clock (99228fa) landed LATER the same day, so the note
-      # telling an operator to "swap the image" for the clock was wrong about
-      # its own remedy. Rebuilt from main (ec18988) and verified by running
-      # the container before pushing: age_s 607867, max_age_s 2592000, three
-      # registry rows, usdc() in POLICY_ABI. Then live on the host:
-      # `make anchors-live` green for the first time (7.0d of 30d).
-      url: docker.io/kaushtubh02/acr-api:2026-10-13-0541
+      # back 0 rows at risk (19 decisions, all 19 already in the image's
+      # archive; 0 live receipts), and both route lists were the same 50.
+      # THAT ORDER IS NOT OPTIONAL on a plan with no disk: the decision log and
+      # the receipt log are erased by the deploy and rehydrate only from what
+      # ships inside the image.
+      #
+      # 2026-10-16-1609 (from 71a3995, #78) is the first image carrying the
+      # mainnet business `acr-mainnet` and the keyless budget reads. This host
+      # serves mainnet `/operator/*` to the terminal, so it is what makes the
+      # mainnet PolicyWallet visible. Preflights were clean, the route set is the
+      # same 53 the repo builds, and RSS was 387 MiB. Rollback: 2026-10-14-1339.
+      url: docker.io/kaushtubh02/acr-api:2026-10-16-1609
     healthCheckPath: /health
     envVars:
       # --- the chain, and the addresses the block above leaves empty ---------

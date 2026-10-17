@@ -331,6 +331,22 @@ def _keeper(rec: Recorder) -> None:
             detail=str(c.get("verdict") or "on cooldown, nothing to do"),
         )
 
+    # The humans chore, only where a service turned it on: absent elsewhere,
+    # because "not asked for" is a configuration and must not read as a fault.
+    h = st.get("humans") or {}
+    if h.get("on"):
+        age = h.get("checked_age_s")
+        verdict = str(h.get("verdict") or "")
+        if age is None:
+            rec.unknown("humans: last checked", "not seen since boot (the first look comes a few minutes in)")
+        elif verdict.startswith(("not resolving", "failed")):
+            # A refusal repeats every window until someone acts, so it is said in full.
+            rec.check(False, f"humans: checked {age / 60:.0f} min ago and NOT resolving", warn_only=True,
+                      detail=verdict)
+        else:
+            rec.check(age < 3 * keeper.HUMANS_TICK_S, f"humans: checked {age / 60:.0f} min ago", warn_only=True,
+                      detail=verdict or "no verdict yet (the first look comes a few minutes after boot)")
+
 
 def _venue(rec: Recorder) -> None:
     from .onchain import get_futures
@@ -488,7 +504,11 @@ def _funding(rec: Recorder) -> None:
         return
     from acr_oracle_client import build_role_signer
 
-    from .desk import PRESS_BURN_USDC_PER_DAY, PRESS_CRITICAL_FLOOR_USDC
+    from .desk import (
+        PRESS_BURN_USDC_PER_DAY,
+        PRESS_CRITICAL_FLOOR_USDC,
+        post_reservation_usdc,
+    )
 
     # THE PRESS WALLET FIRST, AND BEFORE THE VENUE GATE. It signs every write the
     # service makes — both oracle generations' prints, receipt mirroring, the
@@ -511,17 +531,33 @@ def _funding(rec: Recorder) -> None:
             rec.unknown("press wallet balance", str(exc)[:60])
         else:
             days = pbal / PRESS_BURN_USDC_PER_DAY if PRESS_BURN_USDC_PER_DAY > 0 else float("inf")
-            rec.check(
-                pbal >= PRESS_CRITICAL_FLOOR_USDC,
-                f"press: {pbal:.3f} USDC",
-                detail=(
-                    f"BELOW the {PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor — prints, "
-                    "mirroring and the heartbeat all stop when this reaches zero"
-                    if pbal < PRESS_CRITICAL_FLOOR_USDC
-                    else f"~{days:.0f} days at the assumed {PRESS_BURN_USDC_PER_DAY}/day; real "
-                         "burn scales with mirrored receipts (2026-09-12 ran ~3/day)"
-                ),
-            )
+            # The stop line is a post's gas RESERVATION, read off the live base
+            # fee — not zero, which is what this sentence used to claim while
+            # mainnet sat at 0.005 USDC refusing every post (see desk.py).
+            try:
+                base_fee = int(w3.eth.get_block("latest")["baseFeePerGas"])
+            except Exception:  # noqa: BLE001 - a ledger must still say something
+                base_fee = None
+            reserve = post_reservation_usdc(base_fee)
+            if pbal < reserve:
+                detail = (
+                    f"posts are being REFUSED NOW — each one must reserve ~{reserve:.4f} USDC up "
+                    f"front (gas x 2x base fee) and the wallet holds {pbal:.4f}; far below the "
+                    f"{PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor. Prints, mirroring and "
+                    "the heartbeat are all stopped until it is funded"
+                )
+            elif pbal < PRESS_CRITICAL_FLOOR_USDC:
+                detail = (
+                    f"BELOW the {PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor — about "
+                    f"{int(pbal / reserve)} post reservations left. Every write stops at "
+                    f"~{reserve:.4f} USDC, not at zero, because a post reserves twice its cost"
+                )
+            else:
+                detail = (
+                    f"~{days:.0f} days at the assumed {PRESS_BURN_USDC_PER_DAY}/day; real "
+                    "burn scales with mirrored receipts (2026-09-12 ran ~3/day)"
+                )
+            rec.check(pbal >= PRESS_CRITICAL_FLOOR_USDC, f"press: {pbal:.3f} USDC", detail=detail)
 
     fut = get_futures()
     if not fut.configured:
@@ -659,9 +695,10 @@ def _humans_this_window(rec: Recorder, window) -> None:
         f"humans resolved this window: {len(clusters)} cluster(s), {wallets} wallet(s) · window {now_window} "
         f"ends in {ends_in_h:.0f}h",
         detail=None if clusters
-        else "the 7-day rotation rolled and nothing re-resolved — run `make resolve-humans ARGS=--commit` "
-             "(needs ACR_HUMANID_SALT); until then the human tier is unreachable and new settlements "
-             "are stamped human:false",
+        else "the 7-day rotation rolled and nothing re-resolved. A press with ACR_KEEPER_HUMANS=1 does it "
+             "itself within the hour (its `keeper.humans` verdict on /health says why not); elsewhere run "
+             "`make resolve-humans ARGS=--commit` (needs ACR_HUMANID_SALT). Until then the human tier is "
+             "unreachable and new settlements are stamped human:false",
     )
 
 

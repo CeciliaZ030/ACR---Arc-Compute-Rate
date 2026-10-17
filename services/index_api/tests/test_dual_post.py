@@ -93,7 +93,32 @@ def test_a_v1_failure_still_aborts_that_index():
 
     assert refs == ["error:ACR-INF"]
     assert v2.posted == [], "v2 must not be posted when v1 failed"
-    assert poster.last_posts["ACR-INF"]["note"] == "error"
+    # The REASON is on the record, not only in the log: a bare "error" sat on
+    # every surface for ~49 hours of mainnet outage while the cause (a gas
+    # reservation the wallet could not cover) was in a Render log nobody could read.
+    assert poster.last_posts["ACR-INF"]["note"] == "error: chain said no"
+
+
+class _RpcRefusal(_Client):
+    """A post refused the way web3 actually refuses one: a JSON-RPC error dict."""
+
+    def post(self, p, wait: bool = True):
+        raise ValueError({
+            "code": -32000,
+            "message": "insufficient funds for gas * price + value: balance 5272576941191814, "
+                       "tx cost 7272000000000000, overshot 1999423058808186",
+        })
+
+
+def test_a_refused_post_records_the_nodes_own_sentence():
+    """The case that actually happened (mainnet, 2026-10-13). `str()` of web3's
+    dict spends the truncation on `{'code': -32000, ...`; the record must carry
+    the node's sentence, because that sentence IS the diagnosis."""
+    poster = _poster(_RpcRefusal(), None)
+    poster.post_latest()
+    note = poster.last_posts["ACR-INF"]["note"]
+    assert note.startswith("error: insufficient funds for gas * price + value"), note
+    assert "{" not in note and "code" not in note, "the repr leaked into the record"
 
 
 def test_no_v2_configured_behaves_exactly_as_before():

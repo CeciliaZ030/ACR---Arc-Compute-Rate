@@ -1,7 +1,9 @@
 import { currentWindow } from "@/lib/humans";
+import { PAYER_WINDOW_DAYS } from "@/lib/deskSource";
 import { NextResponse } from "next/server";
 import { fetchLiveMeta, postLiveMeta } from "@/lib/api";
-import { envelopeHeaders, requestChain } from "@/lib/envelope";
+import { envelopeHeaders, refusalHeaders, requestChain } from "@/lib/envelope";
+import { payerParam } from "@/lib/routeInput";
 import type { ChainKey } from "@/lib/chainChoice";
 import type { Envelope } from "@/lib/types";
 import { humanShareInWindow, sellerTerms, sellersFromSettlements, recentForPayer } from "@/lib/tape";
@@ -72,7 +74,15 @@ function busiestPayer(rows: TapeSettlement[]): string | null {
 export async function GET(request: Request) {
   const chain = requestChain(request);
   const url = new URL(request.url);
-  const payerParam = url.searchParams.get("payer");
+  // Checked before any read: the payer goes into the press path `/tca/${payer}`,
+  // where `../health#` used to fetch the press's /health and serve it as a TCA.
+  const asked = payerParam(url.searchParams.get("payer"));
+  if (!asked.ok) {
+    return NextResponse.json(
+      { live: false, data: null, fetchedAt: Date.now(), chain, error: asked.error },
+      { status: 422, headers: refusalHeaders() },
+    );
+  }
 
   const [rawMeta, sellersRes, settleRes, fills, opsRes] = await Promise.all([
     op<{ _meta: { block: { number: number; timestamp: number }; hasIndexingErrors: boolean; deployment: string } }>(chain, "meta",
@@ -86,7 +96,7 @@ export async function GET(request: Request) {
   ]);
 
   const settlements = settleRes?.settlements ?? [];
-  const payer = payerParam ? payerParam.toLowerCase() : busiestPayer(settlements);
+  const payer = asked.payer ?? busiestPayer(settlements);
 
   /* Flattened at the boundary. `_meta.block` is a nested object and TapeMeta is
      flat: leaving the nesting to the view would have rendered an object through
@@ -130,7 +140,8 @@ export async function GET(request: Request) {
     : null;
 
   const tcaRes = payer
-    ? await fetchLiveMeta<TcaResult>(chain, `/tca/${payer}?days=7`, OP_TIMEOUT_MS)
+    // The MCP plugin's window, so a wallet seen there is not 'unseen' here (lib/deskSource.ts).
+    ? await fetchLiveMeta<TcaResult>(chain, `/tca/${payer}?days=${PAYER_WINDOW_DAYS}`, OP_TIMEOUT_MS)
     : { data: null, upstream: "error" as const };
 
   /* Grades are an ENHANCEMENT, not a dependency. /rating reaches for a window

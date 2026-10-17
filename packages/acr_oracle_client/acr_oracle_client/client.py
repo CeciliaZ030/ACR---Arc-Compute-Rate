@@ -19,6 +19,15 @@ from acr_core import ACRPrint, get_settings
 
 from .signer import Signer, build_signer
 
+
+def _is_revert(exc: Exception) -> bool:
+    """A contract revert (an answer: "no print") as opposed to a transport failure."""
+    try:
+        from web3.exceptions import ContractLogicError
+    except Exception:  # pragma: no cover - web3 is a dependency
+        ContractLogicError = ()  # type: ignore[assignment]
+    return isinstance(exc, ContractLogicError) or "revert" in str(exc).lower()
+
 log = logging.getLogger("acr_oracle_client")
 
 WAD = 10**18
@@ -782,21 +791,38 @@ class OracleClient:
             return None
         return {"index_id": index_id, "value": value / WAD, "posted_at": int(posted_at)}
 
-    def read_latest(self, index_id: str) -> dict | None:  # pragma: no cover - live chain
+    def read_latest(self, index_id: str, *, strict: bool = False) -> dict | None:
         """Read back the latest on-chain print for ``index_id`` (WAD-descaled).
 
         The v1 keys come back unchanged whatever the schema, so every existing
         caller is untouched; a v2 print ADDS the four fields that make it
         reproducible (``human_adjusted_bound``, ``policy_hash``,
         ``window_start``, ``window_end``).
+
+        ``strict``: None means only "the contract has no print" (it reverts
+        ``"no print"``). A throttled or unreachable RPC raises instead, after
+        retrying 429s. The default treats every failure as no print, which is
+        how a 429 reached readers as ``404 no on-chain print`` (2026-10-14).
         """
-        if self._connect() is None or not self.oracle_address:
+        if not self.oracle_address:
+            return None
+        if self._connect() is None:
+            if strict:
+                raise ConnectionError("oracle RPC unreachable")
             return None
         c = self._contract()
         idx = index_id_to_bytes32(index_id)
         try:
-            row = c.functions.latestPrint(idx).call()
-        except Exception:
+            call = c.functions.latestPrint(idx).call
+            if strict:
+                from .futures import _rpc_retry  # lazy: futures imports client
+
+                row = _rpc_retry(call, tries=3)
+            else:
+                row = call()
+        except Exception as exc:
+            if strict and not _is_revert(exc):
+                raise
             return None  # contract reverts "no print" when none exists yet
         # strict: a length mismatch means the ABI and the deployed contract
         # disagree, which must be loud. Swallowing it is the bug above.

@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { TOOLS, snippets } from "../components/chain/McpSnippet";
+import { AOMI_CHAT, EXAMPLES, TOOLS, snippetApi, snippets } from "../components/chain/McpSnippet";
 
 test("the MCP config names the API this page looks at, and is JSON a host can paste", () => {
   const s = snippets("https://acr.test");
@@ -136,6 +136,29 @@ test("the worked examples use addresses that have rows at the plugin's default w
   assert.ok(!/this week/.test(s.ask), "the default window is 30 days, so the question must not say a week");
 });
 
+test("the bill example names no vendor, because an ACR seller cannot be priced against the market", () => {
+  /* MEASURED 2026-10-13 through the published plugin. The example read "billed
+     0.47 USDC for 23 thousand tokens BY 0xefe0…" — and 0xefe0… is ACR's own
+     seller, which the press prices only against ACR's fleet, never the open
+     market. The answer was "pay, unbenchmarked" on mainnet and "pay, −9,609 bp"
+     on testnet, while the same bill with no vendor was "escalate, +500,870 bp"
+     against five cited market prices. The page's demo of token spend was the one
+     case the tool is built to refuse.
+
+     The seller_rating example SHOULD keep that address (it rates a seller); only
+     the question check_spend answers must not carry one. */
+  const lines = snippets("https://acr.test").ask.split("\n");
+  const arrow = lines.findIndex((l) => /->\s*check_spend\b/.test(l));
+  assert.ok(arrow > 0, "the ask tab must still teach check_spend");
+  const question = lines.slice(0, arrow).reverse().find((l) => l.startsWith('"')) ?? "";
+  assert.match(question, /tokens/, "the check_spend example should be a token bill");
+  assert.doesNotMatch(
+    question,
+    /0x[0-9a-fA-F]{40}/,
+    `the check_spend example names a vendor address: ${question}`,
+  );
+});
+
 test("a press that cannot serve the tools is not pinned into the config", () => {
   /* THE CONFIG USED TO BE WORSE THAN NONE. `ACR_API` was pinned to
      `baseState().active` — whichever host last answered, which for most of this
@@ -173,4 +196,104 @@ test("a press that cannot serve the tools is not pinned into the config", () => 
     "ACR_API" in JSON.parse(unpinned.config).mcpServers["acr-tca"].env,
     false,
   );
+});
+
+// ── an outside team testing its own agents (the Aomi team, 2026-10-14) ─────────
+
+test("on testnet the worked examples name testnet's own subjects, over a window that has rows", () => {
+  /* Measured 2026-10-14 on the testnet press: 0x784e… bought 144 times and
+     0x8366… is the seller it paid, inside 90 days, and NOTHING inside the
+     plugin's 30-day default. The page used to hand a testnet visitor the
+     mainnet pair, whose honest answer there is "never seen". */
+  const t = snippets("https://press.test", "testnet").ask;
+  assert.ok(t.includes(EXAMPLES.testnet.payer), "the testnet payer");
+  assert.ok(t.includes(EXAMPLES.testnet.seller), "the testnet seller");
+  assert.match(t, /in the last 90 days/);
+  assert.ok(!t.includes(EXAMPLES.mainnet.payer), "never the other chain's wallet");
+  const m = snippets("https://press.test", "mainnet").ask;
+  assert.ok(m.includes(EXAMPLES.mainnet.payer) && !m.includes(EXAMPLES.testnet.payer));
+});
+
+test("the ask tab's heading counts the questions it actually lists", () => {
+  /* It said "Five things to ask" over six questions. */
+  const words = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+  for (const chain of ["mainnet", "testnet"] as const) {
+    const ask = snippets(null, chain).ask;
+    const said = words.indexOf(ask.split(" ")[1]);
+    const listed = ask.split("\n").filter((l) => l.startsWith('"')).length;
+    assert.equal(said, listed, `${chain}: heading says ${ask.split(" ")[1]}, lists ${listed}`);
+  }
+});
+
+test("testnet always pins its own press; mainnet still leaves out a press without /par", () => {
+  /* Null means the package default, and that default is a MAINNET press: on
+     testnet, leaving the line out silently tested the other chain. */
+  assert.equal(snippetApi("testnet", "https://t.test", false), "https://t.test");
+  assert.equal(snippetApi("testnet", "https://t.test", null), "https://t.test");
+  assert.equal(snippetApi("mainnet", "https://m.test", false), null);
+  assert.equal(snippetApi("mainnet", "https://m.test", true), "https://m.test");
+  assert.equal(snippetApi("mainnet", "https://m.test", null), "https://m.test", "unread is not 'lacks /par'");
+});
+
+test("the card key is marked optional, because the tools answer without it", () => {
+  /* mcp/src/card.ts: "Opt-in. No ACR_AGENT_PRIVATE_KEY means no header and an
+     anonymous call". The line read as a requirement. */
+  assert.match(snippets(null).config, /"ACR_AGENT_PRIVATE_KEY": "0x<optional:/);
+});
+
+test("the testnet paying tab starts with free test money; mainnet's names no faucet", () => {
+  const t = snippets("https://press.test", "testnet").pay;
+  assert.match(t, /faucet\.circle\.com/);
+  assert.match(t, /Gateway/);
+  assert.match(t, /can_i_pay/);
+  assert.doesNotMatch(snippets("https://press.test", "mainnet").pay, /faucet/, "mainnet has no faucet");
+});
+
+test("the Aomi tab opens the App pinned, the way Aomi's own dashboard does", () => {
+  /* Unpinned, chat.aomi.dev routes on its own and answered our bill question
+     without ACR. aomi-labs/aomi chat-url.ts builds ?app=…&application_id=…&lock_app=1. */
+  const a = snippets(null, "testnet").aomi;
+  assert.ok(a.includes(AOMI_CHAT));
+  assert.match(AOMI_CHAT, /app=acr-compute-rate&application_id=2938642&lock_app=1$/);
+  assert.match(a, /Arc mainnet/, "the App reads mainnet, whichever chain this page shows");
+  assert.ok(a.includes(EXAMPLES.mainnet.payer) && !a.includes(EXAMPLES.testnet.payer));
+});
+
+/* The playground: a visitor's own values change the text, and only valid ones do. */
+
+test("a visitor's wallet and bill replace the examples", () => {
+  const wallet = "0x1234567890abcdef1234567890abcdef12345678";
+  const s = snippets("https://acr.test", "mainnet", {
+    wallet,
+    bill: { unit: "$/GPU-sec", billed: 2, quantity: 100, vendor: "" },
+  });
+  assert.ok(s.ask.includes(wallet), "the visitor's wallet is the subject");
+  assert.ok(!s.ask.includes(EXAMPLES.mainnet.payer), "and the example payer is gone");
+  assert.match(s.ask, /billed 2 USDC for 100 GPU-seconds/);
+  assert.ok(!/~50x the going rate/.test(s.ask), "the example's verdict is not claimed for someone else's bill");
+  assert.ok(s.aomi.includes(wallet) && /billed 2 USDC for 100 GPU-seconds/.test(s.aomi));
+});
+
+test("with no values given, the text is the worked example byte for byte", () => {
+  assert.deepEqual(snippets("https://acr.test", "mainnet", {}), snippets("https://acr.test", "mainnet"));
+});
+
+test("a hosted client is never told to ask for the local ledger, and the count follows", () => {
+  const s = snippets("https://acr.test", "mainnet", { remote: true });
+  assert.ok(!s.ask.includes("spend_report"), "the hosted server keeps no ledger");
+  const questions = s.ask.split("\n").filter((l) => l.startsWith('"')).length;
+  assert.match(s.ask, new RegExp(`^# ${["Zero", "One", "Two", "Three", "Four", "Five", "Six"][questions]} things to ask`));
+});
+
+test("the pay tab states the live price", () => {
+  assert.match(snippets(null, "mainnet", { priceUsdc: 0.0025 }).pay, /A metered query is \$0\.0025/);
+  assert.match(snippets(null, "mainnet").pay, /A metered query is \$0\.0001/);
+});
+
+test("the Aomi tab stays on mainnet and never hands out the hosted URL", () => {
+  const testnetWallet = "0x784e6D2d4870174aD1aEa3d7446F2377D0c6A05d";
+  const s = snippets("https://acr.test", "testnet", { wallet: testnetWallet });
+  assert.ok(!s.aomi.includes(testnetWallet), "the App reads mainnet; a testnet wallet would read 'never seen'");
+  assert.ok(s.aomi.includes(EXAMPLES.mainnet.payer));
+  assert.ok(!s.aomi.includes("/api/mcp"), "the App is not an MCP URL");
 });

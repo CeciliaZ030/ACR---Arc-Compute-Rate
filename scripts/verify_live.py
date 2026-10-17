@@ -54,6 +54,25 @@ API = os.environ.get("ACR_API_URL", "https://acr-api-mainnet.onrender.com").rstr
 TERMINAL = os.environ.get(
     "ACR_TERMINAL_URL", "https://arc-compute-rate.vercel.app"
 ).rstrip("/")
+#: Arc testnet. The terminal serves BOTH chains from one host and its route
+#: handlers pick by the `chain` query key (`apps/terminal/lib/chainChoice.ts`,
+#: CHAIN_PARAM), defaulting to mainnet. So a testnet run that called bare
+#: `/api/futures` audited MAINNET's venue and reported its empty tape as a
+#: testnet failure (measured 2026-10-14: "0 desk(s)" vs `?chain=testnet`'s own).
+TESTNET_CHAIN_ID = 5042002
+
+
+def terminal_url(path: str, chain_id: int) -> str:
+    """The terminal `path` on the chain this run audits."""
+    if int(chain_id) != TESTNET_CHAIN_ID:
+        return f"{TERMINAL}{path}"
+    return f"{TERMINAL}{path}{'&' if '?' in path else '?'}chain=testnet"
+
+
+def _audited_chain() -> int:
+    from acr_core import get_settings
+
+    return int(get_settings().arc_chain_id)
 #: Free-tier hosts sleep; a cold start is slow but not a fault.
 TIMEOUT_S = float(os.environ.get("VERIFY_TIMEOUT_S", "90"))
 #: HARD failure: ACRFutures.MAX_SETTLE_AGE is 7200s, so a print older than this
@@ -114,6 +133,21 @@ _GATEWAY_REF = re.compile(
 GATED = ["/prints/ACR-INF", "/curve/ACR-INF", "/vol/ACR-INF", "/seller-scores/ACR-INF"]
 UNGATED = ["/onchain/ACR-INF", "/marketplace/catalog", "/revenue", "/x402/info"]
 ROUTES = ["/", "/curve", "/developers"]
+
+#: The hosted MCP server (`apps/terminal/app/api/mcp`), the URL an agent adds with
+#: no install. Its unit tests stub the press, so nothing here checked that the
+#: DEPLOYED one answers: a broken endpoint would have left this whole run green
+#: while every agent that connected to it got an error. These are the tools it
+#: must offer. The two it must never offer need the agent's own machine:
+#: `pay_and_read` signs a payment with a local key, `spend_report` reads a local
+#: ledger file.
+HOSTED_MCP_TOOLS = frozenset({
+    "check_spend", "wallet_tca", "reroute_suggestion", "payment_receipts", "seller_rating",
+    "benchmark_price", "get_rate", "query_tape", "can_i_pay",
+})
+HOSTED_MCP_LOCAL_ONLY = frozenset({"pay_and_read", "spend_report"})
+#: The example bill /developers runs (`EXAMPLE_BILL` in lib/mcpPlayground.ts).
+HOSTED_MCP_BILL = {"unit": "$/1k tokens", "billed_usdc": 0.47, "quantity": 23}
 
 _failures: list[str] = []
 _warnings: list[str] = []
@@ -762,14 +796,15 @@ def verify_humans() -> None:
         bool(in_window),
         f"window {window}: {len(in_window)} human(s), {wallets} wallet(s) resolved"
         if in_window else
-        f"window {window} has NO resolutions — run `make resolve-humans ARGS=--commit` "
+        f"window {window} has NO resolutions — a press with ACR_KEEPER_HUMANS=1 resolves it within the "
+        f"hour (its /health keeper.humans verdict says why not); else `make resolve-humans ARGS=--commit` "
         f"(ids rotate weekly; the last window's are expired, not wrong)",
         warn_only=True,
     )
 
     # The Terminal's own reading of the same fact, so the chip a judge sees and the
     # line a cron prints cannot quietly disagree.
-    status, env = get(f"{TERMINAL}/api/humanid")
+    status, env = get(terminal_url("/api/humanid", _audited_chain()))
     humans = ((env or {}).get("data") or {}).get("humans") or {}
     if humans:
         check(int(humans.get("traded") or 0) > 0,
@@ -871,7 +906,7 @@ def verify_revenue(settings) -> None:
           f"/desk/pass/status refuses a stranger with {st}, not a 500")
     # 3. The terminal's server-side balance read, with a known address: numbers
     #    back, and the one-next-step the storefront keys on.
-    st, body = get(f"{TERMINAL}/api/wallet/balances?address=0x95DE70736E21e70DF921Fb3ab91dD56750965b59&price=0.001")
+    st, body = get(terminal_url("/api/wallet/balances?address=0x95DE70736E21e70DF921Fb3ab91dD56750965b59&price=0.001", settings.arc_chain_id))
     good = st == 200 and isinstance(body, dict) and "usdc_wallet" in body and "usdc_gateway" in body
     check(good,
           f"terminal /api/wallet/balances -> {st}"
@@ -1024,9 +1059,9 @@ def verify_hedger(settings) -> None:
 def verify_terminal(live_series: dict | None) -> None:
     print("\nterminal — the public surface")
     for path in ROUTES:
-        status, _ = get(f"{TERMINAL}{path}")
+        status, _ = get(terminal_url(path, _audited_chain()))
         check(status == 200, f"{path} -> {status}")
-    status, body = get(f"{TERMINAL}/api/futures")
+    status, body = get(terminal_url("/api/futures", _audited_chain()))
     payload = (body or {}).get("data") or body or {}
     desks = payload.get("desks") or {}
     check(
@@ -1047,9 +1082,119 @@ def verify_terminal(live_series: dict | None) -> None:
     check(
         n_fills > 0 or NO_VENUE,
         f"{n_fills} fill(s) on the public tape"
-        + (" — nothing to fill against yet, declared" if NO_VENUE and not n_fills else ""),
+        + (" — nothing to fill against yet, declared" if NO_VENUE and not n_fills else "")
+        + ("" if n_fills else tape_cause(payload.get("freshness"))),
         warn_only=NO_VENUE,
     )
+
+
+def mcp_rpc(chain_id: int, method: str, params: dict | None = None) -> tuple[int, dict | None]:
+    """One JSON-RPC call to the hosted MCP server for `chain_id`. No Accept
+    header, on purpose: a client that sends none must be answered too."""
+    body = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}}
+    return post(terminal_url("/api/mcp", chain_id), body)
+
+
+def tool_answer(body: dict | None) -> tuple[dict | None, str]:
+    """A `tools/call` reply as (the tool's JSON answer, why there is none).
+
+    Three ways to fail look like success at the HTTP layer. A JSON-RPC error
+    arrives with status 200. A failed tool is a RESULT with `isError`. A refusal
+    the tool explains (bad arguments, a press that cannot answer) is a result
+    without `isError`, carrying `available: false` and a reason. A gate that read
+    only the status code would pass all three.
+    """
+    body = body or {}
+    result = body.get("result")
+    if not isinstance(result, dict):
+        err = body.get("error") if isinstance(body.get("error"), dict) else {}
+        return None, f"no result ({err.get('message') or 'unparseable reply'})"
+    text = next(
+        (c.get("text") for c in result.get("content") or [] if isinstance(c, dict) and c.get("type") == "text"),
+        "",
+    ) or ""
+    if result.get("isError"):
+        return None, f"tool error: {text[:90]}"
+    try:
+        answer = json.loads(text)
+    except ValueError:
+        return None, f"not JSON: {text[:90]}"
+    if not isinstance(answer, dict):
+        return None, f"not an object: {text[:90]}"
+    if answer.get("available") is False:
+        return None, f"refused: {str(answer.get('reason') or 'no reason given')[:90]}"
+    return answer, ""
+
+
+def verify_hosted_mcp(settings) -> None:
+    print("\nhosted MCP — the endpoint an agent adds with no install")
+    cid = int(settings.arc_chain_id)
+    testnet = cid == TESTNET_CHAIN_ID
+
+    status, body = mcp_rpc(cid, "initialize", {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {"name": "acr-verify-live", "version": "1"},
+    })
+    info = ((body or {}).get("result") or {}).get("serverInfo") or {}
+    title = str(info.get("title") or "")
+    # The title names the chain the server answers for. A testnet URL answered
+    # by the mainnet server is the failure the `?chain=` param exists to prevent.
+    check(
+        status == 200 and info.get("name") == "acr-tca" and ("Testnet" in title) == testnet,
+        f"handshake -> {status}, {title or 'no serverInfo'}",
+    )
+
+    status, body = mcp_rpc(cid, "tools/list")
+    tools = ((body or {}).get("result") or {}).get("tools") or []
+    offered = {t.get("name") for t in tools if isinstance(t, dict)}
+    missing = sorted(HOSTED_MCP_TOOLS - offered)
+    local = sorted(HOSTED_MCP_LOCAL_ONLY & offered)
+    check(
+        status == 200 and not missing and not local,
+        f"tools/list -> {status}, {len(offered)} tool(s)"
+        + (f" — MISSING {', '.join(missing)}" if missing else "")
+        + (f" — OFFERS {', '.join(local)}, which need the agent's own machine" if local else ""),
+    )
+
+    # The identity check. Every print carries the oracle that holds it, and a
+    # label can say testnet while the press behind it reads mainnet.
+    _, body = mcp_rpc(cid, "tools/call", {"name": "get_rate", "arguments": {"index_id": "ACR-INF"}})
+    rate, why = tool_answer(body)
+    seen = str((rate or {}).get("oracle") or "")
+    want = str(settings.oracle_address or "")
+    if rate is None:
+        check(False, f"get_rate ACR-INF -> {why}")
+    else:
+        check(
+            bool(want) and seen.lower() == want.lower(),
+            f"get_rate ACR-INF = {rate.get('value')}, from oracle {seen[:10]}…"
+            + ("" if seen.lower() == want.lower()
+               else f" — but this chain's oracle is {want[:10] or 'unset'}…: the hosted server reads another chain"),
+        )
+
+    _, body = mcp_rpc(cid, "tools/call", {"name": "check_spend", "arguments": HOSTED_MCP_BILL})
+    spend, why = tool_answer(body)
+    verdict = (spend or {}).get("verdict") or {}
+    check(
+        spend is not None and verdict.get("benchmarked") is True,
+        "check_spend on the /developers example bill -> "
+        + (str(verdict.get("verdict") or "benchmarked") if spend is not None and verdict.get("benchmarked")
+           else why or f"not benchmarked: {verdict.get('reason') or 'no verdict'}"),
+    )
+
+
+def tape_cause(freshness: dict | None) -> str:
+    """Why an empty tape is empty. The press states when it last READ the tape
+    (`FuturesReader.freshness`): never means the read is failing (a throttled
+    RPC), a recent read means there were simply no fills within its reach. The
+    two call for opposite fixes, and `0 fill(s)` alone named neither."""
+    if not isinstance(freshness, dict) or "tape_age_s" not in freshness:
+        return ""
+    age = freshness["tape_age_s"]
+    if age is None:
+        return " — the press has not managed to READ the tape since it booted (its RPC reads are failing)"
+    return f" — read {age:.0f}s ago and empty: no fills within reach (is the venue's taker funded?)"
 
 
 def verify_funding(w3, settings) -> None:
@@ -1060,6 +1205,7 @@ def verify_funding(w3, settings) -> None:
         FAUCET_USDC,
         PRESS_BURN_USDC_PER_DAY,
         PRESS_CRITICAL_FLOOR_USDC,
+        post_reservation_usdc,
     )
 
     print("\nfunding — the runway under all of it")
@@ -1103,10 +1249,23 @@ def verify_funding(w3, settings) -> None:
         )
         # The floor FAILS. This is the one funding check that is about our code
         # continuing to run at all rather than about somebody's budget.
+        # "Below the floor every write stops" was false, and the false version
+        # cost a diagnosis: writes stop at a post's gas RESERVATION, ~0.0073 USDC
+        # (see desk.post_reservation_usdc). Below the floor the runway is short;
+        # below the reservation nothing can be sent at all, and that is said.
+        try:
+            base_fee = int(_rpc_retry(w3.eth.get_block, "latest")["baseFeePerGas"])
+        except Exception:
+            base_fee = None
+        reserve = post_reservation_usdc(base_fee)
         check(
             bal >= PRESS_CRITICAL_FLOOR_USDC,
-            f"{label} above the {PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor "
-            f"({bal:.3f}) — below it every on-chain write stops, prints included",
+            f"{label} above the {PRESS_CRITICAL_FLOOR_USDC:.1f} USDC critical floor ({bal:.3f})"
+            + (
+                f" — posts are REFUSED NOW: each must reserve ~{reserve:.4f} up front"
+                if bal < reserve
+                else f" — {int(bal / reserve)} post reservations left; writes stop at ~{reserve:.4f}, not zero"
+            ),
         )
         # The faucet and the press share this wallet, so say plainly how many
         # readers can still be onboarded before the floor bites.
@@ -1282,6 +1441,7 @@ def main() -> None:
     section(verify_revenue, s)
     section(verify_hedger, s)
     section(verify_terminal, live)
+    section(verify_hosted_mcp, s)
     section(verify_funding, w3, s)
     section(verify_crons, w3)
     section(verify_route_drift)

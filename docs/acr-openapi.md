@@ -105,4 +105,4 @@ carded tape reads pass Google Cloud Model Armor in both directions (`GET /armor/
 ---
 
 *Rendered by `scripts/gen_openapi_doc.py` from `app.openapi()` — 48 routes;*
-*2 operator routes omitted on purpose. `make openapi-doc-check` fails when this is stale.*
+*5 operator routes omitted on purpose. `make openapi-doc-check` fails when this is stale.*

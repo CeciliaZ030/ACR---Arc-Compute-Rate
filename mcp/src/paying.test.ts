@@ -16,7 +16,7 @@ import { CARD_HEADER, gateChainId, withCard } from "./card.js";
 import { arcChain, knownChainIds, USDC_DECIMALS } from "./chain.js";
 import { admits, fundingStep, newLedger, priceFromChallenge, record, validateKey } from "./pay.js";
 import { canIPay } from "./preflight.js";
-import { callTool, TOOLS, toolsFor, UNIT_SANITY_BP, UNITS } from "./tools.js";
+import { callTool, fleetHint, TOOLS, toolsFor, UNIT_SANITY_BP, UNITS } from "./tools.js";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -573,13 +573,41 @@ test("get_rate reads the on-chain route, and reports an unposted oracle as a sta
      a value and a 404 within ten minutes under Arc's `eth_getLogs` throttling.
      Which is the reason this branch stays: an absence is not always permanent,
      so it is reported as a state and never as a verdict on the deployment. */
+  const asked: Array<{ url: string }> = [];
   const none = (await callTool("get_rate", { index_id: "ACR-GPU" }, {
     api: "https://acr.test",
-    fetchImpl: router({ "/onchain/ACR-GPU": { status: 404, body: { detail: "no on-chain print for ACR-GPU" } } }),
+    fetchImpl: router({ "/onchain/ACR-GPU": { status: 404, body: { detail: "no on-chain print for ACR-GPU" } } }, asked),
+    retryDelayMs: 0,
   })) as { available: boolean; reason: string; try_instead: string };
   assert.equal(none.available, false);
-  assert.match(none.reason, /has not been posted to/);
+  assert.equal(asked.length, 2, "one 404 is not evidence: it re-asks once before saying anything");
+  /* It used to say "Its oracle has not been posted to." as a fact. Both causes
+     are possible and the answer has to carry both. */
+  assert.doesNotMatch(none.reason, /Its oracle has not been posted to\./);
+  assert.match(none.reason, /never been posted to/);
+  assert.match(none.reason, /could not read the chain just now/);
+  assert.match(none.reason, /Retry/);
   assert.match(none.try_instead, /pay_and_read/, "the value is still buyable from the metered endpoint");
+});
+
+test("get_rate rides out a throttled read: a 404 then the value returns the value", async () => {
+  /* Measured 2026-10-14 against the testnet press: one 404 for ACR-INF, then 36
+     of 36 reads answered 200. The re-ask is what turns that 404 into an answer. */
+  let calls = 0;
+  const flaky = async () => {
+    calls += 1;
+    return calls === 1
+      ? { ok: false, status: 404, json: async () => ({ detail: "no on-chain print for ACR-INF" }) }
+      : { ok: true, status: 200, json: async () => ({ value: 0.49236, posted_at: Math.floor(Date.now() / 1000) - 60 }) };
+  };
+  const out = (await callTool("get_rate", { index_id: "ACR-INF" }, {
+    api: "https://acr.test",
+    fetchImpl: flaky,
+    retryDelayMs: 0,
+  })) as { value?: number; available?: boolean };
+  assert.equal(calls, 2);
+  assert.equal(out.value, 0.49236);
+  assert.notEqual(out.available, false);
 });
 
 test("get_rate says how old the print is, because the payload always knew", async () => {
@@ -727,6 +755,55 @@ test("check_spend forwards a vendor, because it changes which market answers", a
     fetchImpl: router({ "/par": { body: { would: { intent: "pay" } } } }, seen),
   });
   assert.equal(new URL(seen[0].url).searchParams.get("vendor"), vendor);
+});
+
+test("a bill judged against ACR's fleet says so, and names the call that prices the market", async () => {
+  /* MEASURED 2026-10-13 through the published plugin: the example `/developers`
+     advertised — 0.47 USDC for 23k tokens from an ACR-operated seller — came back
+     "pay, unbenchmarked" on mainnet and "pay, −9,609 bp" on testnet, while the
+     same bill with no vendor was "escalate, +500,870 bp" against the open market.
+     Both fleet answers are the press applying a correct rule; neither told the
+     agent that a market answer existed. These are the press's real shapes. */
+  const vendor = "0xefe0E4625AFf072c3FCff230b47f8150A17aDF19";
+  const bill = { billed_usdc: 0.47, quantity: 23, unit: "$/1k tokens", vendor };
+  const shapes: Array<[string, Record<string, unknown>, RegExp]> = [
+    ["mainnet: fleet, no quotes", {
+      benchmarked_against: "fleet", over_rate_bp: null,
+      verdict: { benchmarked: false, reason: "NO_QUOTES", verdict: "unbenchmarked" },
+      would: { intent: "pay" },
+    }, /no independent quote/],
+    ["testnet: fleet, index scale", {
+      benchmarked_against: "fleet", over_rate_bp: -9609.2,
+      verdict: { benchmarked: true, verdict: "under_par" },
+      would: { intent: "pay" },
+    }, /index scale/],
+  ];
+  for (const [label, body, extra] of shapes) {
+    const out = (await callTool("check_spend", bill, {
+      api: "https://acr.test",
+      fetchImpl: router({ "/par": { body } }),
+    })) as { hint?: string; would?: { intent?: string } };
+    assert.ok(out.hint, `${label}: a fleet basis must come with a hint`);
+    assert.match(out.hint as string, /without `vendor`/, `${label}: the hint must name the market call`);
+    assert.match(out.hint as string, extra, label);
+    assert.equal(out.would?.intent, "pay", "the press's own answer is passed through, not rewritten");
+  }
+});
+
+test("a market-priced bill carries no hint, and a no-vendor fleet answer says the basket failed", async () => {
+  const market = (await callTool("check_spend", { billed_usdc: 0.47, quantity: 23, unit: "$/1k tokens" }, {
+    api: "https://acr.test",
+    fetchImpl: router({ "/par": { body: {
+      benchmarked_against: "market", over_rate_bp: 500869.6,
+      verdict: { benchmarked: true, verdict: "over_par", saving_usdc: 0.4639625 },
+      would: { intent: "escalate" },
+    } } }),
+  })) as { hint?: string };
+  assert.equal(market.hint, undefined, "the answer the hint points AT needs no footnote");
+  // No vendor reaches the fleet only when the market basket is unusable.
+  assert.match(fleetHint("fleet", false, true) as string, /basket could not be used/);
+  assert.equal(fleetHint("market", true, true), null);
+  assert.equal(fleetHint(undefined, true, false), null, "an older press with no basis field gets no guess");
 });
 
 test("check_spend refuses a bad bill locally, and names WHICH field", async () => {

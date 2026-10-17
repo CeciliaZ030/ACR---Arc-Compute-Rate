@@ -4,7 +4,8 @@ import { Fragment, useCallback, useState } from "react";
 import { TickerNumber } from "@/components/TickerNumber";
 import { ApiConsole } from "@/components/ApiConsole";
 import { AgentCardSnippet } from "@/components/chain/AgentCardSnippet";
-import { McpSnippet } from "@/components/chain/McpSnippet";
+import { McpSnippet, snippetApi } from "@/components/chain/McpSnippet";
+import type { ChainKey } from "@/lib/chainChoice";
 import { HumanProof } from "@/components/chain/HumanProof";
 import { WebhookActivity } from "@/components/WebhookActivity";
 import { WalletPanel } from "@/components/chain/WalletPanel";
@@ -18,6 +19,9 @@ import { fmtInt, money, shortAddr } from "@/lib/format";
 import { sellerBase, servesPath } from "@/lib/apiBase";
 import { PRICE_FALLBACK_USDC } from "@/lib/indices";
 import { ENDPOINTS, FAMILIES, type EndpointRow, type Family } from "@/lib/endpoints";
+import { liveSubjects, readInputs } from "@/lib/mcpPlayground";
+import { ADDRESS, parPath } from "@/lib/parQuery";
+import { usePlaygroundInputs } from "@/lib/usePlayground";
 import type { Envelope, MarketReceipt, TerminalData } from "@/lib/types";
 
 /** What /api/probe answers with. `detail` replaces the rest on a refusal or a
@@ -147,10 +151,19 @@ const FAMILY_HEAD: Record<Family, React.ReactNode> = {
 export function DevelopersView({
   initial,
   activeApi,
+  chainKey = "mainnet",
+  mcpOrigin = null,
+  hostedTools = null,
 }: {
   initial: Envelope<TerminalData>;
   /** The seller this page is actually reading from — see the note in page.tsx. */
   activeApi: string;
+  /** The chain the visitor chose (the `acr-chain` cookie), read on the server. */
+  chainKey?: ChainKey;
+  /** This deployment's public origin, from the request: the MCP URL is built on it. */
+  mcpOrigin?: string | null;
+  /** What the hosted MCP server lists, from the same function it answers with. */
+  hostedTools?: { name: string; description: string }[] | null;
 }) {
   const env = useTerminal(initial);
   const { revenue, refresh } = useRevenue();
@@ -196,6 +209,28 @@ export function DevelopersView({
      a visitor can be older. Null means the host would not say, and then every
      row stays runnable — the behaviour before this existed. */
   const served = useServes();
+
+  /* THE VISITOR'S OWN VALUES. The wallet, seller and bill rows run with what
+     they typed into the MCP section above (lib/usePlayground.ts), else with the
+     live example, and say which. These rows used to read "needs a wallet in the
+     path" and offer nothing; /api/probe now accepts them through
+     lib/probePath.ts, which rebuilds the path from validated parts. */
+  const [inputs] = usePlaygroundInputs();
+  const mine = readInputs(inputs);
+  const vendor = ADDRESS.test(inputs.vendor.trim()) ? inputs.vendor.trim() : null;
+  const subjects = liveSubjects(chainKey, tape?.data?.receipts ?? null);
+  const runFor = (e: EndpointRow): { path: string; subject: string | null; yours: boolean } | null => {
+    if (e.fill === "payer") {
+      const w = mine.wallet ?? subjects.payer;
+      return { path: `/tca/${w}?days=${mine.wallet ? 30 : subjects.days}`, subject: w, yours: Boolean(mine.wallet) };
+    }
+    if (e.fill === "seller") {
+      const v = vendor ?? subjects.seller;
+      return { path: `/rating/${v}?days=${vendor ? 30 : subjects.days}`, subject: v, yours: Boolean(vendor) };
+    }
+    if (e.fill === "bill" && mine.bill) return { path: parPath(mine.bill), subject: null, yours: true };
+    return e.run ? { path: e.run, subject: null, yours: false } : null;
+  };
 
   const loadIntoConsole = useCallback((path: string, run: string) => {
     setSelected(path);
@@ -267,7 +302,10 @@ export function DevelopersView({
    *  shows the 402 before anything is paid; a free one runs right here. */
   const fire = (e: EndpointRow) => {
     if (e.console) loadIntoConsole(e.path, e.console);
-    else if (e.run) void probe(e.path, e.run);
+    else {
+      const r = runFor(e);
+      if (r) void probe(e.path, r.path);
+    }
   };
 
   return (
@@ -309,7 +347,11 @@ export function DevelopersView({
         sample={env.data.x402_exchange_sample ?? null}
         prints={env.data.prints}
         chain={env.data.chain}
-        sellerBase={sellerBase()}
+        /* ON TESTNET, THE PRESS THIS PAGE READS. `sellerBase()` is env-only and
+           names mainnet in production, so a testnet visitor's "Settle for real"
+           signed testnet terms and sent them to the mainnet press. Mainnet keeps
+           the proven path unchanged. */
+        sellerBase={chainKey === "testnet" ? activeApi : sellerBase()}
       />
 
       <Ed
@@ -356,7 +398,14 @@ export function DevelopersView({
           package's own correct default to do it. Null omits the line and lets
           the package choose. `served` is the host's own /openapi.json, which is
           the same evidence the endpoint table below uses. */}
-      <McpSnippet api={served && !servesPath(served, "/par") ? null : activeApi} />
+      <McpSnippet
+        api={snippetApi(chainKey, activeApi, served ? servesPath(served, "/par") : null)}
+        chain={chainKey}
+        origin={mcpOrigin}
+        price={price}
+        receipts={tape?.data?.receipts ?? null}
+        hostedTools={hostedTools}
+      />
 
       {/* The contracts, named where a developer looks for them. This page knew
           the chain well enough to build explorer links and never once said
@@ -516,7 +565,8 @@ export function DevelopersView({
                       const out = probeOut[e.path];
                       // A paid row goes to the console (it has to show the 402
                       // before anything is paid); a free row runs right here.
-                      const act = e.console ? "console" : e.run ? "probe" : null;
+                      const act = e.console ? "console" : e.run || e.fill ? "probe" : null;
+                      const run = act === "probe" ? runFor(e) : null;
                       const sold = paid ? salesFor(e.path, tape?.data?.receipts).length : 0;
                       return (
                         <Fragment key={e.path}>
@@ -568,7 +618,7 @@ export function DevelopersView({
                               {DESC[e.path]}
                             </td>
                             <td className="mono">
-                              {act === "probe" && served && !servesPath(served, e.run!) ? (
+                              {act === "probe" && served && run && !servesPath(served, run.path) ? (
                                 /* A LABEL, NOT A DISABLED BUTTON. This row is
                                    runnable in the product and not on this
                                    press, which is a fact about the deployment
@@ -589,12 +639,19 @@ export function DevelopersView({
                                     className="mini-btn"
                                     onClick={(ev) => {
                                       ev.stopPropagation();
-                                      void probe(e.path, e.run!);
+                                      if (run) void probe(e.path, run.path);
                                     }}
-                                    disabled={probing !== null}
+                                    disabled={probing !== null || !run}
                                   >
                                     {probing === e.path ? "…" : "run"}
                                   </button>
+                                  {e.fill && run ? (
+                                    <span className="muted" style={{ fontSize: "var(--t-2)" }}>
+                                      {" "}
+                                      {run.subject ? `${shortAddr(run.subject)} ` : null}
+                                      {run.yours ? <Ed x="yours" p="yours" /> : <Ed x="example" p="example" />}
+                                    </span>
+                                  ) : null}
                                   {e.path === "/agent/whoami" ? (
                                     <>
                                       {" "}
@@ -641,8 +698,6 @@ export function DevelopersView({
                                     <Ed x="Circle calls this" p="Circle calls this" />
                                   ) : e.why === "post" ? (
                                     <Ed x="POST · needs a body" p="needs a form filled in" />
-                                  ) : e.why === "address" ? (
-                                    <Ed x="needs a wallet in the path" p="needs a wallet address" />
                                   ) : e.why === "business" ? (
                                     <Ed x="needs a business slug in the path" p="needs the name of a business" />
                                   ) : e.why === "human" ? (

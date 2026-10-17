@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { CHAIN } from "@/lib/chain";
+import { CardShelf } from "@/lib/cardShelf";
 import { apiBase } from "@/lib/api";
 import { requestChain } from "@/lib/envelope";
-import type { ChainKey } from "@/lib/chainChoice";
+import { CHAINS, type ChainKey } from "@/lib/chainChoice";
 import { CARD_HEADER, mintCard, throwawayKey } from "@/lib/agentcard";
 import { TEXT_CAP, matchedFilters, verdictOf, type ScreenVerdict } from "@/lib/screen";
 import { SCREEN_THROTTLE, Throttle, callerKey } from "@/lib/throttle";
@@ -32,17 +32,15 @@ export const runtime = "nodejs";
 const TIMEOUT_MS = 15_000;
 const REMINT_MARGIN_S = 60;
 
-interface HeldCard {
-  header: string;
-  expiresAt: number;
-}
-let held: HeldCard | null = null;
+/* One card per CHAIN — see lib/cardShelf.ts for the 401 a shared one caused. */
+const held = new CardShelf();
 let heldKey: `0x${string}` | null = null;
 const throttle = new Throttle(SCREEN_THROTTLE);
 
 async function card(chain: ChainKey): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  if (held && held.expiresAt - now > REMINT_MARGIN_S) return held.header;
+  const kept = held.fresh(chain, now, REMINT_MARGIN_S);
+  if (kept) return kept;
   heldKey ??= await throwawayKey();
   type Challenge = { audience?: string; chain_id?: number };
   const ch: Challenge = await fetch(`${apiBase(chain)}/agent/challenge`, {
@@ -54,13 +52,14 @@ async function card(chain: ChainKey): Promise<string> {
     .catch((): Challenge => ({}));
   const minted = await mintCard({
     privateKey: heldKey,
-    chainId: Number(ch.chain_id ?? CHAIN.chainId),
+    // The asked chain when the challenge did not answer, never mainnet by default.
+    chainId: Number(ch.chain_id ?? CHAINS[chain].chainId),
     audience: String(ch.audience ?? "acr-index-api"),
     name: "acr-terminal-screen-lab",
     role: "reader",
     ttlSeconds: 900,
   });
-  held = { header: minted.header, expiresAt: minted.expiresAt };
+  held.put(chain, { header: minted.header, expiresAt: minted.expiresAt });
   return minted.header;
 }
 

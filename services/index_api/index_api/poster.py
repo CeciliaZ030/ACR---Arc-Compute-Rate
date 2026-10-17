@@ -21,6 +21,19 @@ from .store import PrintStore
 log = logging.getLogger("index_api.poster")
 
 
+def _reason(exc: Exception, limit: int = 120) -> str:
+    """The sentence an operator needs from a failed post, not its repr.
+
+    web3 raises a JSON-RPC refusal as a DICT, and `str()` of that spends half of
+    any truncation on `{'code': -32000, 'message': ...` — so the reason itself
+    is lifted out when there is one.
+    """
+    arg = exc.args[0] if exc.args else None
+    if isinstance(arg, dict) and arg.get("message"):
+        return str(arg["message"])[:limit]
+    return str(exc)[:limit]
+
+
 def _build_v2_client() -> OracleClient | None:
     """The v2 oracle client, or None when no v2 address is configured."""
     from acr_core import get_settings
@@ -87,8 +100,16 @@ class OraclePoster:
             except Exception as exc:  # isolate a single index's failure
                 log.warning("post failed for %s: %s", iid, exc)
                 refs.append(f"error:{iid}")
+                # THE REASON GOES ON THE RECORD, not only in the log. Mainnet
+                # printed nothing for ~49 hours (2026-10-11 → 10-13) while every
+                # surface — /health, the terminal, the ledger — said "error" and
+                # the cause sat in a Render log nobody could open. It was gas: a
+                # post RESERVES gas × 2× base fee (0.007272 USDC) and the wallet
+                # held 0.005272, so the node refused every post before it was
+                # mined. The v2 path below already kept its reason; v1 now does.
                 self.last_posts[iid] = {"tx": None, "block": None,
-                                        "at_wall": time.time(), "note": "error"}
+                                        "at_wall": time.time(),
+                                        "note": f"error: {_reason(exc)}"}
                 continue
             if tx is None:
                 self.last_posts[iid] = {"tx": None, "block": None,
@@ -116,7 +137,7 @@ class OraclePoster:
                     self.last_posts[iid]["v2"] = v2_tx or "offline"
                 except Exception as exc:  # noqa: BLE001 — the reason, not the trace
                     log.warning("v2 post failed for %s: %s", iid, str(exc)[:160])
-                    self.last_posts[iid]["v2"] = f"error: {str(exc)[:80]}"
+                    self.last_posts[iid]["v2"] = f"error: {_reason(exc, 80)}"
         return refs
 
     def post_once(self, ts: float | None = None) -> list[str]:

@@ -1,0 +1,12 @@
+{
+  "name": "acr-aomi-live",
+  "private": true,
+  "description": "Live witness: ask ACR through Aomi's production chat and compare with the press",
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "@aomi-labs/client": "0.9.14"
+  }
+}

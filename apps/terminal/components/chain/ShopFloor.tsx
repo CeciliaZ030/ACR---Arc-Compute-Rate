@@ -11,6 +11,8 @@ import { Ed } from "@/components/Ed";
 import { HedgerPanel } from "@/components/chain/HedgerPanel";
 import { useEdition } from "@/lib/useEdition";
 import { chainFacts } from "@/lib/chain";
+import { apiKey } from "@/lib/chainChoice";
+import { useChain } from "@/lib/useChain";
 import { connectWallet, injectedProvider, payWithWallet, type WalletSession } from "@/lib/walletPayer";
 import { WalletFunding, type WalletBalances } from "@/components/WalletFunding";
 import { readableWalletError } from "@/lib/bridge";
@@ -118,6 +120,15 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
   // --- the floor buyer: a real x402 loop released from this page ---
   const { status: buyer, refresh: refreshBuyer } = useBuyerRun();
   const { mutate } = useSWRConfig();
+  const chain = useChain();
+  /* The settlement tape and revenue counters, re-read after a sale. By the
+     chain-scoped KEY the hooks use (`apiKey`): a bare "/api/revenue" names a
+     key nothing reads, so these calls revalidated nothing and a fresh sale
+     waited for the next 60 s poll to appear. */
+  const refreshLedger = useCallback(() => {
+    void mutate(apiKey("/api/marketplace/receipts", chain));
+    void mutate(apiKey("/api/revenue", chain));
+  }, [mutate, chain]);
   const run = buyer?.data ?? null;
   const running = run?.state === "running";
   const [releasing, setReleasing] = useState(false);
@@ -133,10 +144,9 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
     const latest = run.recent[0];
     if (run.done > 0 && latest) {
       setToast({ amountUsdc: latest.price_usdc, txRef: latest.tx_ref, key: ++toastSeq.current });
-      void mutate("/api/marketplace/receipts");
-      void mutate("/api/revenue");
+      refreshLedger();
     }
-  }, [run, mutate]);
+  }, [run, refreshLedger]);
 
   const release = useCallback(async () => {
     setReleasing(true);
@@ -186,8 +196,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         const settled = (body.results ?? []).filter((r: LiveBuyResult) => r.status === 200 && r.tx_ref);
         const last = settled[settled.length - 1];
         if (last) setToast({ amountUsdc: last.price_usdc, txRef: last.tx_ref, key: ++toastSeq.current });
-        void mutate("/api/marketplace/receipts");
-        void mutate("/api/revenue");
+        refreshLedger();
         void refreshBalances();
       }
     } catch {
@@ -195,7 +204,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
     } finally {
       setLiveRunning(false);
     }
-  }, [mutate, refreshBalances]);
+  }, [refreshLedger, refreshBalances]);
 
   /* --- buying ONE listing, the one the reader opened ---
      The button above releases the buyer at `{count: 3}` with no paths, so it
@@ -232,8 +241,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
           // The three surfaces this purchase just changed. Without these the
           // reader has to reload to see their own settlement, which is the
           // whole thing this page is trying to prove.
-          void mutate("/api/marketplace/receipts");
-          void mutate("/api/revenue");
+          refreshLedger();
           void refreshBalances();
         } else if (r?.error) {
           setBuyErr((e) => ({ ...e, [path]: r.error as string }));
@@ -244,7 +252,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         setBuying(null);
       }
     },
-    [mutate, refreshBalances],
+    [refreshLedger, refreshBalances],
   );
 
   // --- the visitor's OWN wallet: the storefront on mainnet, where there is no
@@ -287,8 +295,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         setBuyOut((o) => ({ ...o, [path]: out }));
         if (r.status === 200 && out.tx_ref) {
           setToast({ amountUsdc: out.price_usdc, txRef: out.tx_ref, key: ++toastSeq.current });
-          void mutate("/api/marketplace/receipts");
-          void mutate("/api/revenue");
+          refreshLedger();
         } else if (r.status !== 200) {
           setBuyErr((e) => ({ ...e, [path]: r.error ?? `the seller answered ${r.status}` }));
         }
@@ -299,7 +306,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         setBuying(null);
       }
     },
-    [wallet, facts, seller, mutate],
+    [wallet, facts, seller, refreshLedger],
   );
 
   return (

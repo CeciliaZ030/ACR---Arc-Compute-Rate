@@ -54,6 +54,28 @@ PRESS_BURN_USDC_PER_DAY = float(os.environ.get("ACR_PRESS_BURN_PER_DAY", "0.41")
 #: printed into a cron log nobody reads. Defined once, here, so the two places
 #: that watch it cannot disagree about where "critical" is.
 PRESS_CRITICAL_FLOOR_USDC = float(os.environ.get("ACR_PRESS_CRITICAL_USDC", "1.0"))
+#: Gas a warm `postPrint` is estimated at. Measured on Arc mainnet 2026-10-13:
+#: the last post that landed was ESTIMATED at 181,800 gas and used 179,210.
+POST_GAS_ESTIMATE = 182_000
+#: Arc's base fee when the chain cannot be asked. Measured 20.00 gwei on every
+#: read 2026-10-13; it is a fallback for a ledger that must still say something.
+FALLBACK_BASE_FEE_WEI = 20 * 10**9
+
+
+def post_reservation_usdc(base_fee_wei: int | None) -> float:
+    """What one post must hold UP FRONT before the node will accept it.
+
+    THIS, NOT ZERO, IS WHERE EVERY WRITE STOPS. web3 fills `maxFeePerGas` as
+    2x the base fee (plus a tip that is ~0 on Arc), and a node refuses any
+    transaction whose `gas x maxFeePerGas` exceeds the sender's balance — before
+    it is mined, whatever it would actually have cost. Measured 2026-10-13: a post
+    COSTS 0.003584 USDC (179,210 x 20 gwei) but RESERVES 0.007272 (181,800 x 40
+    gwei), and the press wallet held 0.005272 — enough to pay for a post, too
+    little to send one. Mainnet printed nothing for ~49 hours on that gap while
+    the ledger said writes stop "when this reaches zero".
+    """
+    base = base_fee_wei if base_fee_wei and base_fee_wei > 0 else FALLBACK_BASE_FEE_WEI
+    return POST_GAS_ESTIMATE * 2 * base / 1e18
 #: How many days of posting the faucet must never eat into.
 PRESS_RUNWAY_DAYS = float(os.environ.get("ACR_PRESS_RUNWAY_DAYS", "14"))
 

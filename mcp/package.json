@@ -1,6 +1,6 @@
 {
   "name": "acr-mcp",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "type": "module",
   "description": "ACR Machine TCA over MCP \u2014 check whether your agent can pay, benchmark a machine purchase, grade a seller, verify a print.",
   "license": "MIT",
@@ -40,6 +40,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test --test-force-exit src/*.test.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
+    "demo": "node --import tsx scripts/demo.ts",
     "prepublishOnly": "npm run build && npm test",
     "release": "npm run smoke && npm publish"
   },

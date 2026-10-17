@@ -146,7 +146,10 @@
   --f-1: 24px;
   --f-2: 30px;
   --f-3: clamp(36px, 4vw, 52px);
-  --f-4: clamp(64px, 13vw, 184px);
+  /* There is no --f-4. It used to hold the home hero's ramp, but that print is
+     sized to its COLUMN now, with a container-query clamp that lib/heroFit.test.ts
+     greps for literally in the rule. A token there would read as tidier and
+     would break the test that keeps the headline on one line. */
 
   /* leading: 11 values to 4. The body value is unchanged, so prose does not
      move; 1.4 through 1.7 all collapse onto it, a delta under 3%. */
@@ -311,7 +314,6 @@ a {
 .section-link,
 .home-hero-scroll,
 details.disclosure summary,
-.chain-switch,
 .chip,
 .chain-strip,
 .dateline,
@@ -340,8 +342,7 @@ table.sheet th,
 .nav a,
 .section-link,
 .home-hero-scroll,
-details.disclosure summary,
-.chain-switch {
+details.disclosure summary {
   font-size: var(--t-2);
   letter-spacing: var(--tr-6);
 }
@@ -874,6 +875,9 @@ a.chip:hover,
   z-index: 1;
   width: 100%;
   max-width: 62ch;
+  /* A size container, so the print below can be sized to THIS column rather
+     than to the window. See .home-hero-rate and lib/heroFit.test.ts. */
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
@@ -906,11 +910,29 @@ a.chip:hover,
 .home-hero-rate {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--f-4);
-  line-height: var(--lh-1);
-  letter-spacing: var(--tr-1);
+  /* Sized to the column, not the viewport. The old viewport unit capped at
+     184px on every laptop while the column stayed at 62ch, so seven glyphs
+     of Plex Mono (0.57em each after tracking) needed 735px of 679px and the
+     headline wrapped to "0.4953" over a lone "3". 23cqi puts seven glyphs at
+     92% of the column at any width; nowrap turns the remaining failure mode
+     into a visible overflow instead of a silent second line. Pinned by
+     lib/heroFit.test.ts. */
+  font-size: clamp(64px, 23cqi, 184px);
+  white-space: nowrap;
+  line-height: 0.94;
+  letter-spacing: -0.03em;
   color: var(--sand);
   text-shadow: var(--glow-gold);
+  /* Scrubbable (components/HomeHero.tsx): a horizontal reading line, with
+     vertical panning left to the page so a phone can still scroll past it. */
+  touch-action: pan-y;
+  cursor: ew-resize;
+  outline: none;
+}
+.home-hero-rate:focus-visible {
+  outline: 1px solid var(--validator);
+  outline-offset: 10px;
+  border-radius: 6px;
 }
 .home-hero-unit {
   font-family: var(--mono);
@@ -1634,14 +1656,65 @@ table.sheet.sheet-checks td:nth-child(3) {
   .nav-links a {
     flex: 0 0 auto;
   }
-  /* `.nav .nav-right`, not `.nav-right`: a media query adds no specificity, so
-     the base rule ~1350 lines below this one was winning and every
-     declaration here had never applied on a phone. Raising specificity is what
-     makes source order stop mattering. Do not simplify this back. */
+  /* TWO ROWS, BECAUSE ONE STOPPED FITTING. This block was budgeted for two
+     pinned controls (the edition toggle and the status pill). The network
+     switch was added later into the same fixed-width, nowrap row, and nobody
+     re-measured: at 390px the nav offers 342px and that row needed 437, so the
+     page scrolled sideways AND the link strip was squeezed to 32px — the seven
+     page links were effectively invisible on a phone. Measured in production
+     2026-10-12. The MAINNET | TESTNET pair is wider again (505), so the row
+     had to stop pretending.
+
+     Row 1: the scrolling link strip, with the status pill pinned at its end —
+     a status light, glanced at, belongs with the navigation it qualifies.
+     Row 2: the two toggles, right-aligned — the controls a reader acts on.
+     `display: contents` lets the pill and the toggles join `.nav`'s own flex
+     line so they can sit on different rows, and `.nav::after` is the line
+     break. Two rows and not three, because a sticky header taller than this
+     eats the screen on every page (the reason this block exists at all). */
+  /* `.masthead .nav`, for the same source-order reason as `.nav .nav-right`
+     below: a `.nav { gap: 14px }` in the 760px block sits LATER in this file and
+     wins every tie, so a plain `.nav` here never set the gap at all.
+     Row gap 0 because the zero-height line break is a line of its own and a
+     row-gap would be paid twice; row 2 carries its own top margin instead. */
+  .masthead .nav {
+    flex-wrap: wrap;
+    gap: 0 10px;
+  }
+  /* `.nav .nav-right`, not `.nav-right`: the base `.nav-right` rule sits
+     ~1,400 lines BELOW this block, and a media query adds no specificity, so
+     the later base rule won every tie and this declaration was silently dead.
+     The block's previous `.nav-right` rule (nowrap, margin-left: 8px) had been
+     dead the same way, which is part of how the phone row drifted unchecked. */
   .nav .nav-right {
-    margin-left: var(--s-3);
+    display: contents;
+  }
+  /* Basis 0, not auto. With `auto` the strip's basis is its CONTENT width
+     (864px of links), which can never share a line with anything, so it took
+     row 1 alone and pushed the pill down — measured: links 366px wide, header
+     236px. At 0 it grows into whatever the pill leaves and scrolls the rest. */
+  .nav-links {
+    order: 1;
+    flex: 1 1 0;
+  }
+  .nav .nav-pulse {
+    order: 2;
     flex: 0 0 auto;
-    flex-wrap: nowrap;
+    margin-left: 0;
+  }
+  .nav::after {
+    content: "";
+    order: 3;
+    flex-basis: 100%;
+    height: 0;
+  }
+  .nav-right > :not(.nav-pulse) {
+    order: 4;
+    flex: 0 0 auto;
+    margin-top: 8px;
+  }
+  .nav-right > :first-child:not(.nav-pulse) {
+    margin-left: auto;
   }
   /* The header is shorter here than on desktop, and the desktop value would
      drop a deep link (the hero's own "Open the desk →") underneath it. */
@@ -2384,6 +2457,13 @@ a.colophon-act:hover::after {
   .register-gloss {
     grid-area: 2 / 1 / 3 / -1;
   }
+  /* The MCP playground's rows hold inputs and button groups, not a name and an
+     address: on a phone each part takes the whole line. Two classes, so this
+     wins over the two-column rule above without depending on source order. */
+  .register-row.is-stacked {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+  }
   .nav {
     gap: var(--s-4);
   }
@@ -2904,53 +2984,44 @@ html[data-edition-turn] .plain-only {
   }
 }
 
-/* the network switch — a footnote on the default chain, a chip off it.
-   Borrowed from `.segmented button`'s reset rather than invented: same eyebrow
-   type, same muted ink, so on the default chain it reads as chrome and not as a
-   control competing with the edition toggle beside it. Off the default it also
-   carries `.chip chip-gold`, which supplies its own border and colour. */
-.chain-switch {
-  border: 0;
-  background: transparent;
-  padding: var(--s-3) var(--s-2);
-  color: var(--ether-45);
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-quart);
+/* the network switch — MAINNET | TESTNET, the same `.segmented` frame as the
+   edition pair beside it. Which side is lit is decided HERE, keyed on the
+   `<html data-chain>` the server rendered from the request's cookie, exactly as
+   `.edition-seg` keys on `data-edition`: React cannot know the chain during SSR
+   without leaking one visitor's network into the next render, so a React-driven
+   highlight would flash the wrong network until hydration.
+
+   The two lit states are deliberately NOT the same colour. Mainnet lights navy,
+   identical to a lit EXPERT, because it is the product and reads as normal.
+   Testnet lights GOLD, the sandbox colour the old chip used, because being on
+   the practice network must stay impossible to miss even in a symmetric
+   control. */
+.chain-seg .seg-word {
+  padding: 7px 12px;
 }
-.chain-switch:hover {
+.chain-seg button:focus-visible {
+  outline: 1px solid var(--validator);
+  outline-offset: -2px;
+}
+.chain-seg button.on-main {
+  background: var(--protocol);
   color: var(--sand);
 }
-.chain-switch:focus-visible {
-  outline: 1px solid var(--validator);
-  outline-offset: 2px;
+[data-chain="testnet"] .chain-seg button.on-main {
+  background: transparent;
+  color: var(--ether-70);
 }
-/* Which label shows is CSS's job, keyed on the attribute the SERVER rendered —
-   the same mechanism `.ed-x` / `.ed-p` use for the edition, and for the same
-   reason: `useChain()`'s server snapshot is the constant default, so a
-   React-driven label flashed the wrong state until hydration. Both branches
-   ship; one is revealed. */
-.chain-off-default {
-  display: none;
-}
-[data-chain="testnet"] .chain-on-default {
-  display: none;
-}
-[data-chain="testnet"] .chain-off-default {
-  display: inline;
-}
-
-/* Off the default network the footnote becomes a chip, because being on the
-   wrong one must be impossible to miss. Borrowing `.chip`'s look here rather
-   than toggling the class in React keeps the whole control server-renderable. */
-[data-chain="testnet"] .chain-switch {
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid rgba(233, 161, 63, 0.55);
-  border-radius: var(--r-pill);
+[data-chain="testnet"] .chain-seg button.on-test {
   background: var(--gold-wash);
   color: var(--sand);
+  box-shadow: inset 0 0 0 1px rgba(233, 161, 63, 0.55);
 }
-[data-chain="testnet"] .chain-switch:hover {
-  border-color: var(--gold);
+[data-chain="testnet"] .chain-seg {
+  border-color: rgba(233, 161, 63, 0.55);
+}
+/* The unlit side is the control: it is the only one a click does anything to. */
+.chain-seg button:hover {
+  color: var(--sand);
 }
 
 /* masthead: the toggle rides with the status pill as one right-aligned unit */
@@ -3352,4 +3423,72 @@ table.sheet td.mono .label {
    settles it. Do not tidy this upwards. */
 .skel-gap {
   margin-top: var(--section-gap);
+}
+
+/* ACR Agent drawer */
+.agent-layout { min-width: 0; }
+.agent-page { min-width: 0; transition: margin-right .32s var(--ease-expo); }
+.agent-layout[data-agent-open="true"] .agent-page { margin-right: var(--agent-width); }
+.agent-launch { display: inline-flex; align-items: center; gap: 12px; padding: 9px 13px; border: 1px solid var(--gold); border-radius: 6px; background: var(--gold-wash); color: var(--sand); font: 11px var(--eyebrow); white-space: nowrap; cursor: pointer; }
+.agent-launch:hover, .agent-launch[aria-expanded="true"] { background: rgba(233,161,63,.24); box-shadow: var(--glow-gold); }
+.agent-drawer { position: fixed; z-index: 50; inset: 0 0 0 auto; width: var(--agent-width); height: 100dvh; display: flex; flex-direction: column; background: var(--genesis); border-left: 1px solid var(--hairline-strong); box-shadow: -12px 0 60px rgba(11,34,62,.35); transform: translateX(100%); visibility: hidden; transition: transform .32s var(--ease-expo); }
+.agent-layout[data-agent-open="true"] .agent-drawer { transform: translateX(0); visibility: visible; }
+.agent-heading { display: flex; justify-content: space-between; align-items: flex-start; padding: 24px 24px 18px; background: linear-gradient(140deg, var(--ledger), var(--genesis)); border-bottom: 1px solid var(--hairline); }
+.agent-eyebrow, .agent-context > span { font: 9px var(--eyebrow); letter-spacing: .14em; color: var(--sky); }
+.agent-heading h2 { font: 500 26px var(--display); margin: 8px 0 4px; }
+.agent-heading h2 span { color: var(--sand); font-size: 22px; }
+.agent-heading p { font-size: 11px; color: var(--ink-45); margin: 0; }
+.agent-close { border: 1px solid var(--hairline-strong); border-radius: 50%; width: 36px; height: 36px; background: var(--glass); color: var(--ether); font-size: 24px; cursor: pointer; }
+.agent-close:hover { background: var(--protocol); }
+.agent-context { padding: 14px 24px; border-bottom: 1px solid var(--hairline); }
+.agent-context p { margin: 5px 0 0; font-size: 13px; color: var(--sand); }
+.agent-chat { flex: 1; min-height: 0; overflow: hidden; }
+/* This app is a compute desk: suppress the widget's generic trade starters. */
+.agent-drawer .aui-thread-welcome-suggestions { display: none; }
+.agent-drawer .acr-agent-widget .aui-thread-welcome-title { font-family: var(--display); font-size: 24px; }
+.agent-notice { padding: 24px; font-size: 14px; color: var(--ink-70); }
+.agent-notice h3 { color: var(--ether); font: 500 20px var(--display); }
+.agent-resize { position: absolute; left: -4px; width: 8px; top: 0; height: 100%; cursor: col-resize; touch-action: none; z-index: 2; }
+.agent-resize:hover, .agent-resize:focus-visible { background: var(--gold-wash); }
+.agent-drawer .acr-agent-widget { border: 0; border-radius: 0; --aomi-bg: #000b24; --aomi-surface: #0b223e; --aomi-raised: #122b4b; --aomi-surface-2: #1b3158; --aomi-border: #2f4667; --aomi-fg: #d5e0e7; --aomi-muted: #acc6e9; --aomi-accent: #ffcc6f; --aomi-accent-strong: #e9a13f; --aomi-accent-subtle: #403521; --aomi-on-accent: #000b24; --aomi-hover: #1b3158; --aomi-success: #4fb3a9; --background: #000b24; --foreground: #d5e0e7; --font-geist-sans: var(--body); --font-geist-mono: var(--mono); font-family: var(--body); }
+@media (max-width: 760px) {
+  .agent-layout[data-agent-open="true"] .agent-page { margin-right: 0; }
+  .agent-drawer { width: 100%; border-left: 0; }
+  .agent-resize { display: none; }
+  .agent-heading { padding-top: max(20px, env(safe-area-inset-top)); }
+  .agent-chat { padding-bottom: env(safe-area-inset-bottom); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-page, .agent-drawer { transition: none; }
+}
+
+/* The agent launcher on a phone floats, bottom right, as the mark alone.
+   In the masthead it cost the second row its fit: even reduced to the mark,
+   EXPERT | PLAIN fell to a third row at 375 and 390px, against a header
+   budgeted at two (the `.nav-right` block above). Floating leaves the header
+   exactly as it was before the agent existed. The full label stays the
+   button's accessible name. After the base `.agent-launch` rule on purpose:
+   a media query adds no specificity. */
+.agent-launch-mark { display: none; }
+@media (max-width: 640px) {
+  .agent-launch {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--genesis);
+    box-shadow: var(--glow-gold);
+  }
+  .agent-launch-text,
+  .agent-launch-arrow { display: none; }
+  .agent-launch-mark { display: inline; font-size: 20px; line-height: 1; }
+  /* The launcher is still `.nav-right`'s first child, which is what took the
+     row's `margin-left: auto`; floating, it no longer pushes, so the next one does. */
+  .nav-right > .agent-launch + * { margin-left: auto; }
 }

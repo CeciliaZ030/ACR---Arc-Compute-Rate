@@ -161,6 +161,11 @@ export function PublicDesk({
 
   const tradable = Object.keys(desks ?? {});
   const desk = (desks ?? {})[indexId];
+  /* What the desk's effects key on. `desk` is parsed afresh from every desk
+     reply (~4 s), so an effect depending on the OBJECT re-ran on every poll:
+     the 10 s position timer restarted before it fired and the fills, loaded
+     "once", were re-read every 4 s. The series id changes only on a roll. */
+  const seriesId = desk?.series_id;
   // Offer the full feasible size, and offer NOTHING until the server has said
   // what that is. This used to fall back to the floor before the first /limits
   // answer, on the reasoning that "the server re-clamps every challenge
@@ -581,12 +586,12 @@ export function PublicDesk({
 
   // Position poll while trading (10s, matches the route's CDN window).
   useEffect(() => {
-    if (phase !== "trading" || !session?.wallet || !desk) return;
+    if (phase !== "trading" || !session?.wallet || seriesId == null) return;
     let alive = true;
     const poll = async () => {
       try {
         const r = await api<{ position: Position | null }>(
-          `/api/desk/position?series=${desk.series_id}&addr=${session.wallet!.address}`,
+          `/api/desk/position?series=${seriesId}&addr=${session.wallet!.address}`,
         );
         if (alive) {
           setPosition(r.position);
@@ -605,7 +610,7 @@ export function PublicDesk({
       alive = false;
       clearInterval(t);
     };
-  }, [phase, session, desk]);
+  }, [phase, session, seriesId]);
 
   // Size caps follow the mark, so re-read them with the position.
   useEffect(() => {
@@ -617,9 +622,9 @@ export function PublicDesk({
   // reader should see their history immediately, not only after trading
   // again); the trade flow refreshes it itself, so this does not poll.
   useEffect(() => {
-    if (phase !== "trading" || !session?.wallet || !desk) return;
-    void refreshFills(session.wallet.address, desk.series_id);
-  }, [phase, session, desk, refreshFills]);
+    if (phase !== "trading" || !session?.wallet || seriesId == null) return;
+    void refreshFills(session.wallet.address, seriesId);
+  }, [phase, session, seriesId, refreshFills]);
 
   // The exit is read for ANY wallet at ANY phase — a reader whose series
   // settled while they were away should land straight on the withdraw button.

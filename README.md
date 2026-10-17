@@ -59,6 +59,13 @@ the same transaction (0.157348 USDC of gas), and the first three prints on chain
 | `FeedAccessAttestor` | [`0xB950…A490`](https://explorer.arc.io/address/0xB9508caD4A5C367C3a62B6767C4837a607EaA490) |
 | Seller API | https://acr-api-1fto.onrender.com (testnet, all 50 routes) · https://acr-probe-free.onrender.com (mainnet, all 50) · https://acr-api-mainnet.onrender.com (mainnet, 44 of 50) |
 
+Carry the rate. Three live badges, each drawn from the latest print and saying how old it is;
+the Markdown for your own README is one click away under **embed this rate** on the front page.
+
+[![ACR-INF, the Arc Compute Rate for inference](https://arc-compute-rate.vercel.app/api/badge/ACR-INF.svg)](https://arc-compute-rate.vercel.app/index/ACR-INF)
+[![ACR-GPU, the Arc Compute Rate for GPU compute](https://arc-compute-rate.vercel.app/api/badge/ACR-GPU.svg)](https://arc-compute-rate.vercel.app/index/ACR-GPU)
+[![ACR-DATA, the Arc Compute Rate for data delivery](https://arc-compute-rate.vercel.app/api/badge/ACR-DATA.svg)](https://arc-compute-rate.vercel.app/index/ACR-DATA)
+
 The first print, ACR-INF:
 [`0xef9812…65835`](https://explorer.arc.io/tx/0xef9812037003c9dd40d5d9fbbfae03549a67b03045b696fd8aada385e8c65835).
 ACR-GPU and ACR-DATA landed in the same cycle and all three read back through `/onchain/{index}`.
@@ -150,6 +157,7 @@ is also the native gas token at eighteen, and
 
 | | |
 |---|---|
+| **Judging this?** | [`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md): seven stops in order, ten minutes, what to click and what you should see |
 | **Who it runs for** | [`GET /operator/traction`](https://acr-api-1fto.onrender.com/operator/traction) — every figure counted from the registry and the decision log at request time, never maintained by hand. Linked against the **testnet** API (chain `5042002`) — the `/traction` page renders it against any press that carries the operator, which now includes the mainnet press `acr-probe-free`; `acr-api-mainnet` is the one that does not (`make verify-drift`) |
 | **One business's money** | [`GET /operator/statement/acr-fleet`](https://acr-api-1fto.onrender.com/operator/statement/acr-fleet) — the statement, the budgets read from the contract, and the queue waiting on its owner. Rendered by the `/spend` page, against the same testnet press |
 | **The ledger** | `GET /operator/ledger/{business}` — beancount, every transaction summing to zero. Downloads from the ledger link on each `/traction` row |
@@ -216,7 +224,10 @@ make recompute                    # re-derive the index from the indexed tape an
 ladder over any vendor's invoice, **`spend_report`**, which totals every bill it has priced on
 that machine, and **`can_i_pay`**, which answers "can this agent pay for a metered query, and if
 not which rung is in the way" without spending anything; the eleventh settles one for real, and is
-not registered unless a payer key is set.
+not registered unless a payer key is set. **No install:** the same package also answers at
+`https://arc-compute-rate.vercel.app/api/mcp?chain=mainnet` (or `?chain=testnet`), a URL any
+remote-MCP client adds, read-only and keyless; [`/developers#mcp`](https://arc-compute-rate.vercel.app/developers#mcp)
+runs every tool live with your own wallet and bill.
 Substreams is N/A on Arc (Studio-only), stated rather than skipped.
 
 ### World — humans, not wallets
@@ -294,9 +305,9 @@ The estimator's headline result, gated in CI so it cannot drift: under the paire
 
 Measured, not aspirational — run `make verify-live` for the current set. These are the **testnet**
 deployment's, which is where the history is; mainnet's own first numbers are in the launch section above.
-At time of writing: hourly on-chain prints for 3 indices with attack-cost-per-bp on every one; **4** seller attestations on-chain; **three** live futures books (ACR-INF, ACR-GPU, ACR-DATA) whose maker is a Circle custody wallet, traded hourly by a keeper; **112** real Gateway x402 settlements from **3 distinct payers** (**30** from the CLI buyer agent, **7** from the autonomous hedger's backing EOA, **75** from a demo human's wallet — the first rows stamped with the tier the agent's card earned); 100% Foundry invariants passing.
+At time of writing: hourly on-chain prints for 3 indices with attack-cost-per-bp on every one; **4** seller attestations on-chain; **three** live futures books (ACR-INF, ACR-GPU, ACR-DATA) whose maker is a Circle custody wallet, traded hourly by a keeper; **120** real Gateway x402 settlements from **4 distinct payers** (**37** from the CLI buyer agent, **7** from the autonomous hedger's backing EOA, **75** from a demo human's wallet, **1** from a fourth wallet — the first rows stamped with the tier the agent's card earned); 100% Foundry invariants passing.
 
-Suites, all green and re-measured on every push: **1368 py** · **217 forge** · **302 terminal** · **58 matchstick** · glossary **563/563** — see `scripts/verify_claims.py`.
+Suites, all green and re-measured on every push: **1486 py** · **220 forge** · **427 terminal** · **58 matchstick** · glossary **563/563** — see `scripts/verify_claims.py`.
 
 ---
 
@@ -311,7 +322,8 @@ Suites, all green and re-measured on every push: **1368 py** · **217 forge** ·
 | [`apps/agent/`](apps/agent) | The machine buyer (TypeScript, Circle Gateway `x402-batching` client) |
 | [`redteam/`](redteam) | The wash-flow adversary used to attack our own index |
 | [`graph/`](graph) | The `acr-tape` subgraph: settlements benchmarked in the mapping, humans per window (The Graph, Studio) |
-| [`mcp/`](mcp) | Eleven MCP tools — Machine TCA, a per-invoice price check, a running spend report and a payment self-check for any MCP host, carded. Packaged as `acr-mcp` (v0.3.2, `npm run release` publishes it) |
+| [`mcp/`](mcp) | Eleven MCP tools — Machine TCA, a per-invoice price check, a running spend report and a payment self-check for any MCP host, carded. Packaged as `acr-mcp` (v0.3.3, `npm run release` publishes it) |
+| [`integrations/aomi/`](integrations/aomi/README.md) | ACR as an **Aomi App**: five read-only tools (bill check, wallet cost, seller rating, index print, receipts), plus a treasury skill whose three tools let a business owner review an escalated compute bill and sign its payment in their own wallet (off until configured; [`TREASURY.md`](integrations/aomi/TREASURY.md)), as a Rust plugin for Aomi's hosted agent, pinned to `aomi-sdk =5.1.1`, which is what api.aomi.dev requires. Deployed from build.aomi.dev |
 | [`skills/`](skills) | Two Skills published *back*: `acr-hedge` (discover → pay → read → hedge) and `acr-analyst` (Ask the Tape) |
 | [`docs/`](docs) | Documentation — start at [`docs/README.md`](docs/README.md) |
 | [`hackathon/`](hackathon) | The two hackathon submissions this began as — preserved, not maintained |

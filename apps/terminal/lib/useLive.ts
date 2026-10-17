@@ -172,6 +172,11 @@ export const fetcherFor = (chain: ChainKey) => async (url: string) => {
   return body;
 };
 
+/* A function-valued `refreshInterval` is a MODULE constant, never an inline
+   arrow: SWR restarts its poll timer whenever the function's identity changes,
+   so an arrow re-created on every render never lets a poll fire on a page that
+   re-renders faster than its interval (lib/pollCadence.test.ts). */
+
 /* Shared resilience policy: retry transient failures with capped exponential
    backoff, keep showing the last good data while retrying. The steady
    refreshInterval keeps probing after retries are spent, so recovery is
@@ -276,20 +281,24 @@ export function useMarketReceipts() {
 /** The autonomous hedger's standing. Polls slower than the desk: this agent
  *  acts on a mandate, not on every tick, so a 4s refresh would spend requests
  *  watching a number that changes a few times an hour. */
+export const hedgerPollMs = (latest?: Envelope<HedgerState>) => (latest?.live ? 15_000 : 60_000);
+
 export function useHedger() {
   const chain = useChain();
   const { data, error } = useSWR<Envelope<HedgerState>>(apiKey("/api/hedger", chain), fetcherFor(chain), {
-    refreshInterval: (latest) => (latest?.live ? 15_000 : 60_000),
+    refreshInterval: hedgerPollMs,
     ...RETRY,
   });
   return { hedger: data, error: error as Error | undefined };
 }
 
+export const futuresPollMs = (latest?: Envelope<FuturesRoster>) =>
+  latest?.data?.source === "chain" ? 30_000 : latest?.live ? 4_000 : 15_000;
+
 export function useFutures() {
   const chain = useChain();
   const { data, error } = useSWR<Envelope<FuturesRoster>>(apiKey("/api/futures", chain), fetcherFor(chain), {
-    refreshInterval: (latest) =>
-      latest?.data?.source === "chain" ? 30_000 : latest?.live ? 4_000 : 15_000,
+    refreshInterval: futuresPollMs,
     ...RETRY,
   });
   return { roster: data, error: error as Error | undefined };
@@ -396,10 +405,13 @@ export function useOnchainHistory(indexId: string, enabled: boolean) {
 
 /** The floor buyer's run — polls fast only while queries are being bought,
  * so the tape and counters tick in near-real-time during a run. */
+export const buyerRunPollMs = (latest?: Envelope<BuyerRunStatus | null>) =>
+  latest?.data?.state === "running" ? 700 : 0;
+
 export function useBuyerRun() {
   const chain = useChain();
   const { data, mutate } = useSWR<Envelope<BuyerRunStatus | null>>(apiKey("/api/demo/buyer", chain), fetcherFor(chain), {
-    refreshInterval: (latest) => (latest?.data?.state === "running" ? 700 : 0),
+    refreshInterval: buyerRunPollMs,
     revalidateOnFocus: true,
     ...RETRY,
   });
@@ -439,10 +451,13 @@ export function useBalances() {
  *  update, which is precisely why the page read as a static picture. 20s is
  *  the `useHedger` cadence: enough to prove the page is connected, cheap
  *  enough for a free-tier press. */
+export const attackRunPollMs = (latest?: Envelope<AttackStatus>) =>
+  latest?.data?.state === "running" ? 700 : 20_000;
+
 export function useAttackRun() {
   const chain = useChain();
   const { data, mutate } = useSWR<Envelope<AttackStatus>>(apiKey("/api/attack/status", chain), fetcherFor(chain), {
-    refreshInterval: (latest) => (latest?.data?.state === "running" ? 700 : 20_000),
+    refreshInterval: attackRunPollMs,
     revalidateOnFocus: true,
     ...RETRY,
   });

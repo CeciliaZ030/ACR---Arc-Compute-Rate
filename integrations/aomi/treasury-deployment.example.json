@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "business": "<BUSINESS_SLUG>",
+  "chain_id": "<CHAIN_ID>",
+  "policy_wallet": "<POLICY_WALLET_ADDRESS>",
+  "usdc": "<USDC_ADDRESS>",
+  "api_url": "<TREASURY_API_URL>"
+}
