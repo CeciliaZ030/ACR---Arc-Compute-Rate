@@ -15,11 +15,12 @@ import type { TerminalData } from "@/lib/types";
    and the real on-chain fills scrolling past, one click from the full desk.
    Renders only when a venue is deployed (else the home page stays clean). */
 const HEAD = (
-  <Ed
-    x="The desk · machine commerce, trading forward"
-    p="The trading desk · buying and selling future prices"
-    className="label"
-  />
+  <h3 className="label">
+    <Ed
+      x="The desk · machine commerce, trading forward"
+      p="The trading desk · buying and selling future prices"
+    />
+  </h3>
 );
 
 export function FuturesTeaser({ data }: { data: TerminalData }) {

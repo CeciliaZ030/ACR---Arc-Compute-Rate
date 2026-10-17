@@ -64,11 +64,12 @@ export function FixingView({ initial }: { initial: Envelope<TerminalData> }) {
           from every route, and the anchor must clear the sticky masthead. */}
       <section className="section anchor-target" id="fixing">
         <div className="section-head">
-          <Ed
-            x="Today’s fixing · all three indices"
-            p="Today’s official rates · all three services"
-            className="label"
-          />
+          <h2 className="label">
+            <Ed
+              x="Today’s fixing · all three indices"
+              p="Today’s official rates · all three services"
+            />
+          </h2>
           <WorkloadRow />
         </div>
         <div className="hero">
@@ -91,7 +92,7 @@ export function FixingView({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">Today’s prints · settlement grade</span>
+          <h2 className="label">Today’s prints · settlement grade</h2>
         </div>
         <PrintsTable prints={prints} live={env.live} direct={directLive} />
       </section>

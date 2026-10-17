@@ -180,9 +180,9 @@ export function OpsView() {
       {unreachable && !pending ? (
         <section className="section">
           <div className="section-head">
-            <span className="label">
+            <h2 className="label">
               <Ed x="No verdict" p="No answer" />
-            </span>
+            </h2>
             <span className="label">
               <span className="chip chip-sim">
                 <Ed x="press unreachable" p="server asleep" />
@@ -201,9 +201,9 @@ export function OpsView() {
       {pending ? (
         <section className="section">
           <div className="section-head">
-            <span className="label">
+            <h2 className="label">
               <Ed x="Reading" p="Checking" />
-            </span>
+            </h2>
             <span className="label">
               <span className="chip chip-sky">
                 <i className="dot breathe" aria-hidden />

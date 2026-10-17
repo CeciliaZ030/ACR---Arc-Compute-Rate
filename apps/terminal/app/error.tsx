@@ -21,7 +21,9 @@ export default function Error({
   return (
     <section className="section" style={{ maxWidth: "var(--measure)" }}>
       <div className="section-head">
-        <Ed x="Press stop" p="Something broke" className="label" />
+        <h2 className="label">
+          <Ed x="Press stop" p="Something broke" />
+        </h2>
       </div>
       <Ed
         as="p"

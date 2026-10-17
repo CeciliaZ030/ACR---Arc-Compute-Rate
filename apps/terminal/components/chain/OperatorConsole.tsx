@@ -218,9 +218,9 @@ export function OperatorConsole() {
     return (
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="Operator desk" p="Staff only" />
-          </span>
+          </h2>
         </div>
         <p className="muted" style={{ maxWidth: "var(--measure)" }}>
           <Ed
@@ -256,9 +256,9 @@ export function OperatorConsole() {
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label">
+        <h2 className="label">
           <Ed x="Operator desk" p="Staff controls" />
-        </span>
+        </h2>
         <span className="label">
           <button className="btn" onClick={lock}>
             <Ed x="lock" p="lock" />

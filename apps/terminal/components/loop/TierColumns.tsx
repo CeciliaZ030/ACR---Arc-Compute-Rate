@@ -85,7 +85,9 @@ export function TierColumns({ wake }: { wake: WakeState }) {
   return (
     <section className="section">
       <div className="section-head">
-        <Ed x="Who is calling" p="Who is asking" className="label" />
+        <h2 className="label">
+          <Ed x="Who is calling" p="Who is asking" />
+        </h2>
         <span className="label muted" style={{ display: "inline-flex", gap: "var(--s-3)", alignItems: "center" }}>
           {gate ? (
             <>

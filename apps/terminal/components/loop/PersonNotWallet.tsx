@@ -92,7 +92,9 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
   return (
     <section className="section">
       <div className="section-head">
-        <Ed x="A person, not a wallet · World AgentKit" p="A person, not a wallet · World" className="label" />
+        <h2 className="label">
+          <Ed x="A person, not a wallet · World AgentKit" p="A person, not a wallet · World" />
+        </h2>
         {info ? (
           <span className="label muted">
             {info.backend} · <Ed x="roster" p="known wallets" /> {info.agentbook ?? "…"} · {info.sandbox ? <Ed x="sandbox identities" p="test identities" /> : <Ed x="production identities" p="checked people" />} · {info.verified_proofs} <Ed x="proofs verified" p="proofs checked" />
@@ -181,7 +183,9 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
       </div>
 
       <div className="block-head">
-        <Ed x="This week's people, as the chain records them" p="This week's people, as the chain has them" className="label" />
+        <h3 className="label">
+          <Ed x="This week's people, as the chain records them" p="This week's people, as the chain has them" />
+        </h3>
         <span className="label muted">
           {window != null ? <><Ed x="window" p="week" /> {window}</> : null}
           {endsIn != null ? <> · <Ed x="rolls in" p="resets in" /> {Math.max(0, Math.round(endsIn / 3600))} h</> : null}
@@ -226,7 +230,9 @@ export function PersonNotWallet({ data, wake }: { data: TerminalData; wake: Wake
       />
 
       <div className="block-head">
-        <Ed x="The bound, in people" p="The cost to cheat, counted in people" className="label" />
+        <h3 className="label">
+          <Ed x="The bound, in people" p="The cost to cheat, counted in people" />
+        </h3>
         <span className="label muted"><Ed x="from ACROracleV2, every hour" p="from the chain, every hour" /></span>
       </div>
       {prints.map((p) => {

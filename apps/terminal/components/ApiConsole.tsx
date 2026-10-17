@@ -410,11 +410,12 @@ export function ApiConsole({
        two dropdowns the reader could not see and looked like nothing at all. */
     <section className="section anchor-target" id="console">
       <div className="section-head">
-        <Ed
-          x="The wire · query the index"
-          p="Ask the index a question · pay for the answer"
-          className="label"
-        />
+        <h2 className="label">
+          <Ed
+            x="The wire · query the index"
+            p="Ask the index a question · pay for the answer"
+          />
+        </h2>
         {mode && (
           <span className={`gate-badge ${mode === "dev" ? "gold" : "green"}`}>
             {mode === "dev" ? <Ed x="◆ DEV GATE" p="◆ PRACTICE PAYWALL" /> : "◆ CIRCLE GATEWAY"}

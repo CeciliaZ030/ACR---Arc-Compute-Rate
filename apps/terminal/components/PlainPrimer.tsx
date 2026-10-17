@@ -10,7 +10,7 @@ export function PlainPrimer() {
   return (
     <section className="section plain-only">
       <div className="section-head">
-        <span className="label">This paper in one minute</span>
+        <h2 className="label">This paper in one minute</h2>
         <span className="label muted">the same numbers, the whole story</span>
       </div>
       <div className="primer-rail">

@@ -330,7 +330,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="Listings · /marketplace/catalog" p="For sale · /marketplace/catalog" />
             {catalogArchived ? (
               <span className="muted">
@@ -338,7 +338,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                 <Ed x="· archived edition" p="· saved copy" />
               </span>
             ) : null}
-          </span>
+          </h2>
           <span className="label">
             {/* Stated once, where it is true. It used to be a column repeating
                 the identical string on all thirteen rows, because the same
@@ -657,7 +657,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="The tape · /marketplace/receipts" p="The receipt roll · /marketplace/receipts" />
             {tape != null && !tape.live && ledger ? (
               <span className="muted">
@@ -665,7 +665,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                 <Ed x="· simulated (bundled snapshot)" p="· simulated (saved copy)" />
               </span>
             ) : null}
-          </span>
+          </h2>
           {ledger ? (
             <span className="label">
               {fmtInt(ledger.paid_queries)} <Ed x="paid queries" p="paid questions" /> · $
@@ -685,9 +685,9 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="Run the buyer" p="Let a robot shopper loose" />
-          </span>
+          </h2>
           <span className="btn-row">
             {gateIsCircle ? (
               <button
@@ -907,7 +907,9 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <Ed x="Only computable on Arc" p="Why this only works on Arc" className="label" />
+          <h2 className="label">
+            <Ed x="Only computable on Arc" p="Why this only works on Arc" />
+          </h2>
         </div>
         <ChainFactsStrip chain={env.data.chain} />
       </section>

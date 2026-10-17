@@ -106,9 +106,9 @@ export function FuturesDesk({
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label">
+        <h2 className="label">
           <Ed x="The desk · on-chain futures (ACRFutures)" p="The trading desk · real futures on the blockchain" />
-        </span>
+        </h2>
         {venue ? (
           rows.length ? (
             /* Which tier served these numbers. A direct read of ACRFutures is

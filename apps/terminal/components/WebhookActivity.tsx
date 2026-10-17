@@ -57,11 +57,12 @@ export function WebhookActivity() {
   return (
     <section>
       <div className="block-head">
-        <Ed
-          x="Webhook activity · inbound from Circle"
-          p="Payment pings · Circle calls us the moment money moves"
-          className="label"
-        />
+        <h3 className="label">
+          <Ed
+            x="Webhook activity · inbound from Circle"
+            p="Payment pings · Circle calls us the moment money moves"
+          />
+        </h3>
         {data && (
           <span className="label">
             {data.received} received ·{" "}

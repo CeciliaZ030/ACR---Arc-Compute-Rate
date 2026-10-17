@@ -402,7 +402,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
           {run && done && run.verdict && (
             <div className="section" style={{ marginTop: "var(--s-7)" }}>
               <div className="section-head">
-                <span className="label">The verdict</span>
+                <h2 className="label">The verdict</h2>
               </div>
               <Ed
                 as="p"

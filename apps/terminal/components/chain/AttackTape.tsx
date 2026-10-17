@@ -65,9 +65,9 @@ export function AttackTape({
   return (
     <div style={{ marginTop: "var(--s-5)" }}>
       <div className="section-head" style={{ marginTop: 0 }}>
-        <span className="label">
+        <h2 className="label">
           <Ed x="estimator log" p="what the maths did" />
-        </span>
+        </h2>
         <span className="label">
           <span className="muted">
             {fmtInt(series.length)}/{fmtInt(hoursTotal)} <Ed x="hours" p="hours" />

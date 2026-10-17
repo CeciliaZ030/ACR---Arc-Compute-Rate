@@ -20,11 +20,12 @@ import { useTape } from "@/lib/useLive";
    for a missing venue. */
 
 const HEAD = (
-  <Ed
-    x="Machine TCA · what the buyers actually paid"
-    p="The receipts · what the robots really paid"
-    className="label"
-  />
+  <h3 className="label">
+    <Ed
+      x="Machine TCA · what the buyers actually paid"
+      p="The receipts · what the robots really paid"
+    />
+  </h3>
 );
 
 export function TapeTeaser() {

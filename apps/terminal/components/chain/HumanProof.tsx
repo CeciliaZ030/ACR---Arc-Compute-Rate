@@ -108,7 +108,9 @@ export function HumanProof() {
   return (
     <section>
       <div className="block-head">
-        <Ed x="The human gate" p="The real-person gate" className="label" />
+        <h3 className="label">
+          <Ed x="The human gate" p="The real-person gate" />
+        </h3>
       </div>
 
       <Ed

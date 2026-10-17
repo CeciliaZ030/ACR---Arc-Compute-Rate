@@ -92,7 +92,9 @@ export function LoopFlow({ wake }: { wake: WakeState }) {
   return (
     <section className="section">
       <div className="section-head">
-        <Ed x="The loop you can drive" p="The loop, with you at the wheel" className="label" />
+        <h2 className="label">
+          <Ed x="The loop you can drive" p="The loop, with you at the wheel" />
+        </h2>
         <span className="label muted">
           <Ed x="live from the tape" p="live from the public record" />
         </span>

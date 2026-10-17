@@ -81,10 +81,10 @@ export function WalletPanel({ explorer }: { explorer?: string }) {
   return (
     <div className="panel panel-pad">
       <div className="section-head" style={{ marginTop: 0 }}>
-        <span className="label">
+        <h2 className="label">
           <Ed x="Circle Gateway wallets" p="Circle wallets · who pays, who gets paid" />
           {ready ? <span className="green"> · live</span> : null}
-        </span>
+        </h2>
         {ready ? (
           <span className="chip chip-teal">
             <i className="dot breathe" /> settling on Arc

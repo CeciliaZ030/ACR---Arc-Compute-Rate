@@ -76,7 +76,9 @@ export function ScreenLab({ wake }: { wake: WakeState }) {
   return (
     <section className="section">
       <div className="section-head">
-        <Ed x="The screen · Google Cloud Model Armor" p="The message filter · Google Cloud" className="label" />
+        <h2 className="label">
+          <Ed x="The screen · Google Cloud Model Armor" p="The message filter · Google Cloud" />
+        </h2>
         <span className={`chip ${state === "live" ? "chip-teal" : state === "off" ? "chip-sim" : "chip-gold"}`}>
           {state === "live" ? <span className="dot breathe" aria-hidden /> : null}
           {state === "live" ? <Ed x="gcp · live" p="Google · live" /> : state === "off" ? <Ed x="switched off" p="off" /> : state === "floor" ? <Ed x="offline floor only" p="basic check only" /> : <Ed x="unread" p="not read yet" />}

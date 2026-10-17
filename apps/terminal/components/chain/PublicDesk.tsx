@@ -632,9 +632,9 @@ export function PublicDesk({
     return (
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="The public desk" p="Trade it yourself" />
-          </span>
+          </h2>
         </div>
         {/* The rail renders here too. A reader arriving from "Open the desk →"
             on a cold press should see the walk they are about to take, not an
@@ -672,9 +672,9 @@ export function PublicDesk({
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label">
+        <h2 className="label">
           <Ed x="The public desk · trade the curve yourself" p="Trade it yourself · with a real wallet" />
-        </span>
+        </h2>
         <span className="label">
           <span className="chip chip-teal">
             <Ed x="Circle wallet · gas sponsored" p="Circle wallet · fees covered" />

@@ -107,11 +107,12 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <Ed
-            x="The quote corridor · where the maker trades"
-            p="The price corridor · where the dealer buys and sells"
-            className="label"
-          />
+          <h2 className="label">
+            <Ed
+              x="The quote corridor · where the maker trades"
+              p="The price corridor · where the dealer buys and sells"
+            />
+          </h2>
           {banner ? (
             <span
               className="chip chip-gold"
@@ -144,12 +145,12 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
       {primaryDesk ? (
         <section>
           <div className="block-head">
-            <span className="label">
+            <h3 className="label">
               <Ed
                 x={<>Fills against the oracle · {primaryDesk.index_id}</>}
                 p={<>Trades against the official rate · {primaryDesk.index_id}</>}
               />
-            </span>
+            </h3>
             <span className="label muted">
               <Ed x="every dot is one on-chain fill" p="every dot is one real trade" />
             </span>
@@ -178,9 +179,9 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section>
         <div className="block-head">
-          <span className="label">
+          <h3 className="label">
             <Ed x="The tape · live on-chain fills" p="The trade feed · real trades on the blockchain" />
-          </span>
+          </h3>
           <span className="label">
             {futLive ? (
               <span className="chip chip-teal">
@@ -252,7 +253,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section>
         <div className="block-head">
-          <span className="label">Quotes</span>
+          <h3 className="label">Quotes</h3>
         </div>
         <div className="table-scroll">
           <table className="sheet">

@@ -77,9 +77,9 @@ export function RegistryProof() {
       {read ? (
         <div className="panel panel-pad" style={{ marginTop: "var(--s-4)" }}>
           <div className="section-head" style={{ marginTop: 0 }}>
-            <span className="label">
+            <h2 className="label">
               <Ed x="what the chain returned" p="what the blockchain said" />
-            </span>
+            </h2>
             <span className="chip chip-teal">
               <Ed x="read just now" p="asked just now" />
             </span>

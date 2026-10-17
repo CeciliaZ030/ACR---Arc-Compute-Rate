@@ -187,7 +187,9 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
 
       <section className="section">
         <div className="section-head">
-          <Ed x="The record · recent prints" p="The history · recent official rates" className="label" />
+          <h2 className="label">
+            <Ed x="The record · recent prints" p="The history · recent official rates" />
+          </h2>
           {directHistory ? (
             <span
               className="chip chip-teal"
@@ -243,11 +245,12 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
 
       <section className="section">
         <div className="section-head">
-          <Ed
-            x="Provenance · the settlement-grade record"
-            p="Proof · the official on-chain copy"
-            className="label"
-          />
+          <h2 className="label">
+            <Ed
+              x="Provenance · the settlement-grade record"
+              p="Proof · the official on-chain copy"
+            />
+          </h2>
         </div>
         <Ed
           as="p"
@@ -432,11 +435,12 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
 
       <section>
         <div className="block-head">
-          <Ed
-            x={<>Quote corridor · {p.index_id}</>}
-            p={<>Forward prices · where dealers quote {p.index_id}</>}
-            className="label"
-          />
+          <h3 className="label">
+            <Ed
+              x={<>Quote corridor · {p.index_id}</>}
+              p={<>Forward prices · where dealers quote {p.index_id}</>}
+            />
+          </h3>
         </div>
         <QuoteCorridor prints={{ [p.index_id]: p }} only={p.index_id} />
       </section>
@@ -456,12 +460,12 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
           />
           <section>
             <div className="block-head">
-              <span className="label">
+              <h3 className="label">
                 <Ed
                   x={<>Fills against the oracle · {p.index_id}</>}
                   p={<>Trades against the official rate · {p.index_id}</>}
                 />
-              </span>
+              </h3>
             </div>
             <FuturesMarkChart
               trades={futures.roster?.data?.trades ?? []}

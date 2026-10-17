@@ -7,11 +7,12 @@ import { fmt, fmtInt, money } from "@/lib/format";
 import type { TerminalData } from "@/lib/types";
 
 const HEAD = (
-  <Ed
-    x="Defensibility · peak error under an identical attack"
-    p="Stress test · the same attack, thrown at us and at a plain average"
-    className="label"
-  />
+  <h3 className="label">
+    <Ed
+      x="Defensibility · peak error under an identical attack"
+      p="Stress test · the same attack, thrown at us and at a plain average"
+    />
+  </h3>
 );
 
 /* One row on the home page: peak estimator error under an identical attack,

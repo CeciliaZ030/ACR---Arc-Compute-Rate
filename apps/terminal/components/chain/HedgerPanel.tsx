@@ -99,10 +99,10 @@ function Card({
   return (
     <div className="panel panel-pad">
       <div className="section-head" style={{ marginTop: 0 }}>
-        <span className="label">
+        <h2 className="label">
           <Ed x="autonomous hedger" p="the robot that hedges its own bill" />
           {indexId ? <span className="muted"> · {indexId}</span> : null}
-        </span>
+        </h2>
         {chip}
       </div>
       {children}
