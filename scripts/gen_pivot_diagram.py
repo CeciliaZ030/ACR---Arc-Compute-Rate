@@ -98,7 +98,9 @@ def build() -> None:
     for gid, title, line in GATES:
         ga.card(gid, 580, y, 380, 56, title, [line], BLUE, title_size=14, body_size=12)
         y += 64
-    for (a, _, _), (b, _, _) in zip(GATES, GATES[1:]):
+    # strict=False, not True: pairing a list with its own tail is deliberately
+    # one short, which is what makes this walk consecutive gates.
+    for (a, _, _), (b, _, _) in zip(GATES, GATES[1:], strict=False):
         ga.wire(a, b, BLUE, side_a="B", side_b="T")
 
     ga.card("n_meter", 580, 865, 820, 80, "why an independent meter at all",
