@@ -171,11 +171,14 @@ export function Masthead({ initial }: { initial: Envelope<TerminalData> }) {
           <Link href="/" className="nameplate">
             ACR <em>· Arc Compute Rate</em>
           </Link>
-          <Ed
-            x="the reference rate for machine commerce"
-            p="the going rate for machine work, in plain words"
-            className="label"
-          />
+          {/* The tagline used to sit here, right-aligned. It left because the
+              masthead was THREE rows at 1440 — nameplate+tagline, ten links,
+              four controls — with 567px of dead space in the middle of this
+              row and 544px at the left of the controls' row. Links (904px) and
+              controls (648px) need 1552px against a 1192px container, so those
+              two can never pair up; the only way to two rows was for the
+              controls to come up here. The words are not lost: the hero on /
+              prints them 40px lower, and they are the metadata description. */}
         </div>
         <div className="horizon-rule" />
         <nav className="nav">

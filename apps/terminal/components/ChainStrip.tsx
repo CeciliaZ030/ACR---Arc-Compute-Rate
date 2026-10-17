@@ -1,6 +1,6 @@
 "use client";
 
-import { chainFacts, isMainnet } from "@/lib/chain";
+import { chainFacts } from "@/lib/chain";
 import { RATING_WINDOW_DAYS } from "@/lib/humans";
 import { deskTier, formatOi } from "@/lib/futuresBook";
 import { ageWords, editionLabel, publishedAt } from "@/lib/format";
@@ -123,20 +123,19 @@ export function ChainStrip({ initial }: { initial: Envelope<TerminalData> }) {
   /* Which Arc this is, said once where every page can see it. A community
      tester on launch day needs to know whether the stake is real before the
      first click; the payload's chain block is the only source, never a literal. */
-  const mainnet = isMainnet(c);
-  parts.push(
-    <a
-      key="net"
-      className={`chip ${mainnet ? "chip-teal" : "chip-gold"}`}
-      href={c.explorer || undefined}
-      target="_blank"
-      rel="noreferrer"
-      title={mainnet ? `chain ${c.chainId} · real USDC · ${c.explorer}` : `chain ${c.chainId} · test USDC from the faucet · ${c.explorer}`}
-    >
-      {mainnet ? <span className="dot breathe" aria-hidden /> : null}
-      <Ed x={mainnet ? "Arc mainnet" : "Arc testnet"} p={mainnet ? "real money" : "play money"} />
-    </a>,
-  );
+  /* The network chip used to sit here, repeating "Arc testnet" forty pixels
+     under the masthead's own MAINNET | TESTNET control. That control arrived
+     later than this chip and nobody re-read the dateline when it did, so the
+     chain was being announced twice in one eyeful. The control is more
+     prominent AND it is interactive, so the chip is the one that goes.
+
+     The explorer is not lost with it: `arcscan ↗` sits on every row that
+     shows a hash, and the colophon's on-chain register links out per address.
+
+     Kept deliberately below: the TIER chip. It looks like a duplicate of the
+     masthead's status pill and is not — it is null in the `live` state, so it
+     only ever appears when something is degraded. That is a warning, not a
+     repetition. */
   parts.push(
     <span key="no">
       <Ed x="Fixing " p="Rate-setting " />
