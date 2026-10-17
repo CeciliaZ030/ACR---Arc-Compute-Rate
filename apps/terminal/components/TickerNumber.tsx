@@ -50,11 +50,19 @@ export function TickerNumber({
   // never wears the class.
   const cls = `tick${flash && !quiet ? " tick-flash" : ""}${className ? ` ${className}` : ""}`;
   if (!roll) return <span className={cls}>{text}</span>;
+  /* The per-digit split is decoration for the roll, and a screen reader read it
+     literally: the home index card announced its rate as "0 . 4 9 7 7 3". So the
+     value is spoken once from an .sr-only copy and the digits are hidden from the
+     accessibility tree. Both spans are inline, and `.tick`/`.digit` are plain
+     inline-block with no child combinators, so the geometry is unchanged. */
   return (
     <span className={cls}>
-      {text.split("").map((ch, i) => (
-        <Digit key={i} ch={ch} />
-      ))}
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">
+        {text.split("").map((ch, i) => (
+          <Digit key={i} ch={ch} />
+        ))}
+      </span>
     </span>
   );
 }

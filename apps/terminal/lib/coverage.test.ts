@@ -365,6 +365,43 @@ test("ledger: every surface is covered or exempt, classed, and its classes exist
     [],
     `inline style sets a type or spacing value by hand instead of from the scale (use var(--t-N) / var(--s-N)): ${offScale.join(", ")}`,
   );
+
+  /* Fourth half: two couplings that are invisible from either side alone, and
+     both of which would read as working code while silently deleting the
+     feature they look like they implement.
+
+     `.sr-only` must refuse selection. TickerNumber renders an aural copy of
+     every rolling numeral beside the digits — without it, a reader copying a
+     rate off a card gets the number twice ("0.492360.49236"), and an /ops
+     table carries its hidden column headers into the clipboard.
+
+     `.skip-link` must not hide itself with `display` or `visibility`, because
+     neither can hold focus: a skip link written that way renders, reads fine
+     in review, and does nothing at all. It must also be declared BEFORE
+     `.ed-p`, whose `display: none` is a single-class rule that any later
+     single-class `display` rule overrides app-wide, rendering both editions.
+
+     Read from the rule BODY with comments stripped, because both rules explain
+     themselves in prose that contains the very declarations under test. */
+  const ruleBody = (sel: string): string => {
+    const at = css.indexOf(`\n${sel} {`);
+    assert.ok(at >= 0, `${sel} rule missing from globals.css`);
+    return css.slice(at, css.indexOf("}", at)).replace(/\/\*[\s\S]*?\*\//g, "");
+  };
+  assert.match(
+    ruleBody(".sr-only"),
+    /[^-]user-select:\s*none/,
+    ".sr-only must set user-select: none, or text meant only to be read aloud lands in a sighted reader's clipboard",
+  );
+  assert.doesNotMatch(
+    ruleBody(".skip-link"),
+    /(^|[\s;])(display|visibility)\s*:/,
+    ".skip-link must stay focusable: park it by offset, never display/visibility",
+  );
+  assert.ok(
+    css.indexOf("\n.skip-link {") < css.indexOf("\n.ed-p {"),
+    ".skip-link must be declared before .ed-p, or a later single-class display rule unhides the plain edition app-wide",
+  );
 });
 
 test("floors: every covered surface meets its minimum marker count", () => {

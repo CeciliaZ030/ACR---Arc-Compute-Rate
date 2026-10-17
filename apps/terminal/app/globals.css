@@ -3038,15 +3038,58 @@ a.colophon-act:hover::after {
   }
 }
 
+/* The keyboard's shortcut past the chrome. Hidden by OFFSET, never by
+   `display` or `visibility`: an un-rendered link cannot be focused, so either
+   of those would silently delete the feature it looks like it implements. It
+   is also why this sits ABOVE `.ed-p` below — a single-class rule setting
+   `display` after that line unhides the plain edition app-wide the first time
+   the class reaches <Ed className>.
+
+   z-index 70 clears the whole ladder (.term-pop 30, .masthead-shell 40 sticky,
+   .agent-drawer 50, .toast 60). A focus affordance that something can cover is
+   not one. */
+.skip-link {
+  position: fixed;
+  top: var(--s-3);
+  left: var(--s-3);
+  z-index: 70;
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--gold);
+  border-radius: var(--r-sm);
+  background: var(--genesis);
+  color: var(--gold);
+  font-family: var(--eyebrow);
+  font-size: var(--t-2);
+  font-weight: 400;
+  letter-spacing: var(--tr-4);
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 10px 40px rgba(0, 11, 36, 0.6);
+  /* Parked above the viewport, still in the tab order. */
+  transform: translateY(calc(-100% - var(--s-5)));
+  transition: transform var(--dur-2) var(--ease-expo);
+}
+.skip-link:focus {
+  transform: none;
+}
+
 /* Read aloud, never set in type.
    The paper hides a string from sight in exactly one other place — `.ed-p`,
    just below — and that one uses `display: none` precisely SO IT LEAVES the
    accessibility tree. This is the opposite case: state that is obvious to the
    eye (a tick, a colour) and invisible to a screen reader, so it must stay in
    the tree and is clipped rather than un-rendered. Do not "simplify" one into
-   the other; they exist for opposite reasons. */
+   the other; they exist for opposite reasons.
+
+   `user-select: none` because this text is for ears only, and selection is a
+   sighted act: without it, copying a rate off a card yielded "0.492360.49236"
+   and copying an /ops table dragged in its hidden column headers. Screen
+   readers do not consult user-select, so the string is still spoken, and
+   find-in-page still matches it. */
 .sr-only {
   position: absolute;
+  -webkit-user-select: none;
+  user-select: none;
   width: 1px;
   height: 1px;
   margin: -1px;
