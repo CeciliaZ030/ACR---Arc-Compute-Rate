@@ -56,7 +56,11 @@ const RES = 120; // price-axis sampling resolution for the reading line
 /** Front tenor solid, back tenors progressively quieter, so the near quote
  *  reads first and the far ones give it context rather than competing. */
 function laneOpacity(j: number, n: number): number {
-  return n <= 1 ? 1 : 1 - (j / (n - 1)) * 0.5;
+  /* 0.4, not 0.5. The back tenor's LABEL is text, and at opacity 0.5 the
+     ether ink measures 4.22:1 on the page base — under the 4.5:1 this UI
+     holds itself to. Floor the fade at 0.6 and it reads 5.64:1, with the
+     front-to-back hierarchy intact. */
+  return n <= 1 ? 1 : 1 - (j / (n - 1)) * 0.4;
 }
 
 function tenorLabel(c: CurvePoint): string {
