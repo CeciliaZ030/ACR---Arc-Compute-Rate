@@ -1806,6 +1806,16 @@ table.sheet.sheet-checks td:nth-child(3) {
   .masthead .nav {
     flex-wrap: wrap;
     gap: 0 10px;
+    /* Every control line ends at the same edge. `margin-left: auto` below
+       right-aligns the FIRST control, which is the whole group only while the
+       group shares one line. In the plain edition it does not: "REAL NETWORK |
+       PRACTICE NETWORK" measures 276px against the 164px of "MAINNET |
+       TESTNET", so at 375px the 124px edition toggle wraps to a line of its
+       own — and that line, having no first-child rule, sat hard LEFT under a
+       right-aligned row. Justifying the container fixes every line at once.
+       Row 1 cannot be affected: `.nav-links` is `flex: 1 1 0` and eats the
+       free space, so that line has none to distribute. */
+    justify-content: flex-end;
   }
   /* `.nav .nav-right`, not `.nav-right`: the base `.nav-right` rule sits
      ~1,400 lines BELOW this block, and a media query adds no specificity, so
@@ -2013,6 +2023,23 @@ details.disclosure summary .disclosure-count {
   border-bottom: 1px solid var(--hairline);
   font-size: var(--t-4);
 }
+/* A request URL and a hex address are each ONE unbreakable token, and a flex
+   item's `min-width` defaults to `auto`, which refuses to shrink below the
+   widest thing inside it. That is the whole mechanism behind the only
+   horizontal scroll left on a phone: at 375px the /par URL measured 382px wide
+   in `.console-req`, and `/curve`'s provenance value sat at left 317 carrying
+   a 100px address chip — 417px of page against a 375px viewport.
+
+   `min-width: 0` lets the box shrink so the prose beside the token can wrap;
+   `overflow-wrap: anywhere` lets the token itself break when even that is not
+   enough. `.provenance-row .val` already did this and is the precedent — these
+   two rows simply hold their value in a `.mono` instead. */
+.console-req .mono,
+.provenance-row .mono {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .console-payer {
   display: inline-flex;
   align-items: center;
@@ -2397,6 +2424,12 @@ details.disclosure summary .disclosure-count {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s-4);
+  /* The label is `flex: none` prose and the value can be an address chip,
+     which is `inline-flex` and `nowrap` and therefore an atom. At 375px the
+     label took 272px of a 309px row and the 100px chip hung 42px past the
+     viewport. Wrapping drops the value onto its own line instead; at any
+     width where both fit, this changes nothing. */
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--hairline);
   padding-bottom: var(--s-3);
 }
