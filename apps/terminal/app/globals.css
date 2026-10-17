@@ -746,6 +746,64 @@ a.chip:hover,
   font-size: var(--t-2);
 }
 
+/* ---- the masthead, from three rows to two (>=1024px only) ----
+   Measured at 1440 before this existed: nameplate 294px and tagline 331px on
+   row one with 567px of dead space BETWEEN them, ten links (904px) on row two,
+   four controls (648px) on row three with 544px of dead space to their left.
+   244px of chrome before a reader reached anything, and two of the three rows
+   half-empty in opposite directions.
+
+   It could not be nudged. Links 904 + controls 648 = 1552 against a 1192px
+   container, so those two can never share a row. The tagline left (the hero on
+   / prints it 40px lower) and the controls came up into the space it used.
+
+   1024px, NOT the 900 this file uses elsewhere, and the arithmetic is why:
+   nameplate + controls + gap is 938px, which fits the 952px container at a
+   1000px viewport and does NOT fit the 912px one at 960. Lifting at 900 would
+   overlap them. A third breakpoint is a real cost in a file that was just
+   consolidated to 640/900; this is what it buys.
+
+   `display: contents` on .nav rather than moving anything in the markup: the
+   two-row PHONE masthead is built on `.nav .nav-right { display: contents }`
+   inside the 640 block and needs .nav-right to stay a child of .nav. Lift it
+   in the DOM and the phone collapses to three rows. Nothing below 1024 is
+   touched by this block. */
+@media (min-width: 1024px) {
+  .masthead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--s-5);
+  }
+  .masthead-top {
+    flex: 1 1 auto;
+    padding-bottom: 0;
+  }
+  /* .nav stops being a box so its two children become items of .masthead and
+     can land on different lines. Its gap and padding move to .nav-links, which
+     becomes the real box for row two. */
+  .nav {
+    display: contents;
+  }
+  .nav-right {
+    order: 1;
+  }
+  .horizon-rule {
+    order: 2;
+    flex: 0 0 100%;
+    margin-top: var(--s-3);
+  }
+  .nav-links {
+    order: 3;
+    flex: 0 0 100%;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--s-6);
+    padding: var(--s-3) 0;
+  }
+}
+
 /* ---------- sections ---------- */
 .section {
   margin-top: var(--section-gap);

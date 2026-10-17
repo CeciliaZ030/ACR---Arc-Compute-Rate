@@ -48,7 +48,10 @@ const REQUIRED_COVERAGE: Record<string, number> = {
   "app/error.tsx": 3,
   "app/not-found.tsx": 3,
   "components/Masthead.tsx": 6,
-  "components/ChainStrip.tsx": 9, // incl. the verified-humans chip, the stale-resolution chip and the network chip
+  // 9 still, but no longer "incl. the network chip": that one was removed
+  // as a repeat of the masthead's MAINNET | TESTNET control. The file sits
+  // exactly on its floor now.
+  "components/ChainStrip.tsx": 9, // incl. the verified-humans and stale-resolution chips
   "components/Colophon.tsx": 13, // incl. the identity line and the salt-mismatch warning
   "components/HomeHero.tsx": 5,
   "components/RateBlock.tsx": 4,
