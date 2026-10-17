@@ -75,8 +75,8 @@ function PayerField({
         }}
         style={{
           font: "inherit",
-          fontSize: 12,
-          padding: "4px 8px",
+          fontSize: "var(--t-3)",
+          padding: "var(--s-2) var(--s-3)",
           width: 260,
           border: `1px solid ${bad ? "var(--breach)" : "var(--rule)"}`,
           background: "transparent",

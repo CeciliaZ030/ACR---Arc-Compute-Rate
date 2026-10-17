@@ -307,11 +307,38 @@ test("ledger: every surface is covered or exempt, classed, and its classes exist
   const SCALE_EXEMPT = new Set(["app/global-error.tsx"]);
   const offScale: string[] = [];
   const propRe = new RegExp(`\\b(${SCALED.join("|")}):\\s*([^,}]+)`, "g");
+  /* The text of every `style=` prop, read by balancing braces rather than by
+     matching the literal `style={{`.
+
+     This cost something to learn. The first version of this gate matched
+     `style={{` only, so it could not see a style object behind a conditional,
+     and `style={micro ? { fontSize: 9.5 } : undefined}` in FinalityBadge sat
+     inside the blind spot while the rendered census reported three chips at a
+     size that appeared in neither this stylesheet nor any inline style. A gate
+     that cannot see a shape is not a gate against that shape.
+
+     Brace-balanced means a computed value still passes: /tape's two
+     `style={slipStyle(...)}` calls contain no bare number on a scaled property
+     and are meant to keep working. */
+  const styleProps = (src: string): string[] => {
+    const out: string[] = [];
+    for (let i = src.indexOf("style={"); i !== -1; i = src.indexOf("style={", i + 1)) {
+      let depth = 0;
+      for (let j = i + 6; j < src.length; j++) {
+        if (src[j] === "{") depth++;
+        else if (src[j] === "}" && --depth === 0) {
+          out.push(src.slice(i + 7, j));
+          break;
+        }
+      }
+    }
+    return out;
+  };
   for (const file of ALL) {
     if (SCALE_EXEMPT.has(file)) continue;
     const src = readFileSync(join(ROOT, file), "utf8");
-    for (const obj of src.matchAll(/style=\{\{([^}]*)\}\}/g)) {
-      for (const m of obj[1].matchAll(propRe)) {
+    for (const body of styleProps(src)) {
+      for (const m of body.matchAll(propRe)) {
         const v = m[2].trim();
         if (/^-?\d+(\.\d+)?$/.test(v) && v !== "0") {
           offScale.push(`${file}: ${m[1]}: ${v}`);

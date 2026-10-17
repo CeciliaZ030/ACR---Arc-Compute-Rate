@@ -25,12 +25,21 @@ export function FinalityBadge({
   const now = useNow();
   const plain = useEdition() === "plain";
 
+  /* The micro variant sat at 9.5px against `.chip`'s own 10px: half a pixel
+     under its base, which is not a size anyone chose. It is --t-1 now, the same
+     step .chip already resolves to. Worth saying how it survived the sweep that
+     put every other inline number on the scale: this style object lives behind
+     a ternary, and both that sweep and the guard in lib/coverage.test.ts matched
+     the literal `style={{`. Three chips rendered off-scale for it, and the
+     census reported them as coming from nowhere. The guard reads any `style=`
+     prop now. */
+
   // Archived snapshot: the posted_at is frozen — don't tick a fake live age.
   if (onchain?.posted_at && !live) {
     return (
       <span
         className="chip chip-sim"
-        style={micro ? { fontSize: 9.5, padding: "2px 8px" } : undefined}
+        style={micro ? { fontSize: "var(--t-1)", padding: "var(--s-1) var(--s-3)" } : undefined}
         title={
           plain
             ? "the last recorded rate from the saved copy: start the live server for real-time freshness"
@@ -64,7 +73,7 @@ export function FinalityBadge({
   return (
     <span
       className={`chip ${stale ? "chip-breach" : "chip-teal"}`}
-      style={micro ? { fontSize: 9.5, padding: "2px 8px" } : undefined}
+      style={micro ? { fontSize: "var(--t-1)", padding: "var(--s-1) var(--s-3)" } : undefined}
       title={
         stale
           ? plain
