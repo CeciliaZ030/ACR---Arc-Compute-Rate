@@ -16,8 +16,13 @@ export const metadata: Metadata = {
 export default function CompanionPage() {
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
-        <p className="standfirst" style={{ margin: 0 }}>
+      <div className="page-head">
+        {/* A plain string, not an <Ed> pair. This page is exempt from the
+            edition swap by a decision recorded in the coverage ledger: it IS
+            the plain voice, so it has one register. The words are its own
+            metadata.title. */}
+        <h1>The Reader’s Companion</h1>
+        <p className="standfirst">
           Every term this paper uses, in one line each, with the everyday analogy that makes it
           stick. No prior knowledge assumed.
         </p>

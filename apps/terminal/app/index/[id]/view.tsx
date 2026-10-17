@@ -132,9 +132,11 @@ export function IndexView({ initial, id }: { initial: Envelope<TerminalData>; id
             </span>
           )}
         </div>
-        <div className="rb-service" style={{ fontSize: "var(--t-7)" }}>
+        {/* The page's title, and it needed no copy: the service name was
+            already here under {p.index_id}, just not as a heading. */}
+        <h1 className="rb-service" style={{ fontSize: "var(--t-7)" }}>
           {serviceName(p.index_id)}
-        </div>
+        </h1>
         <div className="rb-value">
           <TickerNumber text={fmt(h.value)} roll />
         </div>

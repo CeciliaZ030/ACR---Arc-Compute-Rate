@@ -126,11 +126,13 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
+      <div className="page-head">
+        <h1>
+          <Ed x="The attack lab" p="Try to cheat it" />
+        </h1>
         <Ed
           as="p"
           className="standfirst"
-          style={{ margin: 0 }}
           x="Try to move my number. Here’s the bill. Fund a wash bot and watch each statistic eat the poison."
           p="Try to move my number. Here’s the bill. Give a cheating bot a budget and watch who bends."
         />

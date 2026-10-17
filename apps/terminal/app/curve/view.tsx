@@ -98,11 +98,13 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
+      <div className="page-head">
+        <h1>
+          <Ed x="The curve" p="Future prices" />
+        </h1>
         <Ed
           as="p"
           className="standfirst"
-          style={{ margin: 0 }}
           x="Machine commerce has a forward curve: weekly tenors, quoted continuously, cash-settled against the oracle print."
           p="You can lock in next month’s price of machine work: weekly contracts, paid out in cash against the official rate."
         />
