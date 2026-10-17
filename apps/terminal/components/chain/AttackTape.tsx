@@ -44,7 +44,7 @@ export function AttackTape({
 }) {
   if (!series.length) {
     return (
-      <p className="muted" style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}>
+      <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}>
         <Ed
           x="No hours estimated yet. The log fills one hour at a time once a run starts."
           p="Nothing to show yet. This fills in one hour at a time once you start a run."
@@ -63,11 +63,11 @@ export function AttackTape({
   const hasStep = rows.some((p) => p.step_ms != null);
 
   return (
-    <div style={{ marginTop: 18 }}>
+    <div style={{ marginTop: "var(--s-5)" }}>
       <div className="section-head" style={{ marginTop: 0 }}>
-        <span className="label">
+        <h2 className="label">
           <Ed x="estimator log" p="what the maths did" />
-        </span>
+        </h2>
         <span className="label">
           <span className="muted">
             {fmtInt(series.length)}/{fmtInt(hoursTotal)} <Ed x="hours" p="hours" />

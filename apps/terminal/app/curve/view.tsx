@@ -98,7 +98,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: 40 }}>
+      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
         <Ed
           as="p"
           className="standfirst"
@@ -110,11 +110,12 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <Ed
-            x="The quote corridor · where the maker trades"
-            p="The price corridor · where the dealer buys and sells"
-            className="label"
-          />
+          <h2 className="label">
+            <Ed
+              x="The quote corridor · where the maker trades"
+              p="The price corridor · where the dealer buys and sells"
+            />
+          </h2>
           {banner ? (
             <span
               className="chip chip-gold"
@@ -145,14 +146,14 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
           Reads book → mark → tape: the desk states the position, the chart
           shows how it got there, the tape scrolls the fills one by one. */}
       {primaryDesk ? (
-        <section className="section">
-          <div className="section-head">
-            <span className="label">
+        <section>
+          <div className="block-head">
+            <h3 className="label">
               <Ed
                 x={<>Fills against the oracle · {primaryDesk.index_id}</>}
                 p={<>Trades against the official rate · {primaryDesk.index_id}</>}
               />
-            </span>
+            </h3>
             <span className="label muted">
               <Ed x="every dot is one on-chain fill" p="every dot is one real trade" />
             </span>
@@ -166,7 +167,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
           <Ed
             as="p"
             className="muted"
-            style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}
+            style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}
             x="The dashed line is the on-chain print these contracts cash-settle against; the gap is the basis, in basis points."
             p={
               <>
@@ -179,11 +180,11 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
         </section>
       ) : null}
 
-      <section className="section">
-        <div className="section-head">
-          <span className="label">
+      <section>
+        <div className="block-head">
+          <h3 className="label">
             <Ed x="The tape · live on-chain fills" p="The trade feed · real trades on the blockchain" />
-          </span>
+          </h3>
           <span className="label">
             {futLive ? (
               <span className="chip chip-teal">
@@ -253,9 +254,9 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
         </div>
       </details>
 
-      <section className="section">
-        <div className="section-head">
-          <span className="label">Quotes</span>
+      <section>
+        <div className="block-head">
+          <h3 className="label">Quotes</h3>
         </div>
         <div className="table-scroll">
           <table className="sheet">
@@ -301,7 +302,7 @@ export function CurveView({ initial }: { initial: Envelope<TerminalData> }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 16, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-5)", maxWidth: "var(--measure)" }}
           x={
             <>
               An Avellaneda–Stoikov maker quotes both sides of the latest print; the weekly future

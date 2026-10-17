@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function CompanionPage() {
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: 40 }}>
+      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
         <p className="standfirst" style={{ margin: 0 }}>
           Every term this paper uses, in one line each, with the everyday analogy that makes it
           stick. No prior knowledge assumed.
@@ -25,7 +25,7 @@ export default function CompanionPage() {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">The whole thing in six beats</span>
+          <h2 className="label">The whole thing in six beats</h2>
         </div>
         <div className="primer-rail">
           {PRIMER_BEATS.map((b) => (
@@ -38,9 +38,9 @@ export default function CompanionPage() {
       </section>
 
       {GLOSSARY_THEMES.map((theme) => (
-        <section className="section companion-theme" key={theme}>
-          <div className="section-head">
-            <span className="label">{theme}</span>
+        <section className="companion-theme" key={theme}>
+          <div className="block-head">
+            <h3 className="label">{theme}</h3>
           </div>
           <div className="companion-grid">
             {Object.entries(PLAIN_GLOSSARY)
@@ -56,7 +56,7 @@ export default function CompanionPage() {
       ))}
 
       <section className="section">
-        <p className="muted" style={{ fontSize: 13, maxWidth: 68 * 9 }}>
+        <p className="muted" style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)" }}>
           The paper’s canonical glossary is <span className="mono">docs/GLOSSARY.md</span>. Flip
           the masthead to <b>plain</b> and every page gets this treatment, numbers identical.
         </p>
@@ -64,7 +64,7 @@ export default function CompanionPage() {
             used to be back to the front page — a reader who had just learned
             the vocabulary was returned to where they started, with nothing to
             do. Send them to the two things they came to understand. */}
-        <p style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <p style={{ marginTop: "var(--s-5)", display: "flex", gap: "var(--s-4)", flexWrap: "wrap" }}>
           <Link href="/attack" className="btn">
             Watch someone try to cheat it →
           </Link>
@@ -72,7 +72,7 @@ export default function CompanionPage() {
             Place a real trade →
           </Link>
         </p>
-        <p style={{ marginTop: 16 }}>
+        <p style={{ marginTop: "var(--s-5)" }}>
           <Link href="/" className="section-link">
             ← Back to the front page
           </Link>

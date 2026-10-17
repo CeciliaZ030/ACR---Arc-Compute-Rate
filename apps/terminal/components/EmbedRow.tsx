@@ -71,11 +71,11 @@ export function EmbedRow() {
             display: "flex",
             flexWrap: "wrap",
             alignItems: "center",
-            gap: 14,
-            paddingTop: 6,
+            gap: "var(--s-4)",
+            paddingTop: "var(--s-2)",
           }}
         >
-          <span style={{ display: "inline-flex", gap: 6 }} role="group" aria-label="which index">
+          <span style={{ display: "inline-flex", gap: "var(--s-2)" }} role="group" aria-label="which index">
             {INDICES.map((i) => (
               <button
                 key={i}
@@ -88,7 +88,7 @@ export function EmbedRow() {
               </button>
             ))}
           </span>
-          <span style={{ display: "inline-flex", gap: 6 }} role="group" aria-label="which form">
+          <span style={{ display: "inline-flex", gap: "var(--s-2)" }} role="group" aria-label="which form">
             {EMBED_KINDS.map((k) => (
               <button
                 key={k}
@@ -125,12 +125,12 @@ export function EmbedRow() {
             <button type="button" className="copy-btn" onClick={copy}>
               {copied ? <Ed x="copied" p="copied" /> : <Ed x="copy" p="copy" />}
             </button>
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all", paddingRight: 64 }}>
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all", paddingRight: "var(--s-8)" }}>
               {code}
             </pre>
           </div>
 
-          <span className="muted" style={{ fontSize: 11.5 }}>
+          <span className="muted" style={{ fontSize: "var(--t-2)" }}>
             <Ed
               x="live from this deployment · the image says how old the print is"
               p="live from this site · the picture says how old the number is"

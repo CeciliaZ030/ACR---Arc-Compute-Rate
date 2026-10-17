@@ -15,11 +15,12 @@ import type { TerminalData } from "@/lib/types";
    and the real on-chain fills scrolling past, one click from the full desk.
    Renders only when a venue is deployed (else the home page stays clean). */
 const HEAD = (
-  <Ed
-    x="The desk · machine commerce, trading forward"
-    p="The trading desk · buying and selling future prices"
-    className="label"
-  />
+  <h3 className="label">
+    <Ed
+      x="The desk · machine commerce, trading forward"
+      p="The trading desk · buying and selling future prices"
+    />
+  </h3>
 );
 
 export function FuturesTeaser({ data }: { data: TerminalData }) {
@@ -60,15 +61,15 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
   if (!venue) return null; // no venue deployed → keep the landing page uncluttered
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         {HEAD}
         <Link href="/curve" className="section-link">
           <Ed x="Trade the curve →" p="See the trading desk →" />
         </Link>
       </div>
       <div
-        style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}
+        style={{ display: "flex", gap: "var(--s-5)", alignItems: "center", flexWrap: "wrap", marginBottom: "var(--s-3)" }}
       >
         <span className={`chip ${tier.chip}`}>
           {tier.chip === "chip-sim" ? null : <span className="dot breathe" aria-hidden />}
@@ -111,7 +112,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, marginTop: 12, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)", maxWidth: "var(--measure)" }}
         x={
           unseeded
             ? "A cash-settled future settling against the same on-chain oracle as the spot rate. The venue is deployed here; no series has been listed on it yet, so there is nothing to trade against."
@@ -145,7 +146,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 6, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-2)", maxWidth: "var(--measure)" }}
           x={
             <>
               Take a side yourself: a Circle wallet behind your PIN,{" "}
@@ -163,7 +164,7 @@ export function FuturesTeaser({ data }: { data: TerminalData }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 6, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-2)", maxWidth: "var(--measure)" }}
           x={
             <>
               The desk trades from your own PIN-secured Circle wallet. It opens as soon as the

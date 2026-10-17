@@ -10,7 +10,7 @@ export function PlainPrimer() {
   return (
     <section className="section plain-only">
       <div className="section-head">
-        <span className="label">This paper in one minute</span>
+        <h2 className="label">This paper in one minute</h2>
         <span className="label muted">the same numbers, the whole story</span>
       </div>
       <div className="primer-rail">
@@ -21,7 +21,7 @@ export function PlainPrimer() {
           </div>
         ))}
       </div>
-      <p className="muted" style={{ fontSize: 13, marginTop: 12 }}>
+      <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-4)" }}>
         Every term this paper still uses is explained in{" "}
         <Link href="/companion" className="section-link">
           the reader’s companion →

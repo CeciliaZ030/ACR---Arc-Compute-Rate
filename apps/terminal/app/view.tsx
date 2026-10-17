@@ -68,13 +68,14 @@ export function FixingView({ initial }: { initial: Envelope<TerminalData> }) {
         <div className="section-head">
           {/* The label grows, so the two quiet entries (price it for yourself,
               carry it somewhere else) sit together at the right edge rather
-              than being spaced out across the head. */}
-          <Ed
-            x="Today’s fixing · all three indices"
-            p="Today’s official rates · all three services"
-            className="label"
-            style={{ flex: 1 }}
-          />
+              than being spaced out across the head. The flex lives on the
+              heading, which is the element in the head's flex line now. */}
+          <h2 className="label" style={{ flex: 1 }}>
+            <Ed
+              x="Today’s fixing · all three indices"
+              p="Today’s official rates · all three services"
+            />
+          </h2>
           <WorkloadRow />
           <EmbedRow />
         </div>
@@ -98,7 +99,7 @@ export function FixingView({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">Today’s prints · settlement grade</span>
+          <h2 className="label">Today’s prints · settlement grade</h2>
         </div>
         <PrintsTable prints={prints} live={env.live} direct={directLive} />
       </section>

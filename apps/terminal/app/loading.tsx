@@ -3,13 +3,13 @@ export default function Loading() {
   return (
     <div aria-busy="true" aria-label="setting type">
       <div className="skel-caption" />
-      <div className="hero" style={{ marginTop: 10 }}>
+      <div className="hero" style={{ marginTop: "var(--s-3)" }}>
         {[0, 1, 2].map((i) => (
           <div key={i} className="skel-card">
             <div className="skel skel-line" style={{ maxWidth: 120 }} />
-            <div className="skel skel-num" style={{ marginTop: 14 }} />
-            <div className="skel skel-line" style={{ maxWidth: 180, marginTop: 12 }} />
-            <div className="skel" style={{ height: 36, marginTop: 14 }} />
+            <div className="skel skel-num" style={{ marginTop: "var(--s-4)" }} />
+            <div className="skel skel-line" style={{ maxWidth: 180, marginTop: "var(--s-4)" }} />
+            <div className="skel" style={{ height: 36, marginTop: "var(--s-4)" }} />
           </div>
         ))}
       </div>

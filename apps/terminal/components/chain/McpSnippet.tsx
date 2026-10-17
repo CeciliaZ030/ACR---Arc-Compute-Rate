@@ -400,10 +400,14 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
 
   return (
     <section className="section anchor-target" id="mcp">
+      {/* Keeps its chapter: #mcp is a deep-link anchor and this is a live
+          playground, not one of the code specimens below it. */}
       <div className="section-head">
-        <Ed x="Ask the Tape" p="Ask the receipts" className="label" />
+        <h2 className="label">
+          <Ed x="Ask the Tape" p="Ask the receipts" />
+        </h2>
       </div>
-      <p className="muted" style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}>
+      <p className="muted" style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}>
         {HOSTED_TOOLS.length}{" "}
         <Ed
           x="read-only tools at one URL any MCP client can add, no install. Put your own agent's wallet and bill in below and run them live; what you see is what your client gets."
@@ -412,7 +416,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
       </p>
 
       {/* WHICH CHAIN, said out loud, and which press actually answered. */}
-      <div className="register-row is-stacked" style={{ fontSize: 13 }}>
+      <div className="register-row is-stacked" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted">
           <Ed x="chain" p="network" />
         </span>
@@ -423,7 +427,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         <span />
       </div>
 
-      <div className="register-row is-stacked" style={{ fontSize: 13 }}>
+      <div className="register-row is-stacked" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted">
           <Ed x="MCP server URL" p="address to add" />
         </span>
@@ -432,7 +436,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
           {connLine ? (
             <>
               <br />
-              <span className={conn?.ok && !wrongChain ? "green" : "vermilion"} style={{ fontSize: 12 }}>
+              <span className={conn?.ok && !wrongChain ? "green" : "vermilion"} style={{ fontSize: "var(--t-3)" }}>
                 {connLine}
                 {wrongChain ? ` · answered for ${wrongChain}` : null}
               </span>
@@ -449,7 +453,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         </span>
       </div>
 
-      <div className="register-row is-stacked" style={{ fontSize: 13 }}>
+      <div className="register-row is-stacked" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted">
           <Ed x="your agent's wallet" p="your agent's wallet" />
         </span>
@@ -465,7 +469,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
             style={{ width: "100%", maxWidth: 420 }}
           />
           {read.walletError ? (
-            <span className="muted" style={{ display: "block", fontSize: 12, color: "var(--breach)" }}>
+            <span className="muted" style={{ display: "block", fontSize: "var(--t-3)", color: "var(--breach)" }}>
               {read.walletError}
             </span>
           ) : null}
@@ -479,7 +483,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         </span>
       </div>
 
-      <div className="register-row is-stacked" style={{ fontSize: 13 }}>
+      <div className="register-row is-stacked" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted">
           <Ed x="your bill" p="your bill" />
         </span>
@@ -525,7 +529,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
             style={{ width: 220 }}
           />
           {read.billError ? (
-            <span className="muted" style={{ fontSize: 12, color: "var(--breach)" }}>
+            <span className="muted" style={{ fontSize: "var(--t-3)", color: "var(--breach)" }}>
               {read.billError}
             </span>
           ) : null}
@@ -533,7 +537,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         <span />
       </div>
 
-      <div className="register-row is-stacked" style={{ fontSize: 13 }}>
+      <div className="register-row is-stacked" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted">
           <Ed x="run a tool" p="try a question" />
         </span>
@@ -553,16 +557,16 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
                 {running === name ? " …" : null}
               </button>
             ))}
-          <span className="muted" style={{ fontSize: 12 }}>
+          <span className="muted" style={{ fontSize: "var(--t-3)" }}>
             {Object.keys(LOCAL_ONLY).join(" · ")} <Ed x="run in the local package only" p="need the local package" />
           </span>
         </span>
-        <span className="muted" style={{ fontSize: 12 }}>
+        <span className="muted" style={{ fontSize: "var(--t-3)" }}>
           {read.wallet || read.bill ? <Ed x="with your values" p="with your values" /> : <Ed x="with the example" p="with the example" />}
         </span>
       </div>
 
-      <div className="register-row is-stacked" style={{ fontSize: 13 }}>
+      <div className="register-row is-stacked" style={{ fontSize: "var(--t-4)" }}>
         <span className="muted">
           <Ed x="your client" p="your app" />
         </span>
@@ -576,7 +580,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         <span />
       </div>
 
-      <div style={{ marginTop: 14, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ marginTop: "var(--s-4)", display: "flex", gap: "var(--s-2)", alignItems: "center", flexWrap: "wrap" }}>
         {(["setup", "pay", "ask", "answer"] as View[]).map((t) => (
           <button key={t} type="button" className={`mini-btn${view === t ? " green" : ""}`} onClick={() => setView(t)} aria-pressed={view === t}>
             {t === "setup" ? (
@@ -594,7 +598,7 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         ))}
       </div>
       {view === "setup" ? (
-        <Ed as="p" className="muted" style={{ fontSize: 12.5, margin: "8px 0 0" }} x={WHERE[inputs.client].x} p={WHERE[inputs.client].p} />
+        <Ed as="p" className="muted" style={{ fontSize: "var(--t-3)", margin: "var(--s-3) 0 0" }} x={WHERE[inputs.client].x} p={WHERE[inputs.client].p} />
       ) : null}
       {view === "setup" && inputs.client === "npx" && api === null ? (
         /* OUTSIDE THE CODE BLOCK, because the config is pasted into a JSON
@@ -602,18 +606,18 @@ export function McpSnippet({ api, chain = "mainnet", origin = null, price = null
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 12.5, margin: "4px 0 0" }}
+          style={{ fontSize: "var(--t-3)", margin: "var(--s-2) 0 0" }}
           x="No ACR_API line below, on purpose. The press this page is reading does not carry /par, and the package already defaults to one where every tool answers."
           p="The config has no address in it on purpose. The tool already knows where to look."
         />
       ) : null}
-      <div className="specimen" style={{ marginTop: 8 }}>
+      <div className="specimen" style={{ marginTop: "var(--s-3)" }}>
         <button type="button" className="copy-btn" onClick={() => copy("code", shown)}>
           {copied === "code" ? <Ed x="copied" p="copied" /> : <Ed x="copy" p="copy" />}
         </button>
-        <pre style={{ maxHeight: 360, overflow: "auto", paddingRight: 64 }}>{shown}</pre>
+        <pre style={{ maxHeight: 360, overflow: "auto", paddingRight: "var(--s-8)" }}>{shown}</pre>
       </div>
-      <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+      <p className="muted" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}>
         <Ed
           x="Hosted is read-only and keyless: nothing is stored, nothing is paid. The local package (npx -y acr-mcp"
           p="The hosted version only reads. To let it pay, run the local version (npx -y acr-mcp"

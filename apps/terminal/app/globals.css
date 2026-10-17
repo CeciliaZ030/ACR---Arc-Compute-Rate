@@ -85,6 +85,101 @@
   --eyebrow: var(--font-eyebrow), "Space Mono", ui-monospace, monospace;
   --mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
+  /* ---- the space scale. Nine steps on a 4px grid. ----
+     Before this the sheet had ONE length token and 121 distinct spacing
+     literals expressing what is really a 7-step scale: every even number from
+     2 to 28 was in use as a margin, and 44 padding values were used exactly
+     once. A component had nothing to be consistent WITH, so each one invented
+     its own rhythm.
+
+     Migration rule, written down so it never has to be argued twice: round to
+     the nearest step, and ON A TIE ROUND DOWN. Every tied value in this
+     codebase (6, 10, 14, 20, 28, 40) is a padding or a flex gap inside a
+     component, never a separation between sections. Tightening inside a
+     component while the section gaps stay wide is what reads as dense rather
+     than cramped.
+
+     Three classes of number are deliberately NOT on this scale, because they
+     are not spacing: border and hairline widths; clamp() bounds and SVG
+     geometry; and measured offsets, where the value is a copy of some other
+     value (`.anchor-target`'s scroll margin is the sticky masthead's height,
+     and the 120px on the section bar is a decorative length). */
+  --s-1: 2px;
+  --s-2: 4px;
+  --s-3: 8px;
+  --s-4: 12px;
+  --s-5: 16px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 48px;
+  --s-9: 96px;
+
+  /* the readable measure. Written out as `68 * 9` inline in 46 places, which
+     is a hand-multiplication standing in for a token. */
+  --measure: 612px;
+
+  /* roles, so a call site can say what it means instead of how big it is */
+  --panel-pad: var(--s-5);
+  --stack-gap: var(--s-4);
+  --row-gap: var(--s-3);
+  --label-gap: var(--s-2);
+
+  /* ---- the type scale. Eight steps. ----
+     Before this: 24 distinct font sizes across 90 declarations, SEVEN of them
+     half-pixel (9.5 / 10.5 / 11.5 / 12.5 / 13.5 / 14.5) and carrying a third
+     of all the type in the app, with 14 of the 24 crowded into the band from
+     9.5px to 16px at half-pixel steps. That is a continuum, not a scale, and
+     no renderer honours it cleanly. Each half-pixel resolves to its nearest
+     integer neighbour. */
+  --t-1: 10px; /* uppercase mono micro-eyebrow. Never prose. */
+  --t-2: 11px; /* label, nav, chip, caption */
+  --t-3: 12px; /* dense mono data, chart text */
+  --t-4: 13px; /* table body, and the densest readable prose */
+  --t-5: 15px; /* prose inside a panel */
+  --t-6: 18px; /* standfirst */
+  --t-7: 22px; /* h2, a section heading */
+  --t-8: 34px; /* h1, a page title */
+
+  /* figures. Mono tabular numerals read smaller than body text at the same
+     pixel size, so they get their own ramp. The largest is the home hero rate,
+     and this file's rule is that the full dawn appears ONCE per app. */
+  --f-1: 24px;
+  --f-2: 30px;
+  --f-3: clamp(36px, 4vw, 52px);
+  /* There is no --f-4. It used to hold the home hero's ramp, but that print is
+     sized to its COLUMN now, with a container-query clamp that lib/heroFit.test.ts
+     greps for literally in the rule. A token there would read as tidier and
+     would break the test that keeps the headline on one line. */
+
+  /* leading: 11 values to 4. The body value is unchanged, so prose does not
+     move; 1.4 through 1.7 all collapse onto it, a delta under 3%. */
+  --lh-1: 1;
+  --lh-2: 1.15;
+  --lh-3: 1.3;
+  --lh-4: 1.55;
+
+  /* tracking is a function of SIZE. That one idea retires five separate
+     uppercase trackings (0.08 / 0.1 / 0.12 / 0.14 / 0.16 / 0.18em) that were
+     all doing a single job. */
+  --tr-1: -0.03em; /* a figure at --f-3 or larger */
+  --tr-2: -0.015em; /* display type */
+  --tr-3: 0; /* body */
+  --tr-4: 0.06em; /* mono data, chart text */
+  --tr-5: 0.12em; /* uppercase eyebrow at --t-3 and up */
+  --tr-6: 0.16em; /* uppercase eyebrow at --t-1 / --t-2: small caps need more */
+
+  /* radius: 11 ad-hoc values to 6 named ones */
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  /* the glass blur. Stated in four places before it had a name. NOT the
+     masthead's: that one is deliberately louder, see .masthead-shell.scrolled. */
+  --blur-glass: 12px;
+
   /* ---- compat aliases: the legacy fleet reskins itself ---- */
   --paper: var(--genesis);
   --paper-2: var(--ledger);
@@ -123,8 +218,10 @@ body {
   background: var(--genesis);
   color: var(--ether);
   font-family: var(--body);
+  /* NOT a step on the type scale: this is the rem anchor. Every ch measure and
+     every em tracking in this file is computed against it. */
   font-size: 16px;
-  line-height: 1.55;
+  line-height: var(--lh-4);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -161,10 +258,10 @@ a {
 .container {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 var(--s-6);
 }
 .page {
-  padding-bottom: 80px;
+  padding-bottom: var(--s-9);
   min-height: 60vh;
 }
 
@@ -189,20 +286,73 @@ a {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
 }
-.label {
+/* ---- the eyebrow, stated once ----
+   Every uppercase-mono label in the paper used to restate these three lines.
+   They were restated 22 times, which is most of the reason this sheet had 24
+   font sizes and 14 trackings: each site re-picked its own while it was there.
+
+   SIZE AND TRACKING STAY AT THE CALL SITES, deliberately. 17 of the 22
+   genuinely differ (--t-1 through --t-3, and --tr-5 against --tr-6) and
+   collapsing those would move pixels. Only the five that were already
+   byte-identical to .label join the size rule below.
+
+   `font-weight: 400` is load-bearing, not decoration: remove a selector from
+   this list and `table.sheet th`, `.term-pop b` and `.companion-entry b` go
+   bold on the UA default.
+
+   NOT in this list, on purpose: `.addr-chip .addr-copy`, `.footnotes li::before`,
+   `.mini-btn` and `.primer-beat::before` want the eyebrow FACE without the
+   TREATMENT. Two of them render counter digits, which 0.16em would space out.
+   `.desk-steps-cap` is not an eyebrow at all: it is mono and lowercase.
+
+   And no `display` here, ever: `.label` and `.eyebrow` both reach
+   `<Ed className>`, which forwards to both edition branches, so a single-class
+   `display` declared after `.ed-p` would unhide the plain edition app-wide. */
+.label,
+.eyebrow,
+.nav a,
+.section-link,
+.home-hero-scroll,
+details.disclosure summary,
+.chip,
+.chain-strip,
+.dateline,
+.rb-cost,
+table.sheet th,
+.btn,
+.segmented button,
+.ops-recheck,
+.ops-cap,
+.specimen .copy-btn,
+.gate-badge,
+.register-head,
+.awaiting,
+.skel-caption,
+.term-pop b,
+.companion-entry b {
   font-family: var(--eyebrow);
-  font-size: 11px;
   font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+}
+
+/* The five that were already at .label's exact --t-2 / --tr-6 and differ from
+   it in colour alone. Each still sets its own colour at its own site. */
+.label,
+.eyebrow,
+.nav a,
+.section-link,
+.home-hero-scroll,
+details.disclosure summary {
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-6);
+}
+
+.label {
   color: var(--ether-45);
 }
 .eyebrow {
-  font-family: var(--eyebrow);
-  font-size: 11.5px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
+  /* This was 11.5px / 0.18em against .label's 11px / 0.16em: one role wearing
+     two values that differ by half a pixel. It is a colour variant now. */
   color: var(--sky);
 }
 .eyebrow .ref {
@@ -211,21 +361,48 @@ a {
 .display {
   font-family: var(--display);
   font-weight: 300;
-  letter-spacing: -0.015em;
+  letter-spacing: var(--tr-2);
 }
 h1,
 h2,
-h3 {
+h3,
+h4 {
   font-family: var(--display);
   font-weight: 300;
-  letter-spacing: -0.015em;
+  letter-spacing: var(--tr-2);
   color: var(--ether);
+  /* Headings carried NO size and NO leading in this file. So every bare <h2>
+     rendered at the UA default 1.5em, every <h3> at 1.17em and every <h1> at
+     2em, which is the real reason 80 blocks reached for `.section-head`: the
+     only heading TREATMENT the sheet owned was the loudest one, so anything
+     that wanted to read as a heading had to take a full-width rule and a gold
+     bar with it. Sizes come off the scale now.
+
+     The UA's em-based margins go with them. A head wrapper owns its own
+     spacing, and a standalone heading keeps one small step beneath it. */
+  margin: 0 0 var(--s-3);
+}
+h1 {
+  font-size: var(--t-8);
+  line-height: var(--lh-2);
+}
+h2 {
+  font-size: var(--t-7);
+  line-height: var(--lh-3);
+}
+h3 {
+  font-size: var(--t-5);
+  line-height: var(--lh-3);
+}
+h4 {
+  font-size: var(--t-4);
+  line-height: var(--lh-3);
 }
 .standfirst {
   font-family: var(--body);
-  font-size: 19px;
+  font-size: var(--t-6);
   font-weight: 400;
-  line-height: 1.55;
+  line-height: var(--lh-4);
   color: var(--ether-70);
   max-width: 64ch;
 }
@@ -263,19 +440,19 @@ h3 {
 /* ---------- glass panel ---------- */
 .panel {
   background: var(--glass);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-brd);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   box-shadow: var(--glow-validator);
 }
 .panel-pad {
-  padding: 20px 22px;
+  padding: var(--s-5) var(--s-6);
 }
 
 .btn-row {
   display: inline-flex;
-  gap: 10px;
+  gap: var(--s-3);
   flex-wrap: wrap;
 }
 
@@ -283,8 +460,8 @@ h3 {
 .wallet-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-top: 12px;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
 }
 @media (max-width: 640px) {
   .wallet-grid {
@@ -294,40 +471,37 @@ h3 {
 .wallet-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
   border: 1px solid var(--hairline);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   background: var(--glass);
 }
 .wallet-role {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--s-3);
   flex-wrap: wrap;
 }
 .wallet-figures {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 15px;
+  gap: var(--s-2);
+  font-size: var(--t-5);
 }
 
 /* ---------- chips & pills ---------- */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-family: var(--eyebrow);
-  font-size: 10.5px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  gap: var(--s-2);
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
   color: var(--ether-70);
   border: 1px solid var(--hairline-strong);
-  border-radius: 999px;
-  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  padding: var(--s-2) var(--s-3);
   white-space: nowrap;
 }
 .chip-gold {
@@ -372,9 +546,9 @@ a.chip:hover,
 .addr-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--s-3);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--t-3);
   color: var(--ether-70);
   white-space: nowrap;
 }
@@ -389,20 +563,41 @@ a.chip:hover,
   box-shadow: none;
   border: 1px dashed var(--ether-45);
 }
-.addr-chip .addr-copy {
-  font-family: var(--eyebrow);
-  font-size: 9.5px;
+/* The quiet button: a hairline box that brightens on hover. Four of these
+   shipped with byte-identical faces AND four byte-identical :hover rules.
+   Size, padding, position and margin stay at each call site, because those are
+   the only things that genuinely differ.
+
+   Declared here, above all four, so every site's own declarations still win on
+   source order: that is what lets `.specimen .copy-btn` keep its opaque
+   background while the other three stay transparent.
+
+   NOT `.lab-presets button`: it is mono rather than eyebrow, it is --ether-70,
+   and it has never had a hover. Adding it here would give it one. */
+.addr-chip .addr-copy,
+.ops-recheck,
+.specimen .copy-btn,
+.mini-btn {
   color: var(--ether-45);
   background: transparent;
   border: 1px solid var(--hairline);
-  border-radius: 4px;
-  padding: 1px 5px;
+  border-radius: var(--r-sm);
   cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
+  transition:
+    color var(--dur-1) var(--ease-expo),
+    border-color var(--dur-1) var(--ease-expo);
 }
-.addr-chip .addr-copy:hover {
+.addr-chip .addr-copy:hover,
+.ops-recheck:hover,
+.specimen .copy-btn:hover,
+.mini-btn:hover {
   color: var(--ether);
   border-color: var(--hairline-strong);
+}
+.addr-chip .addr-copy {
+  font-family: var(--eyebrow);
+  font-size: var(--t-1);
+  padding: 1px var(--s-2);
 }
 .addr-chip a:hover {
   color: var(--sky);
@@ -411,7 +606,7 @@ a.chip:hover,
 /* tx / explorer links */
 .tx-link {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--t-3);
   color: var(--sky);
   border-bottom: 1px solid transparent;
   transition: border-color var(--dur-1) var(--ease-expo);
@@ -421,7 +616,7 @@ a.chip:hover,
   border-bottom-color: var(--sky);
 }
 .tx-link .ext {
-  font-size: 10px;
+  font-size: var(--t-1);
   opacity: 0.7;
 }
 
@@ -436,30 +631,33 @@ a.chip:hover,
 }
 .masthead-shell.scrolled {
   background: rgba(0, 11, 36, 0.72);
+  /* 14, not --blur-glass's 12: the masthead sits over moving content when
+     scrolled and needs to separate harder than a panel does. Deliberate. */
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom-color: var(--glass-brd);
   box-shadow: var(--glow-validator);
 }
 .masthead {
-  padding-top: 22px;
+  padding-top: var(--s-6);
 }
 .masthead-shell.scrolled .masthead {
-  padding-top: 12px;
+  padding-top: var(--s-4);
 }
 .masthead-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  padding-bottom: 10px;
+  gap: var(--s-3) var(--s-5);
+  padding-bottom: var(--s-3);
 }
 .nameplate {
   font-family: var(--display);
+  /* NOT on the type scale either: a logotype, sized to the masthead's height. */
   font-size: 26px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tr-3);
 }
 .nameplate em {
   font-style: normal;
@@ -469,9 +667,9 @@ a.chip:hover,
 .nav {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: var(--s-6);
   flex-wrap: wrap;
-  padding: 9px 0;
+  padding: var(--s-3) 0;
 }
 /* Transparent above 640px: the links stay direct flex children of .nav, so
    this wrapper costs the desktop layout nothing. It exists only so a phone
@@ -480,13 +678,8 @@ a.chip:hover,
   display: contents;
 }
 .nav a {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
   color: var(--ether-70);
-  padding-bottom: 2px;
+  padding-bottom: var(--s-1);
   transition: color var(--dur-1) var(--ease-expo);
 }
 .nav a:hover {
@@ -500,28 +693,9 @@ a.chip:hover,
   margin-left: auto;
 }
 
-/* live pulse (legacy) + status pill */
-.pulse {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-.pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
-  animation: breathe 2s ease-in-out infinite;
-}
-.pulse-dot.off {
-  background: transparent;
-  border: 1px solid var(--gold);
-  animation: none;
-}
+/* `breathe` outlived its first callers. `.pulse`, `.pulse-dot` and
+   `.pulse-dot.off` were deleted once no .tsx named any of them; the live status
+   pill is `.nav-pulse`. The keyframes stay: `.chip .dot.breathe` reads them. */
 @keyframes breathe {
   0%,
   100% {
@@ -537,16 +711,13 @@ a.chip:hover,
 .dateline {
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  padding: 8px 0;
+  padding: var(--s-3) 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 10px;
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  gap: var(--s-2) var(--s-3);
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-5);
   color: var(--ether-45);
 }
 .chain-strip b,
@@ -559,7 +730,7 @@ a.chip:hover,
   color: var(--hairline-strong);
 }
 .chain-strip .addr-chip {
-  font-size: 11px;
+  font-size: var(--t-2);
 }
 
 /* ---------- sections ---------- */
@@ -571,16 +742,64 @@ a.chip:hover,
 .anchor-target {
   scroll-margin-top: 120px;
 }
-.section-head {
-  border-top: 1px solid var(--hairline);
-  padding-top: 12px;
-  margin-bottom: 20px;
+/* Four levels of head, and the hairline plus the gold bar belong to exactly
+   ONE of them. The bar was firing 80 times across the app, eleven of them on
+   /spend, and a chapter mark spent eleven times on one page marks nothing.
+
+   A block earns `.section-head` only if it is a named top-level part of its
+   page: it would appear in a table of contents for that page, or it is a
+   deep-link anchor target. Four per page is the ceiling. Anything subordinate
+   takes `.block-head`; a title inside a panel takes `.card-head`; and the
+   page's own title takes `.page-head`, which is a stack rather than a row.
+
+   The three row-shaped levels share one declaration block, so they cannot
+   drift out of alignment: every head on every page starts on the same left
+   edge and puts its right-hand slot on the same baseline. */
+.section-head,
+.block-head,
+.card-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--s-5);
   flex-wrap: wrap;
   position: relative;
+}
+.section-head h2,
+.section-head h3,
+.block-head h3,
+.card-head h4,
+.page-head h1 {
+  margin: 0;
+}
+.section-head {
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+.block-head {
+  margin-top: var(--s-7);
+  margin-bottom: var(--s-4);
+}
+.card-head {
+  margin-bottom: var(--s-3);
+}
+.page-head {
+  margin-top: var(--s-6);
+}
+/* a page title with a status slot beside it */
+.page-head-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+.page-head > .label {
+  margin: 0 0 var(--s-2);
+}
+.page-head .standfirst {
+  margin-top: var(--s-4);
 }
 .section-head::before {
   content: "";
@@ -592,10 +811,6 @@ a.chip:hover,
   background: var(--horizon-line);
 }
 .section-link {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
   color: var(--gold);
 }
 .section-link:hover {
@@ -606,7 +821,7 @@ a.chip:hover,
 .hero {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+  gap: var(--s-5);
   /* reserve the card band so a late payload never shoves the standfirst */
   min-height: 300px;
 }
@@ -615,13 +830,13 @@ a.chip:hover,
 .home-hero {
   position: relative;
   overflow: hidden;
-  margin-top: 28px;
+  margin-top: var(--s-6);
   min-height: clamp(440px, 74vh, 720px);
   display: flex;
   align-items: center;
   padding: clamp(28px, 5vw, 64px);
   border: 1px solid var(--glass-brd);
-  border-radius: 16px;
+  border-radius: var(--r-xl);
   background: var(--dawn-soft);
   box-shadow: var(--glow-validator);
 }
@@ -665,7 +880,7 @@ a.chip:hover,
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--s-5);
   animation: hero-reveal var(--dur-3) var(--ease-expo) both;
 }
 @keyframes hero-reveal {
@@ -684,12 +899,12 @@ a.chip:hover,
 .home-hero-flagship {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--s-2);
 }
 .home-hero-idline {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-4);
   flex-wrap: wrap;
 }
 .home-hero-rate {
@@ -721,16 +936,16 @@ a.chip:hover,
 }
 .home-hero-unit {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--t-4);
   color: var(--ether-45);
 }
 .home-hero-thesis {
   font-family: var(--display);
   font-weight: 300;
   font-size: clamp(21px, 3.2vw, 34px);
-  line-height: 1.15;
-  letter-spacing: -0.015em;
-  margin: 4px 0 0;
+  line-height: var(--lh-2);
+  letter-spacing: var(--tr-2);
+  margin: var(--s-2) 0 0;
   max-width: 22ch;
   text-wrap: balance;
 }
@@ -738,38 +953,34 @@ a.chip:hover,
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--s-6);
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: var(--s-2);
 }
 .home-hero-stat {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: var(--s-4);
 }
 .home-hero-stat-num {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-size: clamp(30px, 5vw, 52px);
   font-weight: 400;
-  line-height: 1;
+  line-height: var(--lh-1);
 }
 .home-hero-stat-cap {
-  font-size: 13px;
+  font-size: var(--t-4);
   color: var(--ether-70);
   max-width: 22ch;
 }
 .home-hero-cta {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--s-5);
   flex-wrap: wrap;
 }
 .home-hero-scroll {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
   color: var(--ether-45);
   animation: hero-scroll-cue 2.4s ease-in-out infinite;
 }
@@ -789,12 +1000,12 @@ a.chip:hover,
 }
 .rate-block {
   display: block;
-  padding: 18px 20px 16px;
+  padding: var(--s-5) var(--s-5) var(--s-5);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-brd);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   transition: border-color var(--dur-2) var(--ease-expo), transform var(--dur-2) var(--ease-expo),
     box-shadow var(--dur-2) var(--ease-expo);
 }
@@ -807,84 +1018,73 @@ a.chip:hover,
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--s-3);
 }
 .rate-block:hover .rb-id {
   color: var(--sky);
 }
 .rb-service {
   font-family: var(--display);
-  font-size: 16px;
+  font-size: var(--t-5);
   font-weight: 400;
   color: var(--ether-70);
-  margin-top: 6px;
+  margin-top: var(--s-2);
 }
 .rb-value {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: clamp(36px, 4vw, 52px);
+  font-size: var(--f-3);
   font-weight: 600;
   color: var(--sand);
-  line-height: 1.1;
-  margin-top: 10px;
-  letter-spacing: -0.01em;
+  line-height: var(--lh-2);
+  margin-top: var(--s-3);
+  letter-spacing: var(--tr-2);
   white-space: nowrap;
   text-shadow: 0 0 26px rgba(255, 204, 111, 0.28);
 }
 .rb-unit {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--t-3);
   color: var(--ether-45);
-  margin-top: 2px;
+  margin-top: var(--s-1);
 }
 .rb-ci {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--t-3);
   color: var(--ether-45);
-  margin-top: 14px;
+  margin-top: var(--s-4);
 }
 .rb-est {
   font-family: var(--mono);
-  font-size: 11px;
-  margin-top: 4px;
+  font-size: var(--t-2);
+  margin-top: var(--s-2);
 }
 .rb-cost {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-5);
   color: var(--clay);
-  margin-top: 6px;
+  margin-top: var(--s-2);
 }
 .rb-spark {
-  margin-top: 16px;
+  margin-top: var(--s-5);
 }
 .rb-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
   flex-wrap: wrap;
 }
-.settled-mark {
-  font-family: var(--eyebrow);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--finality);
-}
-
 /* ---------- standfirst block ---------- */
 .standfirst-block {
-  margin-top: 48px;
+  margin-top: var(--s-8);
 }
 
 /* ---------- settlement tape (marquee) ---------- */
 .tape {
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  margin-top: 26px;
+  margin-top: var(--s-6);
   overflow: hidden;
   position: relative;
 }
@@ -908,9 +1108,9 @@ a.chip:hover,
 }
 .tape-track {
   display: flex;
-  gap: 44px;
+  gap: var(--s-8);
   width: max-content;
-  padding: 9px 0;
+  padding: var(--s-3) 0;
   animation: tape-scroll 48s linear infinite;
 }
 .tape:hover .tape-track {
@@ -927,9 +1127,9 @@ a.chip:hover,
 .tape-item {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-3);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--t-3);
   font-variant-numeric: tabular-nums;
   color: var(--ether-70);
   white-space: nowrap;
@@ -942,62 +1142,62 @@ a.chip:hover,
 }
 .tape-static {
   display: flex;
-  gap: 44px;
+  gap: var(--s-8);
   overflow-x: auto;
-  padding: 9px 0;
+  padding: var(--s-3) 0;
 }
 
 /* ---------- chain facts strip ---------- */
 .facts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+  gap: var(--s-5);
 }
 .fact {
   border-left: 2px solid transparent;
   border-image: linear-gradient(180deg, #326796, #e9a13f) 1;
   border-image-width: 0 0 0 2px;
-  padding-left: 16px;
+  padding-left: var(--s-5);
 }
 .fact-value {
   font-family: var(--display);
-  font-size: 22px;
+  font-size: var(--t-7);
   font-weight: 400;
   color: var(--ether);
-  line-height: 1.3;
+  line-height: var(--lh-3);
 }
 .fact-value .mono {
-  font-size: 18px;
+  font-size: var(--t-6);
 }
 .fact-gloss {
   font-family: var(--body);
-  font-size: 14px;
+  font-size: var(--t-5);
   color: var(--ether-45);
-  margin-top: 6px;
-  line-height: 1.55;
+  margin-top: var(--s-2);
+  line-height: var(--lh-4);
 }
 
 /* ---------- defensibility strip ---------- */
 .defense {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  gap: 40px;
+  gap: var(--s-7);
   align-items: center;
 }
 .defense-bars {
   display: grid;
-  gap: 14px;
+  gap: var(--s-4);
 }
 .defense-bar-row {
   display: grid;
   grid-template-columns: 120px 1fr 80px;
-  gap: 12px;
+  gap: var(--s-4);
   align-items: center;
 }
 .defense-bar {
   height: 10px;
   background: rgba(172, 198, 233, 0.08);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   position: relative;
   overflow: hidden;
 }
@@ -1005,7 +1205,7 @@ a.chip:hover,
   position: absolute;
   inset: 0 auto 0 0;
   display: block;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   transition: width 0.6s var(--ease-expo);
 }
 .defense-bar .fill-vwap {
@@ -1020,26 +1220,26 @@ a.chip:hover,
   white-space: nowrap;
 }
 .defense-bar-row .num {
-  font-size: 12px;
+  font-size: var(--t-3);
   text-align: right;
   color: var(--ether-70);
 }
 .defense-verdict {
   border-left: 1px solid var(--hairline);
-  padding-left: 40px;
+  padding-left: var(--s-7);
 }
 .defense-ratio {
   font-family: var(--mono);
-  font-size: clamp(36px, 4vw, 52px);
+  font-size: var(--f-3);
   font-weight: 600;
   color: var(--ether);
-  line-height: 1;
+  line-height: var(--lh-1);
 }
 .defense-caption {
   font-family: var(--body);
   color: var(--ether-70);
-  margin-top: 8px;
-  font-size: 15px;
+  margin-top: var(--s-3);
+  font-size: var(--t-5);
 }
 
 /* ---------- tables ---------- */
@@ -1051,23 +1251,20 @@ table.sheet {
   border-collapse: collapse;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
+  font-size: var(--t-4);
 }
 table.sheet th {
-  font-family: var(--eyebrow);
-  font-size: 10.5px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
   color: var(--ether-45);
   text-align: right;
-  padding: 8px 12px;
+  padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--hairline-strong);
   white-space: nowrap;
 }
 table.sheet td {
   text-align: right;
-  padding: 10px 12px;
+  padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--hairline);
   white-space: nowrap;
 }
@@ -1098,16 +1295,13 @@ table.sheet .row-link:focus-visible {
 
 /* ---------- buttons & controls ---------- */
 .btn {
-  font-family: var(--eyebrow);
-  font-size: 12px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: var(--t-3);
+  letter-spacing: var(--tr-5);
   color: var(--sand);
   background: transparent;
   border: 1px solid rgba(233, 161, 63, 0.5);
-  border-radius: 6px;
-  padding: 11px 20px;
+  border-radius: var(--r-sm);
+  padding: var(--s-4) var(--s-5);
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-expo), color var(--dur-1) var(--ease-expo),
     box-shadow var(--dur-2) var(--ease-expo);
@@ -1159,12 +1353,12 @@ input:not([type]),
 select,
 textarea {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--t-4);
   color: var(--ether);
   background: transparent;
   border: 1px solid var(--hairline-strong);
-  border-radius: 6px;
-  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  padding: var(--s-3) var(--s-4);
   transition: border-color var(--dur-1) var(--ease-expo), color var(--dur-1) var(--ease-expo);
 }
 input[type="text"]:hover:not(:disabled),
@@ -1195,19 +1389,16 @@ select {
 .segmented {
   display: inline-flex;
   border: 1px solid var(--hairline-strong);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 .segmented button {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-5);
   color: var(--ether-70);
   background: transparent;
   border: 0;
-  padding: 8px 16px;
+  padding: var(--s-3) var(--s-5);
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-expo), color var(--dur-1) var(--ease-expo);
 }
@@ -1250,7 +1441,7 @@ table.sheet.sheet-checks td:nth-child(3) {
   text-align: right;
   white-space: normal;
   min-width: 26ch;
-  padding-left: 32px;
+  padding-left: var(--s-7);
 }
 /* Below this a check and its reason cannot share a line without one of them
    losing, and `.table-scroll` would resolve that by scrolling the row
@@ -1268,8 +1459,8 @@ table.sheet.sheet-checks td:nth-child(3) {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr);
     align-items: start;
-    column-gap: 12px;
-    padding: 10px 0;
+    column-gap: var(--s-4);
+    padding: var(--s-3) 0;
     border-bottom: 1px solid var(--hairline);
   }
   table.sheet.sheet-checks td {
@@ -1289,7 +1480,7 @@ table.sheet.sheet-checks td:nth-child(3) {
     grid-area: 2 / 2;
     text-align: left;
     min-width: 0;
-    padding: 3px 0 0;
+    padding: var(--s-2) 0 0;
   }
 }
 
@@ -1300,7 +1491,7 @@ table.sheet.sheet-checks td:nth-child(3) {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 0;
+  gap: var(--s-2) 0;
 }
 /* The separator belongs BETWEEN the counters, not inside the button at the
    end of them — a generated middot on a bordered control reads as part of its
@@ -1308,7 +1499,7 @@ table.sheet.sheet-checks td:nth-child(3) {
 .ops-tally > * + *:not(.ops-recheck)::before {
   content: "·";
   color: var(--ether-45);
-  margin: 0 8px;
+  margin: 0 var(--s-3);
 }
 /* A count that leads somewhere. The verdict said "1 warning" and left the
    reader to find it across nine bands and twenty-three rows. */
@@ -1321,40 +1512,26 @@ table.sheet.sheet-checks td:nth-child(3) {
   border-bottom-color: var(--sky);
 }
 .ops-recheck {
-  margin-left: 16px;
-  font-family: var(--eyebrow);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--ether-45);
-  background: transparent;
-  border: 1px solid var(--hairline);
-  border-radius: 4px;
-  padding: 2px 8px;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
-}
-.ops-recheck:hover {
-  color: var(--ether);
-  border-color: var(--hairline-strong);
+  margin-left: var(--s-5);
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
+  padding: var(--s-1) var(--s-3);
 }
 /* The section head's right side carries a standing chip AND a count. */
 .ops-head-right {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-4);
 }
 /* An amount field and the ceiling it is bounded by, kept together. */
 .ops-field {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s-2);
 }
 .ops-cap {
-  font-family: var(--eyebrow);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
   color: var(--ether-45);
   white-space: nowrap;
 }
@@ -1364,13 +1541,13 @@ table.sheet.sheet-checks td:nth-child(3) {
    a done/current/pending step reads with the same colours as every other state
    in the paper: teal settled, gold in hand, bare still to come. */
 .desk-steps-wrap {
-  margin: 14px 0 18px;
+  margin: var(--s-4) 0 var(--s-5);
 }
 .desk-steps {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-3);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1395,21 +1572,49 @@ table.sheet.sheet-checks td:nth-child(3) {
   width: 14px;
   height: 1px;
   background: var(--hairline);
-  margin-right: 8px;
+  margin-right: var(--s-3);
 }
 .desk-steps li.todo .chip {
   color: var(--ether-45);
   border-color: var(--hairline);
 }
 .desk-steps-cap {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  margin: 8px 0 0;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-4);
+  margin: var(--s-3) 0 0;
 }
 @media (max-width: 640px) {
+  /* THE PHONE GUTTER. `.container` had no media query at all, so a 375px
+     screen got a 327px column — the measurement this file blames twice for
+     clipping, once for a BUY figure 332px wide and once for a 400px block in a
+     283px panel. 16px each side gives 343.
+
+     LONGHAND, and this is not style. `main` is `className="container page"`,
+     and `.page` sets `padding-bottom` AFTER `.container`'s shorthand at equal
+     specificity. A `padding: 0 var(--s-5)` here would win on source order and
+     zero the bottom padding of every page in the app on phones. The footer
+     already learned this lesson the hard way: see the comment on `.colophon`,
+     whose shorthand had been silently eating the same inset.
+
+     `.colophon` needs its own entry at (0,2,0) for that exact reason — its
+     shorthand is declared later, so it would keep 24px while the column above
+     it moved to 16, which is the misalignment that comment was written to fix. */
+  .container {
+    padding-left: var(--s-5);
+    padding-right: var(--s-5);
+  }
+  .container.colophon {
+    padding: var(--s-6) var(--s-5) var(--s-8);
+  }
+  /* the panel's own inset sits inside the container's: both at 16 gives a
+     311px panel on a 375px screen instead of 283. */
+  .panel-pad {
+    padding: var(--s-5);
+  }
+
   .desk-steps li + li::before {
     width: 8px;
-    margin-right: 4px;
+    margin-right: var(--s-2);
   }
 
   /* The masthead, on a phone.
@@ -1418,7 +1623,12 @@ table.sheet.sheet-checks td:nth-child(3) {
      ate ~200px — near a third of an iPhone SE, on every page, forever. Scroll
      the links instead and keep the two CONTROLS pinned: the edition toggle and
      the status pill are things a reader uses, not decoration to push offscreen. */
-  .nav {
+  /* `.masthead .nav`, not `.nav`. A media query adds no specificity, so the
+     tablet rule below — which also matches a phone — was winning on source
+     order and the phone nav ran a 12px gap, giving back 12px of the 327px the
+     comment above is about. Second instance of this lesson in this block; see
+     `.nav .nav-right` just below. Do not simplify either back. */
+  .masthead .nav {
     flex-wrap: nowrap;
     gap: 0;
   }
@@ -1426,14 +1636,17 @@ table.sheet.sheet-checks td:nth-child(3) {
     display: flex;
     flex: 1 1 auto;
     min-width: 0;
-    gap: 16px;
+    gap: var(--s-5);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    /* bleed to the container edge so a cut-off link reads as "there is more" */
-    margin-left: -24px;
-    padding: 0 8px 0 24px;
+    /* bleed to the container edge so a cut-off link reads as "there is more".
+       --s-5, matching the phone gutter set at the top of this block: these two
+       are the same measurement written twice, and if they drift the strip
+       bleeds past the column edge. */
+    margin-left: calc(-1 * var(--s-5));
+    padding: 0 var(--s-3) 0 var(--s-5);
     -webkit-mask-image: linear-gradient(90deg, #000 0 88%, transparent 100%);
     mask-image: linear-gradient(90deg, #000 0 88%, transparent 100%);
   }
@@ -1516,7 +1729,7 @@ table.sheet.sheet-checks td:nth-child(3) {
      labels from wrapping INSIDE a pill and mismatching the two heights. */
   .home-hero-cta {
     width: 100%;
-    gap: 10px;
+    gap: var(--s-3);
   }
   .home-hero-cta .btn {
     flex: 1 1 100%;
@@ -1525,7 +1738,7 @@ table.sheet.sheet-checks td:nth-child(3) {
   .home-hero-scroll {
     flex: 1 1 100%;
     text-align: center;
-    margin-top: 2px;
+    margin-top: var(--s-1);
   }
 
   /* The check label is prose too, not just the detail column. Leaving it
@@ -1553,18 +1766,13 @@ details.disclosure {
   border-top: 1px solid var(--hairline);
 }
 details.disclosure summary {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
   color: var(--ether-70);
-  padding: 14px 0;
+  padding: var(--s-4) 0;
   cursor: pointer;
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-3);
   transition: color var(--dur-1) var(--ease-expo);
 }
 details.disclosure summary:hover {
@@ -1582,14 +1790,14 @@ details.disclosure[open] summary::before {
   content: "▾";
 }
 details.disclosure .disclosure-body {
-  padding: 4px 0 24px;
+  padding: var(--s-2) 0 var(--s-6);
 }
 /* A disclosure that counts what it hides. Part of the summary's accessible
    name, so it is never aria-hidden. */
 details.disclosure summary .disclosure-count {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-3);
   color: var(--ether);
 }
 
@@ -1604,25 +1812,25 @@ details.disclosure summary .disclosure-count {
   counter-increment: fn;
   display: grid;
   grid-template-columns: 28px 1fr auto;
-  gap: 12px;
-  padding: 10px 0;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
   border-bottom: 1px solid var(--hairline);
   align-items: baseline;
 }
 .footnotes li::before {
   content: counter(fn, decimal-leading-zero);
   font-family: var(--eyebrow);
-  font-size: 10.5px;
+  font-size: var(--t-1);
   color: var(--sky);
 }
 .footnotes .fn-gloss {
   font-family: var(--body);
-  font-size: 14.5px;
+  font-size: var(--t-5);
   color: var(--ether-70);
 }
 .footnotes .fn-value {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--t-4);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1630,16 +1838,16 @@ details.disclosure summary .disclosure-count {
 .specimen {
   background: rgba(0, 11, 36, 0.62);
   border: 1px solid var(--glass-brd);
-  border-radius: 8px;
-  padding: 18px 20px;
+  border-radius: var(--r-md);
+  padding: var(--s-5) var(--s-5);
   position: relative;
   overflow-x: auto;
 }
 .specimen pre {
   margin: 0;
   font-family: var(--mono);
-  font-size: 12.5px;
-  line-height: 1.6;
+  font-size: var(--t-3);
+  line-height: var(--lh-4);
   font-variant-numeric: tabular-nums;
   color: var(--sky);
 }
@@ -1647,86 +1855,64 @@ details.disclosure summary .disclosure-count {
   position: absolute;
   top: 10px;
   right: 10px;
-  font-family: var(--eyebrow);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--ether-45);
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
+  /* the one face difference that is real: this sits ON a code specimen, so it
+     needs to be opaque. Declared after the shared rule, so it wins. */
   background: rgba(0, 11, 36, 0.7);
-  border: 1px solid var(--hairline);
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
-}
-.specimen .copy-btn:hover {
-  color: var(--ether);
-  border-color: var(--hairline-strong);
+  padding: var(--s-2) var(--s-3);
 }
 
 /* ---------- api console ("the wire") ---------- */
 .gate-badge {
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-5);
 }
 .console {
-  margin-top: 8px;
+  margin-top: var(--s-3);
 }
 .console-controls {
   display: flex;
-  gap: 12px;
+  gap: var(--s-4);
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: var(--s-5);
 }
 .console-req {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-4);
   flex-wrap: wrap;
-  padding: 12px 0;
+  padding: var(--s-4) 0;
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  font-size: 13px;
+  font-size: var(--t-4);
 }
 .console-payer {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-3);
   margin-left: auto;
 }
 .console-payer .mono {
-  font-size: 12px;
+  font-size: var(--t-3);
   color: var(--ether-70);
 }
 .mini-btn {
   font-family: var(--eyebrow);
-  font-size: 11px;
-  color: var(--ether-45);
-  background: transparent;
-  border: 1px solid var(--hairline);
-  border-radius: 4px;
-  padding: 2px 8px;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-expo), border-color var(--dur-1) var(--ease-expo);
-}
-.mini-btn:hover {
-  color: var(--ether);
-  border-color: var(--hairline-strong);
+  font-size: var(--t-2);
+  padding: var(--s-1) var(--s-3);
 }
 .console-actions {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--s-5);
   flex-wrap: wrap;
-  margin-top: 18px;
+  margin-top: var(--s-5);
 }
 .agent-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-3);
   cursor: pointer;
 }
 .agent-toggle input {
@@ -1738,27 +1924,27 @@ details.disclosure summary .disclosure-count {
 }
 .console-out {
   display: grid;
-  gap: 16px;
-  margin-top: 22px;
+  gap: var(--s-5);
+  margin-top: var(--s-6);
 }
 .act-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: var(--s-4);
+  margin-bottom: var(--s-3);
 }
 .act-actions {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--s-3);
   align-items: center;
 }
 .deposit-row {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--s-3);
   align-items: center;
-  margin-top: 8px;
+  margin-top: var(--s-3);
 }
 .console-out .specimen pre {
   white-space: pre-wrap;
@@ -1773,22 +1959,22 @@ details.disclosure summary .disclosure-count {
   z-index: 60;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-4);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid rgba(79, 179, 169, 0.4);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   box-shadow: 0 8px 60px rgba(79, 179, 169, 0.22);
-  padding: 13px 18px;
+  padding: var(--s-4) var(--s-5);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-3);
   color: var(--ether);
   animation: toast-in var(--dur-3) var(--ease-expo);
 }
 .toast .tick-ok {
   color: var(--finality);
-  font-size: 15px;
+  font-size: var(--t-5);
 }
 @keyframes toast-in {
   from {
@@ -1894,7 +2080,7 @@ details.disclosure summary .disclosure-count {
 }
 .arc-horizon-mini {
   height: 96px;
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   overflow: hidden;
   position: relative;
 }
@@ -1903,28 +2089,28 @@ details.disclosure summary .disclosure-count {
 .lab {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 48px;
-  margin-top: 40px;
+  gap: var(--s-8);
+  margin-top: var(--s-7);
 }
 .lab-controls {
   display: grid;
-  gap: 24px;
+  gap: var(--s-6);
   align-content: start;
 }
 .lab-presets {
   display: flex;
-  gap: 8px;
+  gap: var(--s-3);
   flex-wrap: wrap;
 }
 .lab-presets button {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--t-3);
   font-variant-numeric: tabular-nums;
   color: var(--ether-70);
   background: transparent;
   border: 1px solid var(--hairline);
-  border-radius: 6px;
-  padding: 9px 14px;
+  border-radius: var(--r-sm);
+  padding: var(--s-3) var(--s-4);
   cursor: pointer;
   transition: border-color var(--dur-1) var(--ease-expo), color var(--dur-1) var(--ease-expo);
 }
@@ -1935,28 +2121,28 @@ details.disclosure summary .disclosure-count {
 }
 .lab-note {
   font-family: var(--body);
-  font-size: 14.5px;
+  font-size: var(--t-5);
   color: var(--ether-70);
-  line-height: 1.6;
+  line-height: var(--lh-4);
 }
 .lab-stage {
   min-width: 0;
 }
 .lab-counters {
   display: flex;
-  gap: 44px;
+  gap: var(--s-8);
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  margin-bottom: var(--s-6);
 }
 .counter-value {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-size: clamp(28px, 3vw, 40px);
   font-weight: 600;
-  line-height: 1.1;
+  line-height: var(--lh-2);
 }
 .counter-label {
-  margin-top: 4px;
+  margin-top: var(--s-2);
 }
 .stage-faded {
   opacity: 0.45;
@@ -1965,7 +2151,7 @@ details.disclosure summary .disclosure-count {
   font-family: var(--display);
   font-weight: 300;
   font-size: clamp(22px, 2.6vw, 30px);
-  line-height: 1.45;
+  line-height: var(--lh-4);
   max-width: 34ch;
 }
 .verdict b {
@@ -1978,7 +2164,7 @@ details.disclosure summary .disclosure-count {
 .sybil-ring {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: var(--s-3) var(--s-5);
   align-items: center;
 }
 
@@ -1993,24 +2179,24 @@ details.disclosure summary .disclosure-count {
 .chart:focus-visible {
   outline: 1.5px solid var(--validator);
   outline-offset: 4px;
-  border-radius: 2px;
+  border-radius: var(--r-xs);
 }
 .chart text {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--t-2);
   font-variant-numeric: tabular-nums;
   fill: var(--ether-45);
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tr-4);
 }
 .reading {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--t-2);
   font-variant-numeric: tabular-nums;
   color: var(--ether-70);
   height: 20px;
   display: flex;
   justify-content: flex-end;
-  gap: 18px;
+  gap: var(--s-5);
   align-items: baseline;
   white-space: nowrap;
   overflow: hidden;
@@ -2026,8 +2212,8 @@ details.disclosure summary .disclosure-count {
    exchange. Set apart from the request line so it reads as a specimen of the
    goods rather than as a result already returned. */
 .console-preview {
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
   border-top: 1px solid var(--hairline);
 }
 
@@ -2042,23 +2228,23 @@ details.disclosure summary .disclosure-count {
   width: 14px;
   background: currentColor;
   vertical-align: middle;
-  margin-right: 3px;
+  margin-right: var(--s-2);
 }
 .key-swatch {
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--r-xs);
 }
 .key-band {
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--r-xs);
   opacity: 0.5;
 }
 
 /* the maker-inventory sparkline under the futures desk — the book "breathing" */
 .desk-spark {
-  margin-top: 14px;
+  margin-top: var(--s-4);
   display: grid;
-  gap: 4px;
+  gap: var(--s-2);
   /* Sits between two viewBox-760 charts whose ink runs 72→748. The sparkline's
      own viewBox is 260 wide with a 1-unit gutter, so stretched to 100% it ran
      full-bleed while its neighbours were inset ~113px: the one graph on /curve
@@ -2076,16 +2262,16 @@ details.disclosure summary .disclosure-count {
 /* ---------- provenance panel ---------- */
 .provenance {
   display: grid;
-  gap: 12px;
+  gap: var(--s-4);
   align-content: start;
 }
 .provenance-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 14px;
+  gap: var(--s-4);
   border-bottom: 1px solid var(--hairline);
-  padding-bottom: 10px;
+  padding-bottom: var(--s-3);
 }
 .provenance-row:last-child {
   border-bottom: 0;
@@ -2096,7 +2282,7 @@ details.disclosure summary .disclosure-count {
 }
 .provenance-row .val {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-3);
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -2104,22 +2290,22 @@ details.disclosure summary .disclosure-count {
 /* ---------- colophon ---------- */
 .colophon {
   border-top: 1px solid var(--hairline);
-  margin-top: 96px;
+  margin-top: var(--s-9);
   /* The horizontal 24px restores .container's inset, which this shorthand had
      been quietly zeroing since it is declared later at equal specificity — so
      every line down here started 24px left of the column above it. The rule
      above still spans the full container; only the copy is inset. */
-  padding: 24px 24px 48px;
+  padding: var(--s-6) var(--s-6) var(--s-8);
   font-family: var(--body);
-  font-size: 13.5px;
+  font-size: var(--t-4);
   color: var(--ether-45);
-  line-height: 1.7;
+  line-height: var(--lh-4);
 }
 /* NOTE (0,2,0): this beats any single-class rule inside the footer. Never put
    className="mono" on a register row — it would render at 11px down here and
    at 12.5px on /developers, from the same component. */
 .colophon .mono {
-  font-size: 11px;
+  font-size: var(--t-2);
 }
 
 /* The imprint band: what the paper is on the left, the two places it sends
@@ -2128,7 +2314,7 @@ details.disclosure summary .disclosure-count {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 20px 40px;
+  gap: var(--s-5) var(--s-7);
 }
 .colophon-say {
   max-width: 62ch;
@@ -2136,14 +2322,14 @@ details.disclosure summary .disclosure-count {
 .colophon-acts {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--s-3);
   justify-content: flex-end;
-  padding-top: 2px;
+  padding-top: var(--s-1);
 }
 /* A chip that behaves like a destination. The arrow says so; hover is already
    handled by a.chip:hover above, so nothing here re-declares it. */
 a.colophon-act {
-  padding: 5px 12px;
+  padding: var(--s-2) var(--s-4);
 }
 a.colophon-act::after {
   content: "→";
@@ -2154,13 +2340,13 @@ a.colophon-act:hover::after {
   color: currentColor;
 }
 .colophon-register {
-  margin-top: 20px;
+  margin-top: var(--s-5);
 }
 .colophon-imprint {
-  margin-top: 20px;
+  margin-top: var(--s-5);
 }
 .colophon-imprint .arc-horizon-mini {
-  margin-top: 12px;
+  margin-top: var(--s-4);
 }
 
 /* ---------- the on-chain register ----------
@@ -2171,18 +2357,16 @@ a.colophon-act:hover::after {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 10px;
-  font-family: var(--eyebrow);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  gap: var(--s-2) var(--s-3);
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
   color: var(--ether-45);
-  padding-bottom: 10px;
+  padding-bottom: var(--s-3);
 }
 .register-caip {
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-3);
   text-transform: none;
   color: var(--sky);
 }
@@ -2190,13 +2374,13 @@ a.colophon-act:hover::after {
   display: grid;
   grid-template-columns: minmax(140px, 200px) minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 4px 20px;
-  padding: 9px 0;
+  gap: var(--s-2) var(--s-5);
+  padding: var(--s-3) 0;
   border-top: 1px solid var(--hairline);
 }
 .register-name {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-3);
   color: var(--ether-70);
   overflow-wrap: anywhere;
 }
@@ -2206,8 +2390,8 @@ a.colophon-act:hover::after {
 }
 .register-gloss {
   font-family: var(--body);
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: var(--t-3);
+  line-height: var(--lh-4);
   color: var(--ether-45);
 }
 .register-addr {
@@ -2215,30 +2399,28 @@ a.colophon-act:hover::after {
 }
 .register-note {
   margin: 0;
-  padding-top: 10px;
+  padding-top: var(--s-3);
   border-top: 1px solid var(--hairline);
   font-family: var(--body);
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: var(--t-3);
+  line-height: var(--lh-4);
   color: var(--ether-45);
 }
 .register.is-dense .register-row {
-  padding: 7px 0;
+  padding: var(--s-3) 0;
 }
 .register.is-dense .register-name,
 .register.is-dense .register-gloss,
 .register.is-dense .register-note {
-  font-size: 12px;
+  font-size: var(--t-3);
 }
 
 /* ---------- states ---------- */
 .awaiting {
-  font-family: var(--eyebrow);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: var(--t-3);
+  letter-spacing: var(--tr-5);
   color: var(--ether-45);
-  padding: 48px 0;
+  padding: var(--s-8) 0;
 }
 .editorial-404 {
   padding: 120px 0;
@@ -2246,39 +2428,16 @@ a.colophon-act:hover::after {
 .editorial-404 h1 {
   font-family: var(--display);
   font-weight: 300;
-  font-size: 34px;
-  margin: 0 0 8px;
+  font-size: var(--t-8);
+  margin: 0 0 var(--s-3);
 }
 
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
-  .lab {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-  .defense {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  .defense-verdict {
-    border-left: 0;
-    padding-left: 0;
-    border-top: 1px solid var(--hairline);
-    padding-top: 20px;
-  }
-  .facts {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .colophon-band {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  .colophon-acts {
-    justify-content: flex-start;
-  }
-}
-@media (max-width: 760px) {
+  /* Moved up from a 760px block that held these four rules and nothing else.
+     760 and 900 were both "tablet", so the home page reflowed twice on the way
+     down: .hero at 760, then .facts and .defense at 900. One step now. Each of
+     these reflows INTO more space per cell, so none of them can clip. */
   .hero {
     grid-template-columns: 1fr;
   }
@@ -2287,7 +2446,7 @@ a.colophon-act:hover::after {
      sends the address, which follows it in source order, to a THIRD row. */
   .register-row {
     grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 2px;
+    row-gap: var(--s-1);
   }
   .register-name {
     grid-area: 1 / 1;
@@ -2306,14 +2465,34 @@ a.colophon-act:hover::after {
     row-gap: 6px;
   }
   .nav {
-    gap: 14px;
+    gap: var(--s-4);
   }
-  .toast {
-    left: 24px;
-    right: 24px;
+  .lab {
+    grid-template-columns: 1fr;
+    gap: var(--s-7);
+  }
+  .defense {
+    grid-template-columns: 1fr;
+    gap: var(--s-6);
+  }
+  .defense-verdict {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--hairline);
+    padding-top: var(--s-5);
+  }
+  .facts {
+    grid-template-columns: 1fr;
+    gap: var(--s-5);
+  }
+  .colophon-band {
+    grid-template-columns: 1fr;
+    gap: var(--s-5);
+  }
+  .colophon-acts {
+    justify-content: flex-start;
   }
 }
-
 /* ---------- skeletons: "setting type…" ----------
    The streaming placeholder vocabulary. Quiet ink-wash bars with a slow gold
    sheen — the page is being typeset, not broken. Uses existing tokens only. */
@@ -2321,7 +2500,7 @@ a.colophon-act:hover::after {
   position: relative;
   overflow: hidden;
   background: color-mix(in srgb, var(--ether) 7%, transparent);
-  border-radius: 3px;
+  border-radius: var(--r-xs);
 }
 .skel::after {
   content: "";
@@ -2343,7 +2522,7 @@ a.colophon-act:hover::after {
 }
 .skel-line {
   height: 13px;
-  margin: 6px 0;
+  margin: var(--s-2) 0;
 }
 .skel-num {
   height: 44px;
@@ -2354,23 +2533,21 @@ a.colophon-act:hover::after {
 }
 .skel-row {
   height: 34px;
-  margin: 8px 0;
+  margin: var(--s-3) 0;
 }
 .skel-caption {
-  font-family: var(--eyebrow);
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-6);
   color: var(--ink-45);
-  margin: 18px 0 10px;
+  margin: var(--s-5) 0 var(--s-3);
 }
 .skel-caption::after {
   content: "setting type…";
 }
 .skel-card {
-  padding: 18px 20px 16px;
+  padding: var(--s-5) var(--s-5) var(--s-5);
   border: 1px solid var(--glass-brd);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: var(--glass);
 }
 
@@ -2437,7 +2614,7 @@ a.colophon-act:hover::after {
   grid-auto-columns: minmax(0, 1fr);
   align-items: stretch;
   gap: 0;
-  margin: 18px 0 6px;
+  margin: var(--s-5) 0 var(--s-2);
 }
 .flow-station {
   display: grid;
@@ -2454,28 +2631,28 @@ a.colophon-act:hover::after {
 .flow-node {
   position: relative;
   min-width: 0;
-  padding: 14px 14px 12px;
+  padding: var(--s-4) var(--s-4) var(--s-4);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: var(--glass);
   transition: border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease;
 }
 .flow-node .label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: var(--s-2);
 }
 .flow-node .flow-value {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 15px;
+  font-size: var(--t-5);
   color: var(--sand);
   overflow-wrap: anywhere;
 }
 .flow-node .flow-cap {
   display: block;
-  margin-top: 6px;
-  font-size: 11.5px;
-  line-height: 1.4;
+  margin-top: var(--s-2);
+  font-size: var(--t-2);
+  line-height: var(--lh-3);
   color: var(--ether-45);
 }
 .flow-node.lit {
@@ -2518,21 +2695,21 @@ a.colophon-act:hover::after {
   100% { box-shadow: 0 0 0 14px rgba(233, 161, 63, 0); }
 }
 .flow-log {
-  margin-top: 12px;
-  padding: 10px 14px;
-  border-radius: 8px;
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
   background: rgba(0, 11, 36, 0.62);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-3);
   color: var(--sky);
   overflow-wrap: anywhere;
 }
 .flow-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 18px;
+  gap: var(--s-4) var(--s-5);
   align-items: center;
-  margin-top: 10px;
+  margin-top: var(--s-3);
 }
 .flow-controls input[type="range"] {
   accent-color: var(--gold);
@@ -2544,26 +2721,26 @@ a.colophon-act:hover::after {
   min-height: 72px;
   resize: vertical;
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-3);
   color: var(--sand);
   background: rgba(0, 11, 36, 0.5);
   border: 1px solid var(--hairline-strong);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
 }
 .tier-cols {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 16px;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
 }
 .tier-col {
-  padding: 16px 16px 14px;
+  padding: var(--s-5) var(--s-5) var(--s-4);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-lg);
   background: var(--glass);
   display: grid;
-  gap: 10px;
+  gap: var(--s-3);
   align-content: start;
   transition: border-color 0.35s ease, box-shadow 0.35s ease;
 }
@@ -2573,28 +2750,28 @@ a.colophon-act:hover::after {
 }
 .tier-col .tier-budget {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: var(--t-3);
   color: var(--ether-70);
   overflow-wrap: anywhere;
 }
 .meter-row {
   display: grid;
   grid-template-columns: 96px 1fr 132px;
-  gap: 12px;
+  gap: var(--s-4);
   align-items: center;
-  margin-top: 10px;
+  margin-top: var(--s-3);
 }
 .meter {
   position: relative;
   height: 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(172, 198, 233, 0.08);
   overflow: hidden;
 }
 .meter i {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   transition: width 0.6s var(--ease-expo);
 }
 .meter .fill-wallet {
@@ -2607,16 +2784,16 @@ a.colophon-act:hover::after {
 .rings {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
-  margin-top: 12px;
+  gap: var(--s-5);
+  margin-top: var(--s-4);
 }
 .ring {
   display: grid;
-  gap: 6px;
+  gap: var(--s-2);
   justify-items: center;
-  padding: 12px 14px;
+  padding: var(--s-4) var(--s-4);
   border: 1px dashed var(--hairline-strong);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   min-width: 120px;
   transition: border-color 0.35s ease, box-shadow 0.35s ease;
 }
@@ -2627,7 +2804,7 @@ a.colophon-act:hover::after {
 }
 .ring-dots {
   display: flex;
-  gap: 8px;
+  gap: var(--s-3);
 }
 .ring-dot {
   width: 14px;
@@ -2648,7 +2825,7 @@ a.colophon-act:hover::after {
   .flow {
     grid-auto-flow: row;
     grid-auto-columns: auto;
-    gap: 8px;
+    gap: var(--s-3);
   }
   .flow-station {
     grid-template-columns: minmax(0, 1fr);
@@ -2672,7 +2849,6 @@ a.colophon-act:hover::after {
   .home-hero-sky .hh-sun,
   .home-hero-scroll,
   .home-hero-inner,
-  .pulse-dot,
   .flow-node.lit,
   .digit-in,
   .tick-flash,
@@ -2788,7 +2964,7 @@ a.colophon-act:hover::after {
 [data-edition="plain"] a.plain-only {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s-2);
 }
 
 /* the re-setting-type turn: a transient attribute pulsed by setEdition() —
@@ -2853,11 +3029,11 @@ html[data-edition-turn] .plain-only {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-3);
   flex-wrap: wrap;
 }
 .edition-seg .seg-word {
-  padding: 7px 12px;
+  padding: var(--s-3) var(--s-4);
 }
 .edition-seg button.on-x {
   background: var(--protocol);
@@ -2901,17 +3077,17 @@ html[data-edition-turn] .plain-only {
   z-index: 30;
   width: max-content;
   max-width: min(320px, 78vw);
-  padding: 10px 12px;
+  padding: var(--s-3) var(--s-4);
   background: rgba(11, 34, 62, 0.94);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  backdrop-filter: blur(var(--blur-glass));
   border: 1px solid var(--glass-brd);
-  border-radius: 8px;
+  border-radius: var(--r-md);
   box-shadow: var(--glow-validator);
   font-family: var(--body);
-  font-size: 13px;
+  font-size: var(--t-4);
   font-weight: 400;
-  line-height: 1.5;
+  line-height: var(--lh-4);
   color: var(--ether-70);
   text-transform: none;
   letter-spacing: normal;
@@ -2929,13 +3105,10 @@ html[data-edition-turn] .plain-only {
 }
 .term-pop b {
   display: block;
-  font-family: var(--eyebrow);
-  font-size: 10px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: var(--t-1);
+  letter-spacing: var(--tr-5);
   color: var(--sky);
-  margin-bottom: 4px;
+  margin-bottom: var(--s-2);
 }
 
 /* "this paper in one minute" — the plain-only rail on the front page.
@@ -2952,10 +3125,10 @@ html[data-edition-turn] .plain-only {
      fix, and it is here only because one value for one job costs nothing.
      The BREAKPOINTS stay different on purpose — six beats want the 2-up step
      at 900px, three rate blocks would only orphan one. */
-  gap: 18px;
+  gap: var(--s-5);
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  padding: 20px 0;
+  padding: var(--s-5) 0;
   counter-reset: beat;
 }
 .primer-beat {
@@ -2964,53 +3137,50 @@ html[data-edition-turn] .plain-only {
 .primer-beat::before {
   content: counter(beat, decimal-leading-zero);
   font-family: var(--eyebrow);
-  font-size: 10.5px;
+  font-size: var(--t-1);
   color: var(--sky);
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: var(--s-3);
 }
 .primer-head {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 15px;
+  font-size: var(--t-5);
   color: var(--ether);
-  margin: 0 0 6px;
+  margin: 0 0 var(--s-2);
 }
 .primer-body {
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: var(--t-4);
+  line-height: var(--lh-4);
   color: var(--ether-70);
   margin: 0;
 }
 
 /* the reader's companion — the glossary as an editorial page */
 .companion-theme {
-  margin-top: 40px;
+  margin-top: var(--s-7);
 }
 .companion-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px 28px;
-  margin-top: 16px;
+  gap: var(--s-4) var(--s-6);
+  margin-top: var(--s-5);
 }
 .companion-entry {
   border-top: 1px solid var(--hairline);
-  padding-top: 10px;
+  padding-top: var(--s-3);
 }
 .companion-entry b {
   display: block;
-  font-family: var(--eyebrow);
-  font-size: 11px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-size: var(--t-2);
+  letter-spacing: var(--tr-5);
   color: var(--sand);
-  margin-bottom: 4px;
+  margin-bottom: var(--s-2);
 }
 .companion-entry p {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: var(--t-4);
+  line-height: var(--lh-4);
   color: var(--ether-70);
 }
 
@@ -3023,11 +3193,19 @@ html[data-edition-turn] .plain-only {
   }
 }
 @media (max-width: 640px) {
+  /* Down here, not in the 640 block up at the masthead: `.toast`'s base rule
+     is between the two, and a (0,1,0) `.toast` declared before it would lose
+     `right` on source order. A stretched toast is a banner, so this is a phone
+     rule rather than the tablet rule it used to be. */
+  .toast {
+    left: var(--s-6);
+    right: var(--s-6);
+  }
   .primer-rail {
     grid-template-columns: 1fr;
   }
   .edition-seg .seg-word {
-    padding: 6px 10px;
+    padding: var(--s-2) var(--s-3);
   }
 }
 
@@ -3043,19 +3221,19 @@ html[data-edition-turn] .plain-only {
    shop-floor listing). Steps are the bridge's progress, one line each. */
 .wallet-funding select {
   font: inherit;
-  padding: 2px 6px;
+  padding: var(--s-1) var(--s-2);
   background: var(--paper, transparent);
   color: inherit;
   border: 1px solid var(--rule, currentColor);
 }
 .bridge-steps {
   list-style: none;
-  margin: 6px 0 0;
+  margin: var(--s-2) 0 0;
   padding: 0;
-  font-size: 12.5px;
+  font-size: var(--t-3);
 }
 .bridge-steps li {
-  margin: 2px 0;
+  margin: var(--s-1) 0;
 }
 
 /* ---------- the operator surface: /spend and /traction ----------
@@ -3095,7 +3273,7 @@ table.sheet.sheet-rules th:last-child {
    right-alignment that is right for a column header and wrong for a banner. */
 table.sheet tr.sheet-group th {
   text-align: left;
-  padding: 20px 0 6px;
+  padding: var(--s-5) 0 var(--s-2);
   border-bottom: 1px solid var(--hairline);
 }
 table.sheet tbody tr.sheet-group:first-child th {
@@ -3119,7 +3297,7 @@ table.sheet tr.sheet-sub td:first-child {
      panel edge it is supposed to be flush with (measured). A shadow draws the
      same 1px rail and takes part in no layout at all. */
   box-shadow: inset 1px 0 0 var(--hairline);
-  padding-left: 16px;
+  padding-left: var(--s-5);
 }
 
 /* The audit findings. The only bare `<ul>` in the product, so it was carrying
@@ -3127,16 +3305,16 @@ table.sheet tr.sheet-sub td:first-child {
    sets `list-style: none` everywhere else. Same rail as `.sheet-sub` above, so
    a finding reads as belonging to the check table it follows. */
 .findings {
-  margin: 14px 0 0;
+  margin: var(--s-4) 0 0;
   padding: 0;
   list-style: none;
-  font-size: 13.5px;
+  font-size: var(--t-4);
   color: var(--ether-70);
 }
 .findings li {
   border-left: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  padding: 10px 0 10px 16px;
+  padding: var(--s-3) 0 var(--s-3) var(--s-5);
 }
 .findings li:last-child {
   border-bottom: 0;
@@ -3154,7 +3332,7 @@ table.sheet tr.sheet-sub td:first-child {
     position: sticky;
     left: 0;
     background: var(--ledger);
-    padding-right: 12px;
+    padding-right: var(--s-4);
   }
   /* Release the rule column's floor, the same release `.sheet-checks` makes at
      this width. 26ch is about 203px of the 283px a panel has on a phone, so
@@ -3183,11 +3361,11 @@ table.sheet td.wrap-left {
    `.label` sets type but not display, so each <label> stayed inline and ran
    into its own input. A field stack needs its caption above its control. */
 .escalation-form {
-  margin-top: 16px;
+  margin-top: var(--s-5);
 }
 .escalation-form label {
   display: block;
-  margin: 16px 0 6px;
+  margin: var(--s-5) 0 var(--s-2);
 }
 .escalation-form label:first-child {
   margin-top: 0;
@@ -3216,18 +3394,9 @@ table.sheet td.wrap-left {
   flex-wrap: wrap;
   height: auto;
   overflow: visible;
-  row-gap: 4px;
+  row-gap: var(--s-2);
 }
 
-/* The skeletons' inter-block gap, from the same token the real page uses, so
-   the two cannot drift apart again.
-
-   It has to be declared down here. `.skel-line` and `.skel-row` set their
-   spacing with the SHORTHAND `margin: 6px 0` / `8px 0`, further up the file
-   than `.section` — so `className="section"` on a skeleton block loses to them
-   at equal specificity and silently does nothing, which is how this fix was
-   first written and would have shipped looking correct. Only source order
-   settles it. Do not tidy this upwards. */
 /* A LABEL LINE UNDER A FIGURE IS PROSE, and `table.sheet td` is nowrap.
    A long one — a benchmark's refusal, a screening service's reason — widened
    its whole column instead of wrapping: "one seller, so no benchmark" grew the
@@ -3243,6 +3412,15 @@ table.sheet td.mono .label {
   margin-left: auto;
 }
 
+/* The skeletons' inter-block gap, from the same token the real page uses, so
+   the two cannot drift apart again.
+
+   It has to be declared down here. `.skel-line` and `.skel-row` set their
+   spacing with the SHORTHAND `margin: 6px 0` / `8px 0`, further up the file
+   than `.section` — so `className="section"` on a skeleton block loses to them
+   at equal specificity and silently does nothing, which is how this fix was
+   first written and would have shipped looking correct. Only source order
+   settles it. Do not tidy this upwards. */
 .skel-gap {
   margin-top: var(--section-gap);
 }

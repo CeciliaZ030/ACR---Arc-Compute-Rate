@@ -85,7 +85,7 @@ export function RateBlock({
            RATIO (never a subtraction across the sim/on-chain seam), and a
            short series renders no delta at all: a missing move must never
            read as "unchanged". Cheaper is green: this is a bill. */
-        <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+        <div className="muted" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-2)" }}>
           <Ed x="yours ≈ " p="your bill ≈ " />
           {money(bill)}/mo
           {move !== null && (

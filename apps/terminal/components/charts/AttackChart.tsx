@@ -15,7 +15,11 @@ import type { SeriesPoint } from "@/lib/types";
 
 const W = 760;
 const H = 280;
-const M = { top: 10, right: 12, bottom: 26, left: 56 };
+/* left: 72 to match QuoteCorridor, HistoryChart and FuturesMarkChart. All four
+   render the same 760-unit viewBox at the same CSS width, so a different left
+   margin is a visible 16px shift between charts a reader sees side by side.
+   The same class of bug the corridor's own comment below records. */
+const M = { top: 10, right: 12, bottom: 26, left: 72 };
 
 export function AttackChart({
   series,

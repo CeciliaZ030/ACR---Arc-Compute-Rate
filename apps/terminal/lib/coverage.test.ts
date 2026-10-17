@@ -276,6 +276,92 @@ test("ledger: every surface is covered or exempt, classed, and its classes exist
     [],
     `className with no rule in globals.css: ${dangling.join(", ")}`,
   );
+
+  /* Third half, and the one that keeps the scales from eroding. The app had
+     ~400 inline style objects, 315 of them fully static, setting type and
+     rhythm from JSX where no stylesheet could govern them: 136 fontSize props
+     and 140 marginTop props between them, which is why the rendered page
+     measured 38 distinct font sizes against a stylesheet holding 8.
+
+     So this does not ban inline styles. A computed width, a per-datum colour
+     and an SVG geometry all belong inline and no class can express them. It
+     bans an OFF-SCALE NUMBER: a bare numeric literal on a type or spacing
+     property, which is a value chosen by hand instead of taken from :root.
+     `var(--t-4)` passes, a string passes, any expression passes, and 0 passes
+     because zero needs no token. */
+  const SCALED = [
+    "fontSize",
+    "lineHeight",
+    "letterSpacing",
+    "marginTop",
+    "marginBottom",
+    "marginLeft",
+    "marginRight",
+    "gap",
+    "rowGap",
+    "columnGap",
+    "paddingTop",
+    "paddingBottom",
+    "paddingLeft",
+    "paddingRight",
+    "margin",
+    "padding",
+  ];
+  /* app/global-error.tsx replaces the root layout when it fires, so by its own
+     comment it can assume nothing from globals.css — a var() there resolves to
+     nothing. Its literals are correct and must stay. */
+  const SCALE_EXEMPT = new Set(["app/global-error.tsx"]);
+  /* The og/ routes are not the website. They render a PNG through Satori, which
+     has no cascade and no custom properties: `var(--t-4)` there resolves to
+     nothing and the text disappears from the image. Their numbers are the
+     image's own geometry and belong as literals. */
+  const scaleExempt = (f: string) => SCALE_EXEMPT.has(f) || f.startsWith("app/og/");
+  const offScale: string[] = [];
+  const propRe = new RegExp(`\\b(${SCALED.join("|")}):\\s*([^,}]+)`, "g");
+  /* The text of every `style=` prop, read by balancing braces rather than by
+     matching the literal `style={{`.
+
+     This cost something to learn. The first version of this gate matched
+     `style={{` only, so it could not see a style object behind a conditional,
+     and `style={micro ? { fontSize: 9.5 } : undefined}` in FinalityBadge sat
+     inside the blind spot while the rendered census reported three chips at a
+     size that appeared in neither this stylesheet nor any inline style. A gate
+     that cannot see a shape is not a gate against that shape.
+
+     Brace-balanced means a computed value still passes: /tape's two
+     `style={slipStyle(...)}` calls contain no bare number on a scaled property
+     and are meant to keep working. */
+  const styleProps = (src: string): string[] => {
+    const out: string[] = [];
+    for (let i = src.indexOf("style={"); i !== -1; i = src.indexOf("style={", i + 1)) {
+      let depth = 0;
+      for (let j = i + 6; j < src.length; j++) {
+        if (src[j] === "{") depth++;
+        else if (src[j] === "}" && --depth === 0) {
+          out.push(src.slice(i + 7, j));
+          break;
+        }
+      }
+    }
+    return out;
+  };
+  for (const file of ALL) {
+    if (scaleExempt(file)) continue;
+    const src = readFileSync(join(ROOT, file), "utf8");
+    for (const body of styleProps(src)) {
+      for (const m of body.matchAll(propRe)) {
+        const v = m[2].trim();
+        if (/^-?\d+(\.\d+)?$/.test(v) && v !== "0") {
+          offScale.push(`${file}: ${m[1]}: ${v}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(
+    offScale,
+    [],
+    `inline style sets a type or spacing value by hand instead of from the scale (use var(--t-N) / var(--s-N)): ${offScale.join(", ")}`,
+  );
 });
 
 test("floors: every covered surface meets its minimum marker count", () => {

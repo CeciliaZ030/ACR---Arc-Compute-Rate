@@ -524,10 +524,10 @@ function StatementBody({ st, onSettled }: { st: Statement; onSettled: () => void
               nobody can reach on a phone. */}
           {st.escalations.map((d) => (
             <div className="panel panel-pad" key={`${d.obligation_id}-${d.at}`}>
-              <div className="section-head">
-                <h3 className="mono">
+              <div className="card-head">
+                <h4 className="mono">
                   {price(d.billed_usdc)} USDC · {who(d.vendor)}
-                </h3>
+                </h4>
                 <span className="chip chip-breach">
                   <Ed x="needs you" p="needs you" />
                 </span>
@@ -836,11 +836,11 @@ function StatementBody({ st, onSettled }: { st: Statement; onSettled: () => void
         </p>
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <section>
+        <div className="block-head">
+          <h3>
             <Ed x="Budgets" p="Limits" />
-          </h2>
+          </h3>
           <span className="label">
             {st.spends ? "on chain" : "not spending"}
           </span>
@@ -889,11 +889,11 @@ function StatementBody({ st, onSettled }: { st: Statement; onSettled: () => void
         )}
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <section>
+        <div className="block-head">
+          <h3>
             <Ed x="Every decision" p="Everything it did" />
-          </h2>
+          </h3>
           <span className="label">{fmtInt(s.decisions)}</span>
         </div>
         <p className="standfirst">
@@ -955,11 +955,11 @@ function StatementBody({ st, onSettled }: { st: Statement; onSettled: () => void
         </div>
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <section>
+        <div className="block-head">
+          <h3>
             <Ed x="Market context" p="How it compares" />
-          </h2>
+          </h3>
           <span className="label">bp</span>
         </div>
         {ctx.available ? (
@@ -1070,11 +1070,11 @@ export function SpendView({ initial = null }: { initial?: string | null }) {
 
   return (
     <>
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <div className="page-head">
+        <div className="page-head-top">
+          <h1>
             <Ed x="Spend" p="The money agent" />
-          </h2>
+          </h1>
           {/* fetchedAt is epoch MILLISECONDS and ageWords takes an AGE IN
               SECONDS, so it is converted here. The `nowS > 0` gate is not
               decoration: useNow() returns 0 during SSR on purpose, and
@@ -1087,12 +1087,15 @@ export function SpendView({ initial = null }: { initial?: string | null }) {
             </span>
           ) : null}
         </div>
-        <p className="standfirst standfirst-block">
+        <p className="standfirst">
           <Ed
             x="An agent holds this business's USDC inside a budget it cannot exceed, meters what was actually consumed, checks every price against what others are charging, and pays what clears policy."
             p="An agent holds the money, checks every bill against real prices, and pays the ones that pass the rules."
           />
         </p>
+      </div>
+
+      <section className="section">
 
         {/* THIS BRANCH WAS UNREACHABLE CODE until 2026-10-07, and the one below
             it ran in its place. `lib/useLive.ts`'s fetcher throws only on a

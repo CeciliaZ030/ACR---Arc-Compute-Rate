@@ -148,7 +148,7 @@ export function Colophon({ initial }: { initial: Envelope<TerminalData> }) {
             footer that asserted a gate it could not read would be stating the
             one thing this line exists to let a reader check. */}
         {info && (
-          <p className="mono muted" style={{ margin: "6px 0 0" }}>
+          <p className="mono muted" style={{ margin: "var(--s-2) 0 0" }}>
             <Ed x="Identity gate" p="Who counts as a person" /> ·{" "}
             {/* Numbers and the backend name stay outside <Ed>: proper nouns are
                 identical in both editions, and a dual-rendered number is a
@@ -186,7 +186,7 @@ export function Colophon({ initial }: { initial: Envelope<TerminalData> }) {
             could not read would be claiming the one thing a reader came here to
             check. `screen === "unread"` is therefore not a state we print. */}
         {gate?.agent && screen !== "unread" && (
-          <p className="mono muted" style={{ margin: "6px 0 0" }}>
+          <p className="mono muted" style={{ margin: "var(--s-2) 0 0" }}>
             <Ed x="Agent gate" p="Who counts as a robot" /> · {gate.agent.audience} ·{" "}
             {gate.agent.cards_verified}{" "}
             <Ed x="cards verified" p="ID cards checked" />

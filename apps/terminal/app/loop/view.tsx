@@ -31,28 +31,34 @@ export function LoopView({ initial }: { initial: Envelope<TerminalData> }) {
 
   return (
     <>
-      <p className="label">
-        <Ed x="Machine commerce, driven from the browser" p="Robots buying, with you at the controls" />
-      </p>
-      <h1 className="display" style={{ fontSize: 42, marginTop: 6 }}>
-        <Ed x="The loop" p="The loop" />
-      </h1>
-      <Ed
-        as="p"
-        className="standfirst"
-        style={{ marginTop: 10 }}
-        x="A payment is benchmarked the moment it lands; the buyer reads its own bill and changes shops; the gate knows who is calling, screens what they send, and bills a person rather than a wallet. Press the buttons."
-        p="Each buy is checked against the fair rate as it lands, the robot reads its bill and switches shops, and the gate knows who is asking."
-      />
+      <div className="page-head">
+        <p className="label">
+          <Ed x="Machine commerce, driven from the browser" p="Robots buying, with you at the controls" />
+        </p>
+        <h1 className="display">
+          <Ed x="The loop" p="The loop" />
+        </h1>
+        <Ed
+          as="p"
+          className="standfirst"
+          x="A payment is benchmarked the moment it lands; the buyer reads its own bill and changes shops; the gate knows who is calling, screens what they send, and bills a person rather than a wallet. Press the buttons."
+          p="Each buy is checked against the fair rate as it lands, the robot reads its bill and switches shops, and the gate knows who is asking."
+        />
+      </div>
 
       <LoopFlow wake={wake} />
       <TierColumns wake={wake} />
       <ScreenLab wake={wake} />
       <PersonNotWallet data={data} wake={wake} />
 
-      <section className="section">
-        <div className="section-head">
-          <Ed x="Read on" p="Read on" className="label" />
+      {/* A row of pointers off the page is not a fifth chapter beside the four
+          instruments above it. Block, not section: /loop was the last route
+          over the four-chapter cap. */}
+      <section>
+        <div className="block-head">
+          <h3 className="label">
+            <Ed x="Read on" p="Read on" />
+          </h3>
         </div>
         <div className="btn-row">
           <Link href="/tape" className="chip"><Ed x="Read the tape →" p="See the receipts →" /></Link>

@@ -214,8 +214,11 @@ def rehearse_par() -> None:
         bad(f"basket status {status!r}: the comparison has fallen back to our "
             "own sellers")
     if age_s is None:
-        note("this press predates `basket.age_s`, so the page shows a bare date "
-             "and the basket clock is not on screen (swap the image)")
+        note(f"{TESTNET_API} predates `basket.age_s`, so /check shows a bare date "
+             "rather than the clock. The mainnet probe was swapped to "
+             "2026-10-13-0541 and has it; the TESTNET press is a different "
+             "Render account that this RENDER_API_KEY cannot see (it lists one "
+             "service, and the testnet id 404s), so that swap is the owner's.")
     else:
         ok(f"basket states its own age: {age_s / 86_400:.1f}d of "
            f"{basket.get('max_age_s', 0) / 86_400:.0f}d")

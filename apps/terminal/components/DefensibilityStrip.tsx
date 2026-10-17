@@ -7,11 +7,12 @@ import { fmt, fmtInt, money } from "@/lib/format";
 import type { TerminalData } from "@/lib/types";
 
 const HEAD = (
-  <Ed
-    x="Defensibility · peak error under an identical attack"
-    p="Stress test · the same attack, thrown at us and at a plain average"
-    className="label"
-  />
+  <h3 className="label">
+    <Ed
+      x="Defensibility · peak error under an identical attack"
+      p="Stress test · the same attack, thrown at us and at a plain average"
+    />
+  </h3>
 );
 
 /* One row on the home page: peak estimator error under an identical attack,
@@ -22,8 +23,8 @@ export function DefensibilityStrip({ data }: { data: TerminalData }) {
     // Reserve the section instead of vanishing — no layout shift when the
     // attack summary streams in a poll later.
     return (
-      <section className="section" aria-busy="true">
-        <div className="section-head">{HEAD}</div>
+      <section aria-busy="true">
+        <div className="block-head">{HEAD}</div>
         <div className="skel" style={{ height: 96 }} />
       </section>
     );
@@ -45,8 +46,8 @@ export function DefensibilityStrip({ data }: { data: TerminalData }) {
   const scale = Math.max(peakVwap, 1);
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         {HEAD}
         <Link href="/attack" className="section-link">
           <Ed x="Attack the index →" p="Try to cheat it yourself →" />

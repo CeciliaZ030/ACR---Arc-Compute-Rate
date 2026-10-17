@@ -166,7 +166,7 @@ function Form({
         {/* Named, because supplying an address changes the ANSWER rather than
             the labelling: the press benchmarks one of our own sellers against
             the fleet and a stranger against the market. */}
-        <span className="muted" style={{ fontSize: 12 }}>
+        <span className="muted" style={{ fontSize: "var(--t-3)" }}>
           <Ed
             x="Nothing is stored and no account is needed. The address only decides which prices you are compared against."
             p="Nothing is saved and you need no account."
@@ -212,10 +212,10 @@ function Source({ c }: { c: ParCheck }) {
     : null;
   return (
     <div className="panel panel-pad">
-      <div className="section-head">
-        <h3>
+      <div className="card-head">
+        <h4>
           <Ed x="What you were compared against" p="Who we compared you to" />
-        </h3>
+        </h4>
         <span className={fleet ? "chip chip-gold" : "chip chip-teal"}>
           {fleet ? (
             <Ed x="our own sellers" p="our own sellers" />
@@ -489,7 +489,7 @@ function Verdict({ c, requestPath }: { c: ParCheck; requestPath: string }) {
           <h2>
             <Ed x="The verdict" p="The answer" />
           </h2>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--s-3)" }}>
             <span className={chip.cls}>
               <Ed x={chip.x} p={chip.p} />
             </span>
@@ -589,13 +589,13 @@ function Verdict({ c, requestPath }: { c: ParCheck; requestPath: string }) {
       </section>
 
       <section className="section">
-        <div className="section-head">
-          <h2>
+        <div className="block-head">
+          <h3>
             <Ed x="What the agent would do" p="What our robot would do" />
-          </h2>
+          </h3>
           <span className="chip">{c.would.intent}</span>
         </div>
-        <p className="standfirst standfirst-block">
+        <p className="standfirst">
           <Ed
             x="This is the real decision ladder run against your bill, not a separate opinion about it. Nothing is paid and nothing is signed."
             p="This is the same checklist our agent uses on real bills. Nothing is paid."
@@ -644,12 +644,12 @@ function Verdict({ c, requestPath }: { c: ParCheck; requestPath: string }) {
       </section>
 
       <section className="section">
-        <div className="section-head">
-          <h2>
+        <div className="block-head">
+          <h3>
             <Ed x="Run it yourself" p="Do it yourself" />
-          </h2>
+          </h3>
         </div>
-        <p className="standfirst standfirst-block">
+        <p className="standfirst">
           <Ed
             x="The request your inputs produced. It is a public read with no key, so this line is the whole thing: paste it into a terminal and you get the same answer this page is showing."
             p="This is the exact request we just made. Paste it into a terminal to get the same answer."
@@ -744,19 +744,22 @@ export function CheckView() {
 
   return (
     <>
-      <section className="section">
-        <div className="section-head">
-          <h2>
+      <div className="page-head">
+        <div className="page-head-top">
+          <h1>
             <Ed x="Check a bill" p="Is this bill fair?" />
-          </h2>
+          </h1>
           <span className="label">{INDEX_FOR_UNIT[unit]}</span>
         </div>
-        <p className="standfirst standfirst-block">
+        <p className="standfirst">
           <Ed
             x="Give it one invoice and it answers against published list prices from sellers we do not operate, with a link to every price it used. No account, no key, nothing stored."
             p="Type in one bill. We compare it to real published prices and show you every one we used."
           />
         </p>
+      </div>
+
+      <section className="section">
         <div className="panel panel-pad">
           <Form
             unit={unit}

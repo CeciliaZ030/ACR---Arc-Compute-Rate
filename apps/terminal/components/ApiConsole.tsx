@@ -84,11 +84,11 @@ function ShapePreview({
     if (!print.curve?.length) return null;
     return (
       <div className="console-preview">
-        <div className="label" style={{ marginBottom: 10 }}>
+        <div className="label" style={{ marginBottom: "var(--s-3)" }}>
           <Ed x={`Shape · ${index} term structure`} p={`Shape · ${index} prices ahead`} />
         </div>
         <QuoteCorridor prints={prints} only={index} />
-        <div className="table-scroll" style={{ marginTop: 10 }}>
+        <div className="table-scroll" style={{ marginTop: "var(--s-3)" }}>
           <table className="sheet">
             <thead>
               <tr>
@@ -129,12 +129,12 @@ function ShapePreview({
   if (kind === "vol") {
     return (
       <div className="console-preview">
-        <div className="label" style={{ marginBottom: 10 }}>
+        <div className="label" style={{ marginBottom: "var(--s-3)" }}>
           <Ed x={`Shape · ${index} realized volatility`} p={`Shape · how much ${index} moves`} />
         </div>
         <div className="lab-counters">
           <div>
-            <div className="counter-value gold" style={{ fontSize: 30 }}>
+            <div className="counter-value gold" style={{ fontSize: "var(--f-2)" }}>
               {fmt(100 * print.vol, 1)}%
             </div>
             <div className="counter-label label">
@@ -410,11 +410,12 @@ export function ApiConsole({
        two dropdowns the reader could not see and looked like nothing at all. */
     <section className="section anchor-target" id="console">
       <div className="section-head">
-        <Ed
-          x="The wire · query the index"
-          p="Ask the index a question · pay for the answer"
-          className="label"
-        />
+        <h2 className="label">
+          <Ed
+            x="The wire · query the index"
+            p="Ask the index a question · pay for the answer"
+          />
+        </h2>
         {mode && (
           <span className={`gate-badge ${mode === "dev" ? "gold" : "green"}`}>
             {mode === "dev" ? <Ed x="◆ DEV GATE" p="◆ PRACTICE PAYWALL" /> : "◆ CIRCLE GATEWAY"}
@@ -489,7 +490,7 @@ export function ApiConsole({
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}
+          style={{ fontSize: "var(--t-3)", marginTop: "var(--s-2)", marginBottom: 0 }}
           x={
             <>
               The <span className="mono">resource</span> in the challenge below is the live API
@@ -510,7 +511,7 @@ export function ApiConsole({
           <Ed
             as="p"
             className="muted"
-            style={{ fontSize: 12, marginTop: 8, marginBottom: 0 }}
+            style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)", marginBottom: 0 }}
             x="The shape above is the free copy of exactly what this endpoint returns. Paying buys it with its own signed record of where it came from."
             p="The picture above is the free copy of what this endpoint answers with. Paying buys it with a signed note of where it came from."
           />
@@ -544,7 +545,7 @@ export function ApiConsole({
 
         {/* always-reserved status line — messages swap in without shoving the
             results block below */}
-        <div className="label" style={{ marginTop: 8, minHeight: 18 }} aria-live="polite">
+        <div className="label" style={{ marginTop: "var(--s-3)", minHeight: 18 }} aria-live="polite">
           {!gateLive ? (
             <Ed
               x="The gate is offline. Below is a RECORDED exchange from the archived edition."
@@ -627,7 +628,7 @@ export function ApiConsole({
                 <span className={`mono ${statusClass(result.act2.status)}`}>{result.act2.status}</span>
               </div>
               {result.act2.paymentResponse && (
-                <div className="mono muted" style={{ fontSize: 11, marginBottom: 6 }}>
+                <div className="mono muted" style={{ fontSize: "var(--t-2)", marginBottom: "var(--s-2)" }}>
                   PAYMENT-RESPONSE: {result.act2.paymentResponse}
                 </div>
               )}
@@ -700,7 +701,7 @@ export function ApiConsole({
                   ) : liveErr ? (
                     <pre className="vermilion">{liveErr}</pre>
                   ) : (
-                    <div className="lab-note" style={{ marginTop: 4 }}>
+                    <div className="lab-note" style={{ marginTop: "var(--s-2)" }}>
                       <Ed
                         x={
                           <>
@@ -719,7 +720,7 @@ export function ApiConsole({
                     </div>
                   )
                 ) : (
-                  <div className="lab-note" style={{ marginTop: 4 }}>
+                  <div className="lab-note" style={{ marginTop: "var(--s-2)" }}>
                     {/* A dead button explains itself in words, not in the name
                         of a variable the reader cannot set. The console still
                         works — only the REAL settlement is closed here — and

@@ -637,9 +637,9 @@ export function PublicDesk({
     return (
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="The public desk" p="Trade it yourself" />
-          </span>
+          </h2>
         </div>
         {/* The rail renders here too. A reader arriving from "Open the desk →"
             on a cold press should see the walk they are about to take, not an
@@ -677,9 +677,9 @@ export function PublicDesk({
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label">
+        <h2 className="label">
           <Ed x="The public desk · trade the curve yourself" p="Trade it yourself · with a real wallet" />
-        </span>
+        </h2>
         <span className="label">
           <span className="chip chip-teal">
             <Ed x="Circle wallet · gas sponsored" p="Circle wallet · fees covered" />
@@ -742,7 +742,7 @@ export function PublicDesk({
           className="vermilion"
           role="status"
           aria-live="polite"
-          style={{ fontSize: 13, margin: "12px 0 0", maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", margin: "var(--s-4) 0 0", maxWidth: "var(--measure)" }}
         >
           {note}
         </p>
@@ -761,7 +761,7 @@ export function PublicDesk({
       )}
 
       {session?.wallet && phase !== "pin" && (
-        <p className="mono" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <p className="mono" style={{ display: "flex", gap: "var(--s-3)", alignItems: "center", flexWrap: "wrap" }}>
           <AddressChip address={session.wallet.address} explorer={explorer} />
           <span className="muted">
             {usdc != null ? `${usdc.toFixed(4)} USDC` : "…"}
@@ -775,7 +775,7 @@ export function PublicDesk({
         </button>
       )}
       {phase === "unfunded" && mainnet && session?.wallet && (
-        <div className="lab-note" style={{ marginTop: 4 }}>
+        <div className="lab-note" style={{ marginTop: "var(--s-2)" }}>
           <Ed
             x={
               <>
@@ -815,7 +815,7 @@ export function PublicDesk({
       )}
 
       {phase === "trading" && desk && (
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "var(--s-4)", alignItems: "center", flexWrap: "wrap" }}>
           <select
             className="mono"
             value={indexId}
@@ -911,7 +911,7 @@ export function PublicDesk({
         (() => {
           const bar = headroomBar(limits.max_sell, limits.max_buy);
           return (
-            <div style={{ marginTop: 14, maxWidth: 420 }}>
+            <div style={{ marginTop: "var(--s-4)", maxWidth: 420 }}>
               <div className="reading reading-spread">
                 <span className="vermilion">
                   <Ed x={`SELL ${limits.max_sell}`} p={`SELL ${limits.max_sell}`} />
@@ -923,7 +923,7 @@ export function PublicDesk({
                   <Ed x={`BUY ${limits.max_buy}`} p={`BUY ${limits.max_buy}`} />
                 </span>
               </div>
-              <div style={{ display: "flex", gap: 3, height: 6, marginTop: 6 }}>
+              <div style={{ display: "flex", gap: "var(--s-2)", height: 6, marginTop: "var(--s-2)" }}>
                 <div
                   className="vermilion"
                   style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}
@@ -951,7 +951,7 @@ export function PublicDesk({
                 </div>
               </div>
               {bar.frozen ? (
-                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                <p className="muted" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)" }}>
                   <Ed
                     x="one side of the book is full. That direction cannot be filled until the maker's inventory comes back."
                     p="the desk cannot take a trade that way right now. It will clear on its own shortly."
@@ -966,7 +966,7 @@ export function PublicDesk({
       {/* The reader's own receipts. Their fills were previously findable only
           by eye in the global marquee. */}
       {phase === "trading" && fills.length ? (
-        <div className="table-scroll" style={{ marginTop: 16, maxWidth: 520 }}>
+        <div className="table-scroll" style={{ marginTop: "var(--s-5)", maxWidth: 520 }}>
           <table className="sheet">
             <thead>
               <tr>
@@ -1008,7 +1008,7 @@ export function PublicDesk({
         row.free_usdc >= MIN_WITHDRAW ? (
           <p
             key={row.series_id}
-            style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}
+            style={{ display: "flex", gap: "var(--s-4)", alignItems: "center", flexWrap: "wrap" }}
           >
             <button className="btn" onClick={() => withdraw(row)} disabled={busy}>
               <Ed
@@ -1055,7 +1055,7 @@ export function PublicDesk({
         .map((row) => (
           <p
             key={`settle-${row.series_id}`}
-            style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}
+            style={{ display: "flex", gap: "var(--s-4)", alignItems: "center", flexWrap: "wrap" }}
           >
             <button className="btn" onClick={() => settle(row)} disabled={busy}>
               <Ed
@@ -1074,7 +1074,7 @@ export function PublicDesk({
 
       {/* The pass — what a Desk wallet buys FROM the product, not on it. */}
       {session?.wallet && pass?.available ? (
-        <p style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <p style={{ display: "flex", gap: "var(--s-4)", alignItems: "center", flexWrap: "wrap" }}>
           {pass.has_access && pass.paid_until ? (
             <span className="chip chip-gold">
               <Ed

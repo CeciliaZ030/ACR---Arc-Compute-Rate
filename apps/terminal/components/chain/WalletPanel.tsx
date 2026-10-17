@@ -15,7 +15,7 @@ function Amount({ value, unit = "USDC" }: { value: string | null; unit?: string 
   if (value == null) return <span className="muted mono">…</span>;
   return (
     <span className="mono" style={{ color: "var(--sand)" }}>
-      {value} <span className="muted" style={{ fontSize: 12 }}>{unit}</span>
+      {value} <span className="muted" style={{ fontSize: "var(--t-3)" }}>{unit}</span>
     </span>
   );
 }
@@ -46,11 +46,11 @@ function WalletRow({ w, explorer }: { w: WalletBalance; explorer?: string }) {
               </span>{" "}
               <Amount value={w.gateway.available} />
             </span>
-            <span className="muted mono" style={{ fontSize: 12 }}>
+            <span className="muted mono" style={{ fontSize: "var(--t-3)" }}>
               total {w.gateway.total}
               {Number(w.gateway.withdrawing) > 0 ? ` · ${w.gateway.withdrawing} mid-batch` : ""}
             </span>
-            <span className="muted mono" style={{ fontSize: 12 }}>
+            <span className="muted mono" style={{ fontSize: "var(--t-3)" }}>
               wallet {w.usdc ?? "…"} USDC
             </span>
           </>
@@ -80,11 +80,11 @@ export function WalletPanel({ explorer }: { explorer?: string }) {
   // and `teal` classes the hedger panel used to name.
   return (
     <div className="panel panel-pad">
-      <div className="section-head" style={{ marginTop: 0 }}>
-        <span className="label">
+      <div className="card-head">
+        <h4 className="label">
           <Ed x="Circle Gateway wallets" p="Circle wallets · who pays, who gets paid" />
           {ready ? <span className="green"> · live</span> : null}
-        </span>
+        </h4>
         {ready ? (
           <span className="chip chip-teal">
             <i className="dot breathe" /> settling on Arc
@@ -99,7 +99,7 @@ export function WalletPanel({ explorer }: { explorer?: string }) {
           ))}
         </div>
       ) : (
-        <p className="muted" style={{ fontSize: 13, margin: "8px 0 0" }}>
+        <p className="muted" style={{ fontSize: "var(--t-4)", margin: "var(--s-3) 0 0" }}>
           {error ? (
             <Ed
               x="Balances are unreachable right now. The terminal keeps retrying automatically."

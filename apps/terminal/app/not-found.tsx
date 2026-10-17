@@ -10,15 +10,15 @@ export default function NotFound() {
       <Ed
         as="p"
         className="standfirst"
-        style={{ marginTop: 8 }}
+        style={{ marginTop: "var(--s-3)" }}
         x="The fixing you are looking for does not exist in this edition."
         p="There is nothing at this address. The front page has everything."
       />
-      <p style={{ marginTop: 24 }}>
+      <p style={{ marginTop: "var(--s-6)" }}>
         <Link href="/" className="section-link">
           <Ed x="← Return to the Fixing" p="← Back to the front page" />
         </Link>
-        <span className="muted" style={{ margin: "0 10px" }}>
+        <span className="muted" style={{ margin: "0 var(--s-3)" }}>
           ·
         </span>
         <Link href="/companion" className="section-link">

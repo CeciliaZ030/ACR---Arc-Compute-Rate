@@ -64,7 +64,7 @@ function Val({ children }: { children: React.ReactNode }) {
         alignItems: "center",
         justifyContent: "flex-end",
         flexWrap: "wrap",
-        gap: 8,
+        gap: "var(--s-3)",
       }}
     >
       {children}
@@ -76,7 +76,7 @@ function Val({ children }: { children: React.ReactNode }) {
  *  so the pair reads as one object rather than two. */
 function Qual({ children }: { children: React.ReactNode }) {
   return (
-    <span className="muted mono" style={{ fontSize: 12 }}>
+    <span className="muted mono" style={{ fontSize: "var(--t-3)" }}>
       {children}
     </span>
   );
@@ -99,10 +99,10 @@ function Card({
   return (
     <div className="panel panel-pad">
       <div className="section-head" style={{ marginTop: 0 }}>
-        <span className="label">
+        <h2 className="label">
           <Ed x="autonomous hedger" p="the robot that hedges its own bill" />
           {indexId ? <span className="muted"> · {indexId}</span> : null}
-        </span>
+        </h2>
         {chip}
       </div>
       {children}
@@ -137,7 +137,7 @@ export function HedgerPanel({
           </span>
         }
       >
-        <p className="muted" style={{ fontSize: 13, margin: "0 0 18px", maxWidth: 68 * 9 }}>
+        <p className="muted" style={{ fontSize: "var(--t-4)", margin: "0 0 var(--s-5)", maxWidth: "var(--measure)" }}>
           <Ed
             x="No hedger agent is configured on this deployment. Set ACR_HEDGER_ADDRESS to the Circle agent wallet; the mandate it would take is below."
             p="No robot trader is switched on here, but the job it would be given is written below."
@@ -237,7 +237,7 @@ export function HedgerPanel({
         )
       }
     >
-      <p className="muted" style={{ fontSize: 13, margin: 0, maxWidth: 68 * 9 }}>
+      <p className="muted" style={{ fontSize: "var(--t-4)", margin: 0, maxWidth: "var(--measure)" }}>
         <Ed
           x="A compute buyer is short the rate it pays, so it hedges by going long the future. This agent buys the ACR print over x402, compares it to the position it already holds, and trades the difference. No human in the loop."
           p="This robot pays a fraction of a cent for today's price, then buys toward the target its owner set once, and buying is all it can do."
@@ -249,9 +249,9 @@ export function HedgerPanel({
           orphan on row three against a 1192px container. `.lab-counters` is a
           wrapping flex row: it reserves no empty cell at any width, and it is
           the shape this product uses for figures inside a card. */}
-      <div className="lab-counters" style={{ marginTop: 20 }}>
+      <div className="lab-counters" style={{ marginTop: "var(--s-5)" }}>
         <div>
-          <div className="counter-value gold" style={{ fontSize: 30 }}>
+          <div className="counter-value gold" style={{ fontSize: "var(--f-2)" }}>
             {num(pos)}
           </div>
           <div className="counter-label label">
@@ -261,7 +261,7 @@ export function HedgerPanel({
         </div>
 
         <div>
-          <div className="counter-value" style={{ fontSize: 30 }}>
+          <div className="counter-value" style={{ fontSize: "var(--f-2)" }}>
             {num(state.collateral_usdc)}
           </div>
           <div className="counter-label label">
@@ -274,7 +274,7 @@ export function HedgerPanel({
             and counts the rows separately, so that display overstated the spend
             by a factor of N. Two numbers, two places. */}
         <div>
-          <div className="counter-value" style={{ fontSize: 30 }}>
+          <div className="counter-value" style={{ fontSize: "var(--f-2)" }}>
             {num(state.spent_usdc, 4)}
           </div>
           <div className="counter-label label">
@@ -289,7 +289,7 @@ export function HedgerPanel({
           dropped, so the panel never said what it hedged or where. No nested
           `.panel` here: the whole block is the card now, and a card inside a
           card was the inverted hierarchy this restructure exists to remove. */}
-      <div className="provenance" style={{ marginTop: 4 }}>
+      <div className="provenance" style={{ marginTop: "var(--s-2)" }}>
         <div className="provenance-row">
           <span className="label">
             <Ed x="venue · series" p="where it trades · round" />
@@ -322,14 +322,14 @@ export function HedgerPanel({
         </div>
       </div>
 
-      <p className="muted" style={{ fontSize: 12.5, margin: "12px 0 0" }}>
+      <p className="muted" style={{ fontSize: "var(--t-3)", margin: "var(--s-4) 0 0" }}>
         <Ed
           x="The payer is the smart account's backing EOA: EIP-3009 needs a signature ecrecover can verify."
           p="The second name signs the payments, because that system needs a different kind of signature."
         />
       </p>
 
-      <div className="label" style={{ marginTop: 22, marginBottom: 8 }}>
+      <div className="label" style={{ marginTop: "var(--s-6)", marginBottom: "var(--s-3)" }}>
         <Ed x="1 · prints it bought" p="1 · prices it paid for" />
         {state.paid_queries != null && state.paid_queries > shownPaid.length ? (
           <span className="muted">
@@ -410,7 +410,7 @@ export function HedgerPanel({
           empty: an agent at its mandate stops trading, so its fills age out of
           the tape's ~8h reach while the position they built persists in
           contract state. Figures stay OUTSIDE <Ed>, per the house rule. */}
-      <p className="muted" style={{ fontSize: 12.5, margin: "14px 0 0", maxWidth: 68 * 9 }}>
+      <p className="muted" style={{ fontSize: "var(--t-3)", margin: "var(--s-4) 0 0", maxWidth: "var(--measure)" }}>
         <Ed x="Each row above bought one print of" p="Each row above bought one price for" />{" "}
         <span className="mono">{state.index_id}</span>.{" "}
         <Ed
@@ -428,7 +428,7 @@ export function HedgerPanel({
         ) : null}
       </p>
 
-      <div className="label" style={{ marginTop: 22, marginBottom: 8 }}>
+      <div className="label" style={{ marginTop: "var(--s-6)", marginBottom: "var(--s-3)" }}>
         <Ed x="2 · fills it took" p="2 · trades it made" />
         {state.fills.length > SHOWN ? (
           <span className="muted">
@@ -503,7 +503,7 @@ export function HedgerPanel({
         </table>
       </div>
 
-      <p className="muted" style={{ fontSize: 12.5, margin: "16px 0 0" }}>
+      <p className="muted" style={{ fontSize: "var(--t-3)", margin: "var(--s-5) 0 0" }}>
         <Ed
           x="Spend and position caps are enforced by the agent's own code: Circle's platform-enforced wallet policies are mainnet-only, so nothing here is guaranteed by the network."
           p="Its spending limits come from its own program, not from the bank, which only offers them on the real network."

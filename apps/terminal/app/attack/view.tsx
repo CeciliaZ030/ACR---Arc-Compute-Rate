@@ -126,7 +126,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: 40 }}>
+      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
         <Ed
           as="p"
           className="standfirst"
@@ -139,7 +139,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
       <div className="lab">
         <div className="lab-controls">
           <div>
-            <div className="label" style={{ marginBottom: 10 }}>
+            <div className="label" style={{ marginBottom: "var(--s-3)" }}>
               <Ed x="The adversary · budget" p="The cheat’s budget" />
             </div>
             {/* Selection was border+text colour only, at 12px, in --breach —
@@ -165,7 +165,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
                 out, so every preset buys the same attack. Better to say that
                 than to let a reader change it, see no difference, and wonder
                 what else on this page is decorative. */}
-            <p className="mono muted" style={{ fontSize: 11.5, marginTop: 8, lineHeight: 1.5 }}>
+            <p className="mono muted" style={{ fontSize: "var(--t-2)", marginTop: "var(--s-3)", lineHeight: "var(--lh-4)" }}>
               {capNote ?? (
                 <Ed
                   x="the trade cap binds before the budget does. Every preset buys the same attack"
@@ -179,9 +179,9 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
             <summary>
               <Ed x="Adversary parameters" p="Fine-tune the cheat" />
             </summary>
-            <div className="disclosure-body" style={{ display: "grid", gap: 14 }}>
+            <div className="disclosure-body" style={{ display: "grid", gap: "var(--s-4)" }}>
               <div>
-                <div className="label" style={{ marginBottom: 8 }}>
+                <div className="label" style={{ marginBottom: "var(--s-3)" }}>
                   <Ed x="Target multiplier" p="How far above the real price it aims" />
                 </div>
                 <div className="lab-presets" role="group" aria-label="target multiplier">
@@ -200,7 +200,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
                 </div>
               </div>
               <div>
-                <div className="label" style={{ marginBottom: 8 }}>
+                <div className="label" style={{ marginBottom: "var(--s-3)" }}>
                   <Ed x="Seed (optional)" p="Dice roll (optional: same seed, same run)" />
                 </div>
                 <input
@@ -263,7 +263,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
               <Ed
                 as="p"
                 className="muted"
-                style={{ marginTop: 8, maxWidth: 68 * 9 }}
+                style={{ marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}
                 x="The lab runs on the live press, which sleeps between visits on the free tier. Keep this page open: it retries by itself and the button arms as soon as the press answers. The chart below is the recorded run in the meantime."
                 p="Our server naps between visits and wakes on its own, so keep this page open; the chart below is a run we recorded earlier, not live."
               />
@@ -283,7 +283,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
               <Ed
                 as="p"
                 className="muted"
-                style={{ marginTop: 8, maxWidth: 68 * 9 }}
+                style={{ marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}
                 x="A run buys thousands of wash trades with our own USDC, so the press only accepts one off mainnet. The chart below is a recorded run, and every figure on it was produced this way."
                 p="A run spends our own money on fake trades, so we only allow it on the test network. The chart below is a run we recorded."
               />
@@ -375,7 +375,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
 
           {/* When these figures last actually moved, and what moved them. A
               number with no provenance is indistinguishable from a decoration. */}
-          <p className="mono muted" style={{ fontSize: 12, marginTop: -12, marginBottom: 20 }}>
+          <p className="mono muted" style={{ fontSize: "var(--t-3)", marginTop: "calc(-1 * var(--s-4))", marginBottom: "var(--s-5)" }}>
             {lastMoved}
           </p>
 
@@ -383,7 +383,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
             <AttackChart series={run.series} hoursTotal={run.hours_total} />
           ) : (
             <>
-              <div className="label" style={{ marginBottom: 12 }}>
+              <div className="label" style={{ marginBottom: "var(--s-4)" }}>
                 <Ed x="Previous exercise · bundled" p="A previous run · saved copy" />
               </div>
               <AttackChart series={stageSeries} faded />
@@ -391,7 +391,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
           )}
 
           {/* The estimator's work, hour by hour. */}
-          <div style={{ marginTop: 28 }}>
+          <div style={{ marginTop: "var(--s-6)" }}>
             <AttackTape
               series={run ? run.series : stageSeries}
               live={Boolean(run)}
@@ -400,9 +400,9 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
           </div>
 
           {run && done && run.verdict && (
-            <div className="section" style={{ marginTop: 40 }}>
+            <div className="section" style={{ marginTop: "var(--s-7)" }}>
               <div className="section-head">
-                <span className="label">The verdict</span>
+                <h2 className="label">The verdict</h2>
               </div>
               <Ed
                 as="p"
@@ -427,7 +427,7 @@ export function AttackView({ initial }: { initial: Envelope<TerminalData> }) {
                   </>
                 }
               />
-              <div className="table-scroll" style={{ marginTop: 24 }}>
+              <div className="table-scroll" style={{ marginTop: "var(--s-6)" }}>
                 <table className="sheet">
                   <thead>
                     <tr>

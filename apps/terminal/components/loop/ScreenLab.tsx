@@ -76,7 +76,9 @@ export function ScreenLab({ wake }: { wake: WakeState }) {
   return (
     <section className="section">
       <div className="section-head">
-        <Ed x="The screen · Google Cloud Model Armor" p="The message filter · Google Cloud" className="label" />
+        <h2 className="label">
+          <Ed x="The screen · Google Cloud Model Armor" p="The message filter · Google Cloud" />
+        </h2>
         <span className={`chip ${state === "live" ? "chip-teal" : state === "off" ? "chip-sim" : "chip-gold"}`}>
           {state === "live" ? <span className="dot breathe" aria-hidden /> : null}
           {state === "live" ? <Ed x="gcp · live" p="Google · live" /> : state === "off" ? <Ed x="switched off" p="off" /> : state === "floor" ? <Ed x="offline floor only" p="basic check only" /> : <Ed x="unread" p="not read yet" />}
@@ -85,7 +87,7 @@ export function ScreenLab({ wake }: { wake: WakeState }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="Agent-to-agent traffic is screened in both directions: the request before it reaches the index, the reply before it reaches the caller. Type anything and send it down that path."
         p="Messages between robots are filtered both ways: on the way in and on the way out. Type anything and send it through."
       />
@@ -159,13 +161,13 @@ export function ScreenLab({ wake }: { wake: WakeState }) {
         </div>
       </div>
 
-      <div className="flow-controls" style={{ marginTop: 14 }}>
+      <div className="flow-controls" style={{ marginTop: "var(--s-4)" }}>
         <textarea value={text} maxLength={TEXT_CAP} onChange={(e) => setText(e.target.value)} aria-label="text to screen" />
       </div>
       <div className="flow-controls">
         <button type="button" className="chip" onClick={() => setText(HONEST)}><Ed x="an honest note" p="a normal note" /></button>
         <button type="button" className="chip chip-breach" onClick={() => setText(INJECTION)}><Ed x="the demo's prompt injection" p="a trick message" /></button>
-        <label className="mono muted" style={{ fontSize: 12.5, display: "inline-flex", gap: 8, alignItems: "center" }}>
+        <label className="mono muted" style={{ fontSize: "var(--t-3)", display: "inline-flex", gap: "var(--s-3)", alignItems: "center" }}>
           <input type="checkbox" checked={carded} onChange={(e) => setCarded(e.target.checked)} />
           <Ed x="present a card" p="show an ID card" />
         </label>
@@ -175,25 +177,25 @@ export function ScreenLab({ wake }: { wake: WakeState }) {
         </button>
         <WakeNote wake={wake} />
         {r?.screened_delta != null ? (
-          <span className="mono muted" style={{ fontSize: 12.5 }}>
+          <span className="mono muted" style={{ fontSize: "var(--t-3)" }}>
             <Ed x="inspections" p="checks" /> +{r.screened_delta} · <Ed x="blocked" p="stopped" /> +{r.blocked_delta ?? 0} · <Ed x="since this boot" p="since the last restart" /> {r.counts ? `${r.counts.screened}/${r.counts.blocked}` : ""}
           </span>
         ) : r && r.status === 200 ? (
-          <span className="mono muted" style={{ fontSize: 12.5 }}>
+          <span className="mono muted" style={{ fontSize: "var(--t-3)" }}>
             <Ed x="counters unread this time; the card decided the verdict" p="the counts could not be read this time; the ID card decided" />
           </span>
         ) : null}
-        {r?.status === 429 && r.note ? <span className="mono gold" style={{ fontSize: 12.5 }}>{r.note}</span> : null}
+        {r?.status === 429 && r.note ? <span className="mono gold" style={{ fontSize: "var(--t-3)" }}>{r.note}</span> : null}
       </div>
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 12.5, marginTop: 8, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-3)", marginTop: "var(--s-3)", maxWidth: "var(--measure)" }}
         x="One card is held on the server for every visitor, so the lab shares one budget at the gate. The counters are the gate's own, read before and after your send."
         p="One ID card is kept on our server for everyone, so the lab shares one allowance. The counts are the gate's own, read before and after."
       />
       {armor?.endpoint ? (
-        <p className="mono muted" style={{ fontSize: 12, marginTop: 6, overflowWrap: "anywhere" }}>
+        <p className="mono muted" style={{ fontSize: "var(--t-3)", marginTop: "var(--s-2)", overflowWrap: "anywhere" }}>
           <Ed x="every call goes to" p="every check goes to" /> {armor.endpoint}
           {armor.template_resource ? <> · {armor.template_resource}</> : null}
           {armor.console_url ? (

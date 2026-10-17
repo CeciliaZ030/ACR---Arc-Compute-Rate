@@ -20,11 +20,12 @@ import { useTape } from "@/lib/useLive";
    for a missing venue. */
 
 const HEAD = (
-  <Ed
-    x="Machine TCA · what the buyers actually paid"
-    p="The receipts · what the robots really paid"
-    className="label"
-  />
+  <h3 className="label">
+    <Ed
+      x="Machine TCA · what the buyers actually paid"
+      p="The receipts · what the robots really paid"
+    />
+  </h3>
 );
 
 export function TapeTeaser() {
@@ -47,15 +48,15 @@ export function TapeTeaser() {
   const allSandbox = cells.every((c) => c.kind !== "count" || c.allSandbox);
 
   return (
-    <section className="section">
-      <div className="section-head">
+    <section>
+      <div className="block-head">
         {HEAD}
         {/* Three, and the order is the argument: drive one decision, read what
             buying cost, then see the agent deciding a business's whole book of
             them. /spend was in the masthead from the day it shipped but on no
             home surface at all, so the only reader who found it was one who
             already knew to look. */}
-        <span style={{ display: "inline-flex", gap: 14, flexWrap: "wrap" }}>
+        <span style={{ display: "inline-flex", gap: "var(--s-4)", flexWrap: "wrap" }}>
           <Link href="/loop" className="section-link">
             <Ed x="Drive the loop →" p="Drive it →" />
           </Link>
@@ -67,7 +68,7 @@ export function TapeTeaser() {
           </Link>
         </span>
       </div>
-      <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: "var(--s-5)", alignItems: "center", flexWrap: "wrap", marginBottom: "var(--s-3)" }}>
         <span className={`chip ${live ? "chip-teal" : "chip-sim"}`}>
           {live ? <span className="dot breathe" aria-hidden /> : null}
           <Ed x={live ? "indexed by The Graph, live" : "tape unread"} p={live ? "live public record" : "record not read"} />
@@ -114,7 +115,7 @@ export function TapeTeaser() {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, marginTop: 4, maxWidth: 68 * 9 }}
+        style={{ fontSize: "var(--t-4)", marginTop: "var(--s-2)", maxWidth: "var(--measure)" }}
         x="Every purchase on the tape is priced against the rate it could have seen at the moment it settled, in the subgraph's own mapping. A buyer that reads its own bill changes shops, and the next payment says so."
         p={
           <>

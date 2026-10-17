@@ -30,10 +30,18 @@ Source `contracts/src/PolicyWallet.sol`; ABI
 let one key be both authorities, which is what makes the escalation below mean
 anything.
 
-> **Ignore `0xA755f87BD00c90DBFc9DdfD6651e4c3071665b32`.** An earlier wallet,
-> still referenced in some registry rows. No key we hold derives to its
-> `owner()`, so every `onlyOwner` path is permanently dead. `spend()` still
-> works on it, which makes it look healthier than it is.
+> **Use `0xa67F1887…` above, not `0xA755f87BD00c90DBFc9DdfD6651e4c3071665b32`.**
+> An earlier wallet, still referenced in some registry rows.
+>
+> **Corrected 2026-10-13.** This note previously said its owner key was lost and
+> every `onlyOwner` path permanently dead. That was wrong: its `owner()` is
+> `0x38DC1B5F05b90ccbe3881Aa6490eAa096a619CCE`, which is the **arc-canteen CLI
+> wallet**, so the key is reachable. The wallet is usable — not paused,
+> `approvalNonce` 0, and holding the history behind our 19 logged decisions.
+>
+> We point at `0xa67F1887…` by **choice**: a clean budget and an owner key held
+> directly rather than through a hackathon tool. "Usable but not the one we use"
+> is a different instruction from "ignore it", and you were given the wrong one.
 
 ## 2. The decision hash — and the premise to correct
 

@@ -329,7 +329,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         <Ed
           as="p"
           className="standfirst"
-          style={{ margin: "8px 0 0" }}
+          style={{ margin: "var(--s-3) 0 0" }}
           x="One buyer closes the loop. It pays for the print, and the venue fills its trade at that same print, so the position below is what it paid for."
           p="One robot shopper closes the loop. It pays for the number, and the market trades at that same number, so it holds what it paid for."
         />
@@ -337,7 +337,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="Listings · /marketplace/catalog" p="For sale · /marketplace/catalog" />
             {catalogArchived ? (
               <span className="muted">
@@ -345,7 +345,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                 <Ed x="· archived edition" p="· saved copy" />
               </span>
             ) : null}
-          </span>
+          </h2>
           <span className="label">
             {/* Stated once, where it is true. It used to be a column repeating
                 the identical string on all thirteen rows, because the same
@@ -449,7 +449,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                         {open ? (
                           <tr>
                             <td colSpan={4} style={{ paddingTop: 0 }}>
-                              <div className="provenance" style={{ padding: "4px 0 14px" }}>
+                              <div className="provenance" style={{ padding: "var(--s-2) 0 var(--s-4)" }}>
                                 <div className="provenance-row">
                                   <span className="label">
                                     <Ed x="you pay" p="you pay" />
@@ -532,7 +532,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                               {/* The whole point: buy THIS one. Same route and
                                   the same two spend caps as the button below,
                                   one query instead of three. */}
-                              <div className="btn-row" style={{ marginBottom: 10 }}>
+                              <div className="btn-row" style={{ marginBottom: "var(--s-3)" }}>
                                 {wallet ? (
                                   <button
                                     className="btn"
@@ -581,7 +581,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                                   </button>
                                 ) : null}
                                 {!buyerReady?.buyer_ready && !wallet && !hasWallet ? (
-                                  <span className="muted" style={{ fontSize: 12.5 }}>
+                                  <span className="muted" style={{ fontSize: "var(--t-3)" }}>
                                     <Ed
                                       x="no wallet in this browser and no house buyer on this deployment, so nothing here can settle"
                                       p="no wallet here and no house shopper on this copy of the site, so it cannot buy"
@@ -589,11 +589,11 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                                   </span>
                                 ) : null}
                                 {walletErr ? (
-                                  <span className="vermilion" style={{ fontSize: 12.5 }}>{walletErr}</span>
+                                  <span className="vermilion" style={{ fontSize: "var(--t-3)" }}>{walletErr}</span>
                                 ) : null}
                               </div>
                               {wallet ? (
-                                <div onClick={(e) => e.stopPropagation()} style={{ marginBottom: 10 }}>
+                                <div onClick={(e) => e.stopPropagation()} style={{ marginBottom: "var(--s-3)" }}>
                                   <WalletFunding
                                     wallet={wallet}
                                     facts={facts}
@@ -605,7 +605,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                               ) : null}
 
                               {out && out.status === 200 ? (
-                                <p className="mono green" style={{ fontSize: 12.5, margin: 0 }}>
+                                <p className="mono green" style={{ fontSize: "var(--t-3)", margin: 0 }}>
                                   ✓ {fmtPrice(out.price_usdc, 2)} USDC · {out.tx_ref}
                                 </p>
                               ) : null}
@@ -613,7 +613,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                                 <p
                                   className="mono vermilion"
                                   role="alert"
-                                  style={{ fontSize: 12.5, margin: 0, maxWidth: 68 * 9 }}
+                                  style={{ fontSize: "var(--t-3)", margin: 0, maxWidth: "var(--measure)" }}
                                 >
                                   {err}
                                 </p>
@@ -630,7 +630,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
             <Ed
               as="p"
               className="muted"
-              style={{ fontSize: 13, marginTop: 16, maxWidth: 68 * 9 }}
+              style={{ fontSize: "var(--t-4)", marginTop: "var(--s-5)", maxWidth: "var(--measure)" }}
               x={
                 <>
                   Open a listing for the x402 terms the gate itself enforces, and buy it here: one
@@ -664,7 +664,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="The tape · /marketplace/receipts" p="The receipt roll · /marketplace/receipts" />
             {tape != null && !tape.live && ledger ? (
               <span className="muted">
@@ -672,7 +672,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
                 <Ed x="· simulated (bundled snapshot)" p="· simulated (saved copy)" />
               </span>
             ) : null}
-          </span>
+          </h2>
           {ledger ? (
             <span className="label">
               {fmtInt(ledger.paid_queries)} <Ed x="paid queries" p="paid questions" /> · $
@@ -692,9 +692,9 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <span className="label">
+          <h2 className="label">
             <Ed x="Run the buyer" p="Let a robot shopper loose" />
-          </span>
+          </h2>
           <span className="btn-row">
             {gateIsCircle ? (
               <button
@@ -757,7 +757,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
             reader who cannot set one. Crucially, both say what is STILL true:
             the tape below is the real record either way. */}
         {gateIsCircle && !buyerReady?.buyer_ready ? (
-          <p className="muted" style={{ fontSize: 13, marginTop: 0, maxWidth: 68 * 9 }}>
+          <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: 0, maxWidth: "var(--measure)" }}>
             <Ed
               x="This deployment carries no funded demo buyer, so the button above is closed. Nothing else here is affected. The settlement tape below is the real, on-chain record of payments that already happened."
               p="This copy of the site has no demo shopper with money, so that button is off; everything else works and the payments below really happened."
@@ -765,7 +765,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
           </p>
         ) : null}
         {!gateIsCircle && !gateIsDev ? (
-          <p className="muted" style={{ fontSize: 13, marginTop: 0, maxWidth: 68 * 9 }}>
+          <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: 0, maxWidth: "var(--measure)" }}>
             <Ed
               x="The paid gate is not answering yet, so the buyer cannot run. The free-tier press wakes on first visit (~60s) and this page retries by itself. The tape below is the archived record until it does."
               p="Our server is waking up (about a minute), so the shopper waits; this page keeps trying and the payments below are real ones from before."
@@ -774,7 +774,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         ) : null}
 
         {liveResult ? (
-          <p className="mono" style={{ fontSize: 13, marginTop: 0 }}>
+          <p className="mono" style={{ fontSize: "var(--t-4)", marginTop: 0 }}>
             {liveResult.payer ? <span className="muted">{liveResult.payer} · </span> : null}
             {liveResult.results.filter((r) => r.status === 200).length}/{liveResult.results.length}{" "}
             settled · ${liveResult.spent_usdc.toFixed(6)} USDC
@@ -792,7 +792,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         ) : null}
 
         {run && run.state !== "idle" ? (
-          <p className="mono" style={{ fontSize: 13, marginTop: 0 }}>
+          <p className="mono" style={{ fontSize: "var(--t-4)", marginTop: 0 }}>
             {run.state === "error" ? (
               <span className="vermilion">buyer errored · {run.error}</span>
             ) : (
@@ -811,7 +811,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
           </p>
         ) : null}
         {releaseError ? (
-          <p className="mono vermilion" style={{ fontSize: 13, marginTop: 0 }} role="alert">
+          <p className="mono vermilion" style={{ fontSize: "var(--t-4)", marginTop: 0 }} role="alert">
             {releaseError}
           </p>
         ) : null}
@@ -865,7 +865,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, marginTop: 16, maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", marginTop: "var(--s-5)", maxWidth: "var(--measure)" }}
           x={
             <>
               The button runs the buyer’s whole loop (discover, pay, receipt) in-process;{" "}
@@ -901,7 +901,7 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
         <Ed
           as="p"
           className="muted"
-          style={{ fontSize: 13, margin: "0 0 14px", maxWidth: 68 * 9 }}
+          style={{ fontSize: "var(--t-4)", margin: "0 0 var(--s-4)", maxWidth: "var(--measure)" }}
           x="…and what a machine does with what it bought: it pays for the print above, then trades the on-chain future on what it read, one agent on both sides of the marketplace."
           p="…and what a robot does with what it bought: it pays for the rate above, then trades a real contract on what it learned."
         />
@@ -914,7 +914,9 @@ export function ShopFloor({ initial }: { initial: Envelope<TerminalData> }) {
 
       <section className="section">
         <div className="section-head">
-          <Ed x="Only computable on Arc" p="Why this only works on Arc" className="label" />
+          <h2 className="label">
+            <Ed x="Only computable on Arc" p="Why this only works on Arc" />
+          </h2>
         </div>
         <ChainFactsStrip chain={env.data.chain} />
       </section>

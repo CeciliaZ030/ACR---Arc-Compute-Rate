@@ -106,9 +106,9 @@ export function FuturesDesk({
   return (
     <section className="section">
       <div className="section-head">
-        <span className="label">
+        <h2 className="label">
           <Ed x="The desk · on-chain futures (ACRFutures)" p="The trading desk · real futures on the blockchain" />
-        </span>
+        </h2>
         {venue ? (
           rows.length ? (
             /* Which tier served these numbers. A direct read of ACRFutures is
@@ -250,7 +250,7 @@ export function FuturesDesk({
               the series multiplier — the page used to assert the example from
               the contract's own comment and overstate a position 200×. */}
           {primary ? (
-            <div className="panel panel-pad" style={{ marginTop: 16 }}>
+            <div className="panel panel-pad" style={{ marginTop: "var(--s-5)" }}>
               <div className="provenance-row">
                 <span className="label">
                   <Ed x="Contract size" p="What one contract is worth" />{" "}
@@ -336,8 +336,8 @@ export function FuturesDesk({
           sentence under the table promises cash settlement at expiry; this is
           where that promise gets a receipt. */}
       {settled && settled.length > 0 ? (
-        <div style={{ marginTop: 20 }}>
-          <div className="label" style={{ marginBottom: 8 }}>
+        <div style={{ marginTop: "var(--s-5)" }}>
+          <div className="label" style={{ marginBottom: "var(--s-3)" }}>
             <Ed x="Settled rounds · cash, final" p="Finished rounds · already paid out" />
           </div>
           <div className="provenance">
@@ -353,7 +353,7 @@ export function FuturesDesk({
               </div>
             ))}
           </div>
-          <p className="muted" style={{ fontSize: 12.5, margin: "10px 0 0", maxWidth: 68 * 9 }}>
+          <p className="muted" style={{ fontSize: "var(--t-3)", margin: "var(--s-3) 0 0", maxWidth: "var(--measure)" }}>
             <Ed
               x="Each ran its whole life on-chain: opened, traded, expired, then cash-settled at the oracle print above. Positions are cleared and collateral is free."
               p="Each of these ran start to finish: opened, traded, closed, then paid out at the rate shown. Nothing is owed."
@@ -362,7 +362,7 @@ export function FuturesDesk({
         </div>
       ) : null}
 
-      <p className="muted" style={{ fontSize: 13, marginTop: 16, maxWidth: 68 * 9 }}>
+      <p className="muted" style={{ fontSize: "var(--t-4)", marginTop: "var(--s-5)", maxWidth: "var(--measure)" }}>
         <Ed
           x={
             <>

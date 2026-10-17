@@ -85,8 +85,10 @@ export function TierColumns({ wake }: { wake: WakeState }) {
   return (
     <section className="section">
       <div className="section-head">
-        <Ed x="Who is calling" p="Who is asking" className="label" />
-        <span className="label muted" style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>
+        <h2 className="label">
+          <Ed x="Who is calling" p="Who is asking" />
+        </h2>
+        <span className="label muted" style={{ display: "inline-flex", gap: "var(--s-3)", alignItems: "center" }}>
           {gate ? (
             <>
               {gate.cards_verified} <Ed x="cards verified" p="ID cards checked" /> · {gate.human_tier_granted} <Ed x="reached the human tier" p="traced to a person" /> · <Ed x="since this boot" p="since the last restart" />
@@ -98,7 +100,7 @@ export function TierColumns({ wake }: { wake: WakeState }) {
       <Ed
         as="p"
         className="muted"
-        style={{ fontSize: 13, maxWidth: 68 * 9, marginTop: 0 }}
+        style={{ fontSize: "var(--t-4)", maxWidth: "var(--measure)", marginTop: 0 }}
         x="One route, three answers. The gate believes the key, not a registry: nobody is enrolled. Only the third tier is scarce, because a person cannot be minted."
         p="One question, three answers. No sign-up: the gate trusts the signature. Only the third kind is rare, because you cannot make a new person."
       />
@@ -119,14 +121,14 @@ export function TierColumns({ wake }: { wake: WakeState }) {
                 {busy === c.tier ? "…" : <Ed x={c.btn[0]} p={c.btn[1]} />}
               </button>
               {r ? (
-                <div className="mono" style={{ fontSize: 12.5 }}>
+                <div className="mono" style={{ fontSize: "var(--t-3)" }}>
                   {got ? (
                     <>
                       <span className={got === "human" ? "gold" : got === "carded" ? "green" : "muted"}>{got}</span>
                       {r.ident_kind ? <span className="muted"> · {r.ident_kind}</span> : null}
                       <span className="muted"> · {r.ms} ms</span>
                       {got === "carded" && c.tier === "human" && r.human_note ? (
-                        <div className="muted" style={{ marginTop: 4 }}>
+                        <div className="muted" style={{ marginTop: "var(--s-2)" }}>
                           <Ed x="claim declined:" p="not confirmed:" /> {r.human_note}
                         </div>
                       ) : null}
