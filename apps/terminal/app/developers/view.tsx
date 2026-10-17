@@ -310,11 +310,13 @@ export function DevelopersView({
 
   return (
     <>
-      <div className="standfirst-block" style={{ marginTop: "var(--s-7)" }}>
+      <div className="page-head">
+        <h1>
+          <Ed x="Developers" p="For coders" />
+        </h1>
         <Ed
           as="p"
           className="standfirst"
-          style={{ margin: 0 }}
           x="The index about machine commerce is bought by machines. Every query is a Nanopayment."
           p="Sold the way it is made, machine to machine. Software pays a fraction of a cent a question, no account, no API key."
         />
