@@ -48,6 +48,15 @@ const CHAIN_COOKIE = "acr-chain";
  *
  * The operator pages (/spend, /traction) only have data on testnet, so run them with
  * --chain testnet. /check needs its inputs in the query string to produce a verdict.
+ *
+ * PICK A TOKEN A TRANSLATOR CANNOT TOUCH. Every gate here must match in BOTH editions,
+ * so it has to be data rather than prose: a price symbol, an index id, a unit. This has
+ * now been got wrong twice. First the gates keyed on expert sentences, and because the
+ * plain edition hides expert copy from innerText, 85 of 120 cells timed out on pages that
+ * had rendered perfectly. Then /tape and /loop kept "USDC" — which LOOKS like data and is
+ * not: the plain edition prints neither page's amounts that way, so 10 more cells reported
+ * a healthy page as never rendered. They gate on `$` now, which is in the rendered price
+ * either way.
  */
 const ROUTES = [
   { path: "/", ready: "ACR-INF" },
@@ -59,9 +68,9 @@ const ROUTES = [
   { path: "/traction", ready: "testnet|mainnet" },
   { path: "/developers", ready: "GET|curl" },
   { path: "/curve", ready: "ACR-INF" },
-  { path: "/tape", ready: "USDC" },
+  { path: "/tape", ready: "\\$" },
   { path: "/ops", ready: "ACR" },
-  { path: "/loop", ready: "USDC" },
+  { path: "/loop", ready: "\\$" },
   { path: "/attack", ready: "bp|USDC" },
   { path: "/companion", ready: "." },
   { path: "/index/ACR-INF", ready: "ACR-INF" },
