@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
- * measure-a11y.mjs — the two accessibility numbers this UI holds itself to.
+ * measure-a11y.mjs — the accessibility numbers this UI holds itself to.
  *
  *   1. every text run at 4.5:1 contrast or better
  *   2. every BUTTON at least 24x24 (WCAG 2.2 SC 2.5.8)
  *   3. every keyboard focus ring at 3:1 (WCAG 2.2 SC 1.4.11)
+ *   4. a skip link that is the FIRST tab stop and actually moves focus
+ *   5. no unlabelled graphic left in the accessibility tree
  *
  * Sibling of measure-ui.mjs and built the same way: headless Chrome over raw
  * CDP, no dependencies, reading getComputedStyle rather than the source,
@@ -39,6 +41,17 @@
  *
  * Disabled controls are skipped: SC 1.4.3 exempts inactive components by name,
  * and brightening one makes a disabled button look live.
+ *
+ * Checks 4 and 5 were added after an audit found the keyboard paying SIXTEEN
+ * masthead stops before the content of every route, and they are written the
+ * way they are because the first attempt at 5 was WRONG. It read each <svg>'s
+ * own attributes and reported five false positives: `aria-hidden` on an
+ * ANCESTOR hides the whole subtree, and no single-element check can see that.
+ * So 5 asks the browser's own accessibility tree instead of the markup, which
+ * is the only answer that cannot be fooled by inheritance. Check 4 likewise
+ * tests ACTIVATION and not just presence: tabbing past a skip link goes to the
+ * next control, so a link whose target does not exist or cannot hold focus
+ * looks exactly like a working one from the outside.
  *
  * Usage:
  *   node scripts/measure-a11y.mjs                        # localhost:3000
@@ -242,6 +255,57 @@ function focusProbe() {
   return null;
 }
 
+/**
+ * The keyboard's current stop, reduced to the two facts the skip-link check
+ * needs: what it is, and whether it is a link that jumps to the content.
+ */
+function stopProbe() {
+  const el = document.activeElement;
+  if (!el || el === document.body || el === document.documentElement) return null;
+  const main = document.querySelector("main");
+  const href = el.getAttribute ? el.getAttribute("href") || "" : "";
+  let skips = false;
+  if (el.tagName === "A" && href.startsWith("#") && href.length > 1) {
+    const t = document.getElementById(href.slice(1));
+    skips = !!(t && main && (t === main || t.contains(main) || main.contains(t)));
+  }
+  return {
+    el:
+      el.tagName.toLowerCase() +
+      (typeof el.className === "string" && el.className.trim()
+        ? "." + el.className.trim().split(/\s+/)[0]
+        : ""),
+    label: (el.getAttribute("aria-label") || el.textContent || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 28),
+    inMain: !!(main && main.contains(el)),
+    skips,
+  };
+}
+
+/**
+ * Activation, not presence. Clicking the link runs the browser's own fragment
+ * navigation, which is what Enter does, and focus should end up in <main> —
+ * that is what `tabIndex={-1}` on the target buys. A link pointing at an id
+ * that does not exist still renders and still focuses; only this notices.
+ */
+function skipActivate() {
+  const a = document.querySelector("a.skip-link");
+  if (!a) return { reason: "no skip link in the document" };
+  const href = a.getAttribute("href") || "";
+  const t = href.startsWith("#") ? document.getElementById(href.slice(1)) : null;
+  if (!t) return { reason: `skip link points at ${href || "nothing"}, which does not exist` };
+  a.focus();
+  a.click();
+  const el = document.activeElement;
+  const main = document.querySelector("main");
+  if (el && main && (el === main || main.contains(el))) return null;
+  return {
+    reason: `activating the skip link left focus on ${el ? el.tagName.toLowerCase() : "nothing"}`,
+  };
+}
+
 class Cdp {
   constructor(ws) {
     this.ws = ws;
@@ -279,6 +343,36 @@ class Cdp {
       throw new Error(r.exceptionDetails.exception?.description || "eval threw");
     return r.result.value;
   }
+}
+
+/**
+ * Unlabelled graphics, asked of the accessibility tree rather than of the DOM.
+ * `ignored` is the browser's own verdict on whether a node reaches assistive
+ * tech, so decorative art hidden by an ancestor's aria-hidden never appears
+ * here and needs no special case.
+ */
+async function graphicsFindings(cdp) {
+  const ROLES = new Set([
+    "image",
+    "graphics-document",
+    "graphics-object",
+    "graphics-symbol",
+  ]);
+  let nodes = [];
+  try {
+    ({ nodes = [] } = await cdp.send("Accessibility.getFullAXTree", {}));
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const n of nodes) {
+    if (n.ignored) continue;
+    const role = n.role && n.role.value;
+    if (!ROLES.has(role)) continue;
+    if (((n.name && n.name.value) || "").trim()) continue;
+    out.push({ role, reason: "graphic with no accessible name" });
+  }
+  return out;
 }
 
 async function main() {
@@ -322,6 +416,7 @@ async function main() {
     await cdp.send("Page.enable");
     await cdp.send("Runtime.enable");
     await cdp.send("Network.enable");
+    await cdp.send("Accessibility.enable");
     await cdp.send("Network.setCookie", {
       name: "acr-chain",
       value: CHAIN,
@@ -360,6 +455,11 @@ async function main() {
          globally without making this census slow. */
       const rings = [];
       const seen = new Set();
+      /* The same walk answers the skip-link question: stop 1 is where a skip
+         link has to be, and the stop that first lands inside <main> is what the
+         chrome costs a keyboard without one. */
+      let firstStop = null;
+      let stopsToMain = null;
       for (let i = 0; i < 20; i++) {
         for (const type of ["rawKeyDown", "keyUp"]) {
           await cdp.send("Input.dispatchKeyEvent", {
@@ -380,9 +480,40 @@ async function main() {
           seen.add(f.el + f.reason);
           rings.push(f);
         }
+        if (stopsToMain === null) {
+          let st = null;
+          try {
+            st = await cdp.call(stopProbe);
+          } catch {
+            /* mid-navigation */
+          }
+          if (st) {
+            if (i === 0) firstStop = st;
+            if (st.inMain) stopsToMain = i + 1;
+          }
+        }
       }
       r.rings = rings;
-      const n = r.contrast.length + r.targets.length + rings.length;
+
+      /* Check 4, in two halves: the link must BE the first stop, and it must
+         actually move focus when used. */
+      const keyboard = [];
+      if (!firstStop || !firstStop.skips) {
+        keyboard.push({
+          reason: `first tab stop is ${firstStop ? firstStop.el : "nothing"}, not a skip link`,
+        });
+      }
+      let act = null;
+      try {
+        act = await cdp.call(skipActivate);
+      } catch {
+        /* mid-navigation */
+      }
+      if (act) keyboard.push(act);
+
+      const graphics = await graphicsFindings(cdp);
+      const n =
+        r.contrast.length + r.targets.length + rings.length + keyboard.length + graphics.length;
       bad += n;
       const short = route.split("?")[0];
       console.log(`${n ? "✗" : "✓"} ${short.padEnd(16)} ${n} finding(s)`);
@@ -394,11 +525,15 @@ async function main() {
         console.log(
           `    focus ${f.ratio ? f.ratio + ":1 (needs 3)" : f.reason} ${f.el} — ${f.label}`,
         );
+      for (const k of keyboard) console.log(`    keyboard ${k.reason}`);
+      for (const g of graphics) console.log(`    graphic ${g.role} has no accessible name`);
+      if (!keyboard.length)
+        console.log(`    keyboard skip link ok · <main> is ${stopsToMain ?? ">20"} stops away`);
     }
     console.log(
       bad
-        ? `\n${bad} finding(s). Text runs must reach 4.5:1, enabled buttons 24x24, focus rings 3:1.`
-        : "\nevery text run reaches 4.5:1, every enabled button is at least 24x24,\nand every focus ring the keyboard reaches is at 3:1 or better",
+        ? `\n${bad} finding(s). Text runs must reach 4.5:1, enabled buttons 24x24,\nfocus rings 3:1, a working skip link first, and no unnamed graphic.`
+        : "\nevery text run reaches 4.5:1, every enabled button is at least 24x24,\nevery focus ring the keyboard reaches is at 3:1 or better, the skip link\nis the first stop and moves focus, and no unnamed graphic is exposed",
     );
   } finally {
     chrome.kill("SIGKILL");

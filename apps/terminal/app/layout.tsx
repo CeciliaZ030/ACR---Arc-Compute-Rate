@@ -145,12 +145,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         {/* Pre-paint: restore the reader's edition before any copy renders. */}
         <script dangerouslySetInnerHTML={{ __html: editionBootScript() }} />
+        {/* First focusable thing on every page, and deliberately outside the
+            providers below: it needs no context, and staying out of the drawer's
+            fixed subtree means nothing can clip it when it appears. Without it
+            the keyboard pays 16 stops of masthead before the content of every
+            route. Invisible until focused; see `.skip-link` in globals.css. */}
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         {/* The request's chain, as the first render's answer (lib/useChain.ts). */}
         <ChainProvider chain={chain}>
           <AgentDrawer applicationId={agentApplicationId(process.env.ACR_AOMI_APPLICATION_ID)}>
             <Masthead initial={initial} />
             <ChainStrip initial={initial} />
-            <main className="container page">{children}</main>
+            {/* tabIndex -1 so activating the skip link MOVES focus here rather than
+                only scrolling: a fragment target that cannot hold focus leaves
+                the next Tab up to the browser. */}
+            <main id="main" tabIndex={-1} className="container page">
+              {children}
+            </main>
             <Colophon initial={initial} />
           </AgentDrawer>
         </ChainProvider>
