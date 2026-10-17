@@ -356,6 +356,14 @@ async function main() {
           }
         }
 
+        /* KNOWN LIMIT, so the overflow column is not over-read: each route is
+           navigated once at 1240 and then stepped through the widths with
+           Emulation alone. Components that measure themselves once (the chart
+           SVGs size from a container read on mount) do not recompute, so a
+           narrow step can report an overflow that a page LOADED at that width
+           does not have. Three rows read 24-42px that way at 375; loading
+           /curve, /index and /check directly at 375 gives scrollWidth 375 and
+           no offenders. Reload per width if that column ever has to be exact. */
         for (const width of widths) {
           await cdp.send("Emulation.setDeviceMetricsOverride", {
             width,

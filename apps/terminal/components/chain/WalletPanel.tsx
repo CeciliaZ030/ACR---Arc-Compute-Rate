@@ -80,11 +80,11 @@ export function WalletPanel({ explorer }: { explorer?: string }) {
   // and `teal` classes the hedger panel used to name.
   return (
     <div className="panel panel-pad">
-      <div className="section-head" style={{ marginTop: 0 }}>
-        <h2 className="label">
+      <div className="card-head">
+        <h4 className="label">
           <Ed x="Circle Gateway wallets" p="Circle wallets · who pays, who gets paid" />
           {ready ? <span className="green"> · live</span> : null}
-        </h2>
+        </h4>
         {ready ? (
           <span className="chip chip-teal">
             <i className="dot breathe" /> settling on Arc
