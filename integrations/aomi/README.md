@@ -12,7 +12,8 @@ and it benchmarks real bills against real published prices. This App puts both
 answers inside Aomi's agent as five research tools. Version 0.2 also adds an
 owner-wallet payment inbox: review escalated bills, prepare an exact PolicyWallet
 payment, and verify its settlement. Deployment addresses remain placeholders;
-the default build is research-only. See [Treasury setup and workflow](TREASURY.md)
+the default build supports research and read-only EVM contract inspection.
+It cannot stage, simulate, sign, or submit payments. See [Treasury setup and workflow](TREASURY.md)
 for the app-specific skill, guard, API, contract upgrade and acceptance checks.
 
 ## What an Aomi agent gets

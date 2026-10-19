@@ -28,7 +28,7 @@ sequenceDiagram
     API-->>Aomi: Durable ledger resolution; paid
 ```
 
-## Default is research-only
+## Default is read-only
 
 The author-supplied deployments and read-only compatibility checks are recorded
 in [DEPLOYMENTS.md](DEPLOYMENTS.md). Both existing testnet PolicyWallets fail
@@ -36,7 +36,9 @@ the replay-protection interface check; the compatible replacement address is
 still unknown. The committed
 `treasury-deployment.example.json` has `enabled=false` and explicit
 `<CHAIN_ID>`, `<POLICY_WALLET_ADDRESS>`, `<USDC_ADDRESS>` placeholders. An ordinary
-build has **no EVM namespace**, and treasury tool calls refuse before HTTP.
+build enables only **`evm-reads`** for contract inspection. It has no transaction
+staging, simulation, signing, or broadcasting tools. Treasury payment tools still
+refuse before HTTP. Read access does not make the deployment ready for payments.
 Do not replace placeholders with zero addresses or remove guard constraints.
 
 The app's deployment binding and guard are generated at build time from the

@@ -23,6 +23,7 @@ quantity in the unit (23 for 23,000 tokens at \"$/1k tokens\"). Leave vendor out
 - Is this wallet or agent overpaying, and where should it buy instead? -> acr_wallet_cost.
 - Is this seller trustworthy or fairly priced? -> acr_seller_rating.
 - Did a payment to ACR land? -> acr_receipts.
+- Inspect a deployed contract or treasury state? -> use get_contract, encode_and_call, and get_erc20_balance on the requested chain. Read owner(), paused(), usdc(), budgetOf(bytes32), and remaining(bytes32) as needed; derive category IDs from the documented category, never guess.
 
 Rules you must keep:
 - Never quote an acr_rate value as what compute costs. For what the market actually charges, use acr_check_bill, which \
@@ -33,6 +34,8 @@ a market verdict: relay the hint and, if it says so, call acr_check_bill again w
 - A wallet with seen: false has no purchases on ACR's tape. Never report that as zero spend.
 - Verdicts are suggestions, not promises, and compare against published list prices, not the user's contract.
 - Quote the cheapest seller by its label and cite its source when you recommend switching.
+- Contract reads must actually run before reporting ownership, balances, budgets, or payment readiness. If a read fails or tools are unavailable, state the limitation; never infer chain state from a bill API response or promise an inspection without doing it.
+- Read access does not authorize spending. The default artifact has only the evm-reads host namespace: no transaction staging, simulation, signing, or broadcasting. Payment execution requires a configured treasury deployment and explicit owner authorization.
 - The five research tools do not move funds. For a business payment inbox, activate acr-compute-rate/treasury. Its tools prepare unsigned owner payments and verify receipts; follow its review and authorization workflow.";
 
 macro_rules! register_app {
@@ -66,9 +69,9 @@ macro_rules! register_app {
     };
 }
 
-// Unconfigured artifacts have no EVM namespace and cannot prepare payments.
+// Unconfigured artifacts can inspect contracts, but cannot stage or submit payments.
 #[cfg(not(treasury_configured))]
-register_app!([]);
+register_app!(["evm-reads"]);
 #[cfg(treasury_configured)]
 register_app!(
     ["evm-core"],

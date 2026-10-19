@@ -382,7 +382,7 @@ mod tests {
         assert_eq!(manifest.skills[0].injected_tools.len(), 3);
         #[cfg(not(treasury_configured))]
         {
-            assert!(manifest.namespaces.unwrap().is_empty());
+            assert_eq!(manifest.namespaces.unwrap(), ["evm-reads"]);
             assert!(deployment().is_err());
             assert!(
                 run_tool::<PreparePayment>(
