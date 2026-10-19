@@ -162,7 +162,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
-        <div style={{ padding: "8px 20px", background: "#132438", color: "#ffd075", fontSize: 13, textAlign: "center" }}>
+        <div className="demo-environment-banner">
           ISOLATED DEMO · Arc testnet · Synthetic bills and mock USDC · Aomi staging
         </div>
         {/* Pre-paint: restore the reader's edition before any copy renders. */}

@@ -3695,3 +3695,5 @@ table.sheet td.mono .label {
      row's `margin-left: auto`; floating, it no longer pushes, so the next one does. */
   .nav-right > .agent-launch + * { margin-left: auto; }
 }
+
+.demo-environment-banner { padding: 8px 20px; background: var(--glass); color: var(--sand); font: var(--t-3) var(--eyebrow); text-align: center; }
