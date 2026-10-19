@@ -1,8 +1,8 @@
 [app]
 # Slug, kebab-case. MUST equal the `name` in `dyn_aomi_app!` (src/lib.rs); it
 # becomes the release tag.
-name         = "acr-compute-rate"
-display_name = "ACR · Arc Compute Rate"
+name         = "acr-treasury-cecilia-demo"
+display_name = "ACR · Isolated Treasury Demo"
 # Business billing records and treasury credentials require restricted app access.
 public       = false
 
@@ -12,4 +12,4 @@ public       = false
 # GET /api/platforms/server-tags with {"server_tags":["prod"],"sdk_version":"5.1.1"}
 # (2026-10-13), so the default would build, activate, and never load on the
 # backend chat.aomi.dev talks to.
-server_tags  = ["prod"]
+server_tags  = ["staging"]

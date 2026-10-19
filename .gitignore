@@ -62,3 +62,6 @@ ACR_REGISTER.md
 
 # aomi-build writes local deploy state here; .aomi/config.json is committed.
 .aomi/deployment.json
+
+# Local demo credentials, logs and operator state.
+.demo/

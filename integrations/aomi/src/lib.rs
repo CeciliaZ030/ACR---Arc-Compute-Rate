@@ -11,7 +11,7 @@ use aomi_sdk::{Secret, dyn_aomi_app};
 #[derive(Clone, Default)]
 pub struct AcrApp;
 
-const PREAMBLE: &str = "You can read ACR (Arc Compute Rate). ACR publishes an on-chain reference index for machine \
+const PREAMBLE: &str = "This is an isolated DEMO on Arc testnet (5042002). Treasury bills are synthetic and the token is mock USDC, not real USDC. Say this clearly before payment review. The configured demo wallet is 0x03eD66010c1C7afF4A7d749Ba64b47d3EBee68F9; inspect it using its PolicyWallet ABI. Never imply these are ACR customer payments. You can read ACR (Arc Compute Rate). ACR publishes an on-chain reference index for machine \
 compute (AI inference, GPU time, data delivery) from an oracle on Arc, and it checks what agents and wallets actually pay \
 against real, cited public market prices.
 
@@ -35,12 +35,12 @@ a market verdict: relay the hint and, if it says so, call acr_check_bill again w
 - Verdicts are suggestions, not promises, and compare against published list prices, not the user's contract.
 - Quote the cheapest seller by its label and cite its source when you recommend switching.
 - Contract reads must actually run before reporting ownership, balances, budgets, or payment readiness. If a read fails or tools are unavailable, state the limitation; never infer chain state from a bill API response or promise an inspection without doing it.
-- Read access does not authorize spending. Use the evm-core host tools to read contracts and stage, simulate, and commit only the configured treasury payment. Activate acr-compute-rate/treasury, prepare the exact logged obligation, simulate successfully, obtain explicit owner authorization, then verify the receipt. Never bypass preparation or use arbitrary transfers.
-- The five research tools do not move funds. For a business payment inbox, activate acr-compute-rate/treasury. Its tools prepare unsigned owner payments and verify receipts; follow its review and authorization workflow.";
+- Read access does not authorize spending. Use the evm-core host tools to read contracts and stage, simulate, and commit only the configured treasury payment. Activate acr-treasury-cecilia-demo/treasury, prepare the exact logged obligation, simulate successfully, obtain explicit owner authorization, then verify the receipt. Never bypass preparation or use arbitrary transfers.
+- The five research tools do not move funds. For a business payment inbox, activate acr-treasury-cecilia-demo/treasury. Its tools prepare unsigned owner payments and verify receipts; follow its review and authorization workflow.";
 
 dyn_aomi_app!(
     app = AcrApp,
-    name = "acr-compute-rate",
+    name = "acr-treasury-cecilia-demo",
     version = "0.2.0",
     preamble = PREAMBLE,
     tools = [tool::RateTool, tool::CheckBillTool, tool::WalletCostTool,
@@ -51,7 +51,7 @@ dyn_aomi_app!(
     ],
     namespaces = ["evm-core"],
     skills = [{
-        id: "acr-compute-rate/treasury",
+        id: "acr-treasury-cecilia-demo/treasury",
         description: "Review escalated compute bills and pay through the business owner's PolicyWallet",
         tags: ["treasury", "bills", "payment"],
         tools: [treasury::PendingPayments, treasury::PreparePayment, treasury::VerifyPayment],

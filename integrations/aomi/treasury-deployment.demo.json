@@ -1,0 +1,9 @@
+{
+  "chain_id": 5042002,
+  "policy_wallet": "0x03eD66010c1C7afF4A7d749Ba64b47d3EBee68F9",
+  "usdc": "0x493d4061BfF3EeCc6df6513c6ca0409eF8487E2e",
+  "owner": "0x5D907BEa404e6F821d467314a9cA07663CF64c9B",
+  "enabled": true,
+  "business": "acr-video-demo",
+  "api_url": "https://jonathan-russell-quality-paste.trycloudflare.com"
+}
