@@ -35,47 +35,34 @@ a market verdict: relay the hint and, if it says so, call acr_check_bill again w
 - Verdicts are suggestions, not promises, and compare against published list prices, not the user's contract.
 - Quote the cheapest seller by its label and cite its source when you recommend switching.
 - Contract reads must actually run before reporting ownership, balances, budgets, or payment readiness. If a read fails or tools are unavailable, state the limitation; never infer chain state from a bill API response or promise an inspection without doing it.
-- Read access does not authorize spending. The default artifact has only the evm-reads host namespace: no transaction staging, simulation, signing, or broadcasting. Payment execution requires a configured treasury deployment and explicit owner authorization.
+- Read access does not authorize spending. Use the evm-core host tools to read contracts and stage, simulate, and commit only the configured treasury payment. Activate acr-compute-rate/treasury, prepare the exact logged obligation, simulate successfully, obtain explicit owner authorization, then verify the receipt. Never bypass preparation or use arbitrary transfers.
 - The five research tools do not move funds. For a business payment inbox, activate acr-compute-rate/treasury. Its tools prepare unsigned owner payments and verify receipts; follow its review and authorization workflow.";
 
-macro_rules! register_app {
-    ([$($namespace:expr),*] $(, $guard:expr)?) => {
-        dyn_aomi_app!(
-            app = AcrApp,
-            name = "acr-compute-rate",
-            version = "0.2.0",
-            preamble = PREAMBLE,
-            tools = [tool::RateTool, tool::CheckBillTool, tool::WalletCostTool,
-                     tool::SellerRatingTool, tool::ReceiptsTool],
-            secrets = [
-                Secret::new("ACR_API", "Optional research API override.", false),
-                Secret::new("ACR_TREASURY_API_TOKEN", "Business-scoped treasury API credential. Never an operations or signing key.", false)
-            ],
-            namespaces = [$($namespace),*],
-            skills = [{
-                id: "acr-compute-rate/treasury",
-                description: "Review escalated compute bills and pay through the business owner's PolicyWallet",
-                tags: ["treasury", "bills", "payment"],
-                tools: [treasury::PendingPayments, treasury::PreparePayment, treasury::VerifyPayment],
-                sections: {
-                    instructions: "skill/instructions.md",
-                    workflows: "skill/workflows.md",
-                    action_rules: "skill/action-rules.md",
-                    safety: "skill/safety.md"
-                }
-                $(, guard: $guard)?
-            }]
-        );
-    };
-}
-
-// Unconfigured artifacts can inspect contracts, but cannot stage or submit payments.
-#[cfg(not(treasury_configured))]
-register_app!(["evm-reads"]);
-#[cfg(treasury_configured)]
-register_app!(
-    ["evm-core"],
-    concat!(env!("OUT_DIR"), "/treasury-guard.json")
+dyn_aomi_app!(
+    app = AcrApp,
+    name = "acr-compute-rate",
+    version = "0.2.0",
+    preamble = PREAMBLE,
+    tools = [tool::RateTool, tool::CheckBillTool, tool::WalletCostTool,
+             tool::SellerRatingTool, tool::ReceiptsTool],
+    secrets = [
+        Secret::new("ACR_API", "Optional research API override.", false),
+        Secret::new("ACR_TREASURY_API_TOKEN", "Business-scoped treasury API credential. Never an operations or signing key.", true)
+    ],
+    namespaces = ["evm-core"],
+    skills = [{
+        id: "acr-compute-rate/treasury",
+        description: "Review escalated compute bills and pay through the business owner's PolicyWallet",
+        tags: ["treasury", "bills", "payment"],
+        tools: [treasury::PendingPayments, treasury::PreparePayment, treasury::VerifyPayment],
+        sections: {
+            instructions: "skill/instructions.md",
+            workflows: "skill/workflows.md",
+            action_rules: "skill/action-rules.md",
+            safety: "skill/safety.md"
+        },
+        guard: concat!(env!("OUT_DIR"), "/treasury-guard.json")
+    }]
 );
 
 #[cfg(test)]

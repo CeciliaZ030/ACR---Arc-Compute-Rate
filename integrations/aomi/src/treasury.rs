@@ -380,28 +380,16 @@ mod tests {
             .unwrap();
         assert_eq!(manifest.tools.len(), 8);
         assert_eq!(manifest.skills[0].injected_tools.len(), 3);
-        #[cfg(not(treasury_configured))]
-        {
-            assert_eq!(manifest.namespaces.unwrap(), ["evm-reads"]);
-            assert!(deployment().is_err());
-            assert!(
-                run_tool::<PreparePayment>(
-                    &AcrApp,
-                    json!({"obligation_id": "bill-1"}),
-                    TestCtxBuilder::new("prepare").build()
-                )
-                .is_err()
-            );
-        }
-        #[cfg(treasury_configured)]
-        {
-            let d = deployment().unwrap();
-            assert_eq!(manifest.namespaces.unwrap(), ["evm-core"]);
-            let guard = serde_json::to_value(manifest.skills[0].guard.as_ref().unwrap()).unwrap();
-            assert_eq!(guard["evm"]["chain_ids"], json!([d.chain_id]));
-            assert_eq!(guard["evm"]["allowed_contracts"], json!(["TREASURY"]));
-            assert_eq!(guard["evm"]["allowed_selectors"], json!(["PAY"]));
-            assert_eq!(guard["evm"]["contracts"]["TREASURY"], d.policy_wallet);
-        }
+        let d = deployment().unwrap();
+        assert_eq!(manifest.namespaces.unwrap(), ["evm-core"]);
+        let guard = serde_json::to_value(manifest.skills[0].guard.as_ref().unwrap()).unwrap();
+        assert_eq!(guard["evm"]["chain_ids"], json!([d.chain_id]));
+        assert_eq!(guard["evm"]["allowed_contracts"], json!(["TREASURY"]));
+        assert_eq!(guard["evm"]["allowed_selectors"], json!(["PAY"]));
+        assert_eq!(guard["evm"]["contracts"]["TREASURY"], d.policy_wallet);
+        assert_eq!(
+            guard["evm"]["selectors"]["PAY"],
+            "spendAsOwner(bytes32,address,uint256,bytes32)"
+        );
     }
 }
