@@ -113,9 +113,22 @@ fn request(
         .map_err(|_| "Invalid treasury API response; stop payment preparation.".into())
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EmptyArgs {}
+
+impl JsonSchema for EmptyArgs {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "EmptyArgs".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": "object", "properties": {}, "required": [],
+            "additionalProperties": false
+        })
+    }
+}
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PrepareArgs {
@@ -371,6 +384,32 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    #[test]
+    fn every_tool_object_schema_declares_properties() {
+        fn check(value: &Value) {
+            match value {
+                Value::Object(fields) => {
+                    if fields.get("type") == Some(&json!("object")) {
+                        assert!(
+                            fields.get("properties").is_some_and(Value::is_object),
+                            "{value}"
+                        );
+                    }
+                    for child in fields.values() {
+                        check(child);
+                    }
+                }
+                Value::Array(items) => {
+                    for child in items {
+                        check(child);
+                    }
+                }
+                _ => {}
+            }
+        }
+        check(&serde_json::to_value(AcrApp.manifest()).unwrap());
     }
 
     #[test]
