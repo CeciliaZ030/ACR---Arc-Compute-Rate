@@ -11,6 +11,7 @@ export default function AgentChat({
   return (
     <AomiWidget
       applicationId={applicationId}
+      baseUrl="https://chat-staging.aomi.dev"
       routing={{
         defaultMode: "direct",
         targets: [{ mode: "direct", apps: [{ applicationId }] }],
